@@ -38,6 +38,7 @@ const BlockResponseTypePrefix = {
   Rejected: 1
 } as const;
 
+// https://github.com/stacks-network/stacks-core/blob/cd702e7dfba71456e4983cf530d5b174e34507dc/libsigner/src/v0/messages.rs#L650
 function parseBlockResponse(msg: BufferCursor) {
   const typePrefix = msg.readU8Enum(BlockResponseTypePrefix);
   switch (typePrefix) {
@@ -84,6 +85,7 @@ const ValidateRejectCode = {
   NoSuchTenure: 6
 } as const;
 
+// https://github.com/stacks-network/stacks-core/blob/cd702e7dfba71456e4983cf530d5b174e34507dc/libsigner/src/v0/messages.rs#L812
 function parseBlockResponseRejectCode(msg: BufferCursor) {
   const rejectCode = msg.readU8Enum(RejectCodeTypePrefix);
   switch (rejectCode) {
@@ -147,27 +149,13 @@ const TransactionPostConditionMode = {
 
 // https://github.com/stacks-network/stacks-core/blob/30acb47f0334853def757b877773ae3ec45c6ba5/stackslib/src/chainstate/stacks/transaction.rs#L682-L692
 function parseStacksTransaction(msg: BufferCursor) {
-  // write_next(fd, &(self.version as u8))?;
   const version = msg.readU8();
-
-  // write_next(fd, &self.chain_id)?;
   const chainId = msg.readU32BE();
-
-  // write_next(fd, &self.auth)?;
   const auth = parseStacksTransactionAuth(msg);
-
-  // write_next(fd, &(self.anchor_mode as u8))?;
   const anchorMode = msg.readU8Enum(TransactionAnchorMode);
-
-  // write_next(fd, &(self.post_condition_mode as u8))?;
   const postConditionMode = msg.readU8Enum(TransactionPostConditionMode);
-
-  // write_next(fd, &self.post_conditions)?;
   const postConditions = msg.readArray(parseStacksTransactionPostCondition);
-
-  // write_next(fd, &self.payload)?;
   const payload = parseTransactionPayload(msg);
-
   return {
     version,
     chainId,
@@ -382,37 +370,16 @@ function parseTransactionAuthField(msg: BufferCursor) {
 
 // https://github.com/stacks-network/stacks-core/blob/30acb47f0334853def757b877773ae3ec45c6ba5/stackslib/src/chainstate/nakamoto/mod.rs#L696-L711
 function parseNakamotoBlockHeader(msg: BufferCursor) {
-  // write_next(fd, &self.version)?;
   const version = msg.readU8();
-
-  // write_next(fd, &self.chain_length)?;
   const chainLength = msg.readU64BE();
-
-  // write_next(fd, &self.burn_spent)?;
   const burnSpent = msg.readU64BE();
-
-  // write_next(fd, &self.consensus_hash)?;
   const consensusHash = msg.readBytes(20);
-
-  // write_next(fd, &self.parent_block_id)?;
   const parentBlockId = msg.readBytes(32);
-
-  // write_next(fd, &self.tx_merkle_root)?;
   const txMerkleRoot = msg.readBytes(32);
-
-  // write_next(fd, &self.state_index_root)?;
   const stateIndexRoot = msg.readBytes(32);
-
-  // write_next(fd, &self.timestamp)?;
   const timestamp = msg.readU64BE();
-
-  // write_next(fd, &self.miner_signature)?;
   const minerSignature = msg.readBytes(65);
-
-  // write_next(fd, &self.signer_signature)?;
   const signerSignature = msg.readArray(c => c.readBytes(65));
-
-  // write_next(fd, &self.pox_treatment)?;
   const poxTreatment = msg.readBitVec();
 
   return {
