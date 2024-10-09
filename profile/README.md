@@ -1,3 +1,0 @@
-# Welcome to Hiro!
-
-We simplify building on Bitcoin and empower developers to unleash the potential of Web3. Contribute to our open-source projects, stay updated on [Twitter @hirosystems](https://twitter.com/hirosystems), and connect with the Stacks developer community on [Discord Builder General channel](https://discord.gg/KrqnVg8D). Visit [hiro.so](https://www.hiro.so/) to learn more about our organization, explore our tools, and access our documentation. Let's unlock Web3 on Bitcoin together!
