@@ -1,58 +1,78 @@
-import { BufferCursor } from "./common";
+import { BufferCursor, getEnumName } from "./common";
+import { deserializeTransaction, BytesReader } from '@stacks/transactions';
 
-const SignerMessageTypePrefix = {
-  BlockProposal: 0,
-  BlockResponse: 1,
-  BlockPushed: 2,
-  MockProposal: 3,
-  MockSignature: 4,
-  MockBlock: 5,
-} as const;
+enum SignerMessageTypePrefix {
+  BlockProposal = 0,
+  BlockResponse = 1,
+  BlockPushed = 2,
+  MockProposal = 3,
+  MockSignature = 4,
+  MockBlock = 5,
+}
 
 // https://github.com/stacks-network/stacks-core/blob/cd702e7dfba71456e4983cf530d5b174e34507dc/libsigner/src/v0/messages.rs#L206
-export function parseSignerMessage(msg: BufferCursor) {
-  const typePrefix = msg.readU8Enum(SignerMessageTypePrefix);
-
-  switch (typePrefix) {
+export function parseSignerMessage(msg: Buffer) {
+  const cursor = new BufferCursor(msg);
+  const messageType = cursor.readU8Enum(SignerMessageTypePrefix);
+  
+  switch (messageType) {
     case SignerMessageTypePrefix.BlockProposal:
-      return parseBlockProposal(msg);
+      return {
+        messageType: 'BlockProposal',
+        blockProposal: parseBlockProposal(cursor),
+      } as const;
     case SignerMessageTypePrefix.BlockResponse:
-      return parseBlockResponse(msg);
+      return {
+        messageType: 'BlockResponse',
+        blockResponse: parseBlockResponse(cursor),
+      } as const;
     case SignerMessageTypePrefix.BlockPushed:
-      return parseBlockPushed(msg);
+      return {
+        messageType: 'BlockPushed',
+        blockPushed: parseBlockPushed(cursor),
+      } as const;
     case SignerMessageTypePrefix.MockProposal:
-      return parseMockProposal(msg);
+      return {
+        messageType: 'MockProposal',
+        mockProposal: parseMockProposal(cursor),
+      } as const;
     case SignerMessageTypePrefix.MockSignature:
-      return parseMockSignature(msg);
+      return {
+        messageType: 'MockSignature',
+        mockSignature: parseMockSignature(cursor),
+      } as const;
     case SignerMessageTypePrefix.MockBlock:
-      return parseMockBlock(msg);
+      return {
+        messageType: 'MockBlock',
+        mockBlock: parseMockBlock(cursor),
+      } as const;
     default:
-      throw new Error(`Unknown message type prefix: ${typePrefix}`);
+      throw new Error(`Unknown message type prefix: ${messageType}`);
   }
 }
 
-const BlockResponseTypePrefix = {
+enum BlockResponseTypePrefix {
   // An accepted block response
-  Accepted: 0,
+  Accepted = 0,
   // A rejected block response
-  Rejected: 1
-} as const;
+  Rejected = 1
+}
 
 // https://github.com/stacks-network/stacks-core/blob/cd702e7dfba71456e4983cf530d5b174e34507dc/libsigner/src/v0/messages.rs#L650
-function parseBlockResponse(msg: BufferCursor) {
-  const typePrefix = msg.readU8Enum(BlockResponseTypePrefix);
+function parseBlockResponse(cursor: BufferCursor) {
+  const typePrefix = cursor.readU8Enum(BlockResponseTypePrefix);
   switch (typePrefix) {
     case BlockResponseTypePrefix.Accepted: {
-      const hash = msg.readBytes(32);
-      const sig = msg.readBytes(65);
-      return { type: 'accepted', hash, sig } as const;
+      const blockHash = cursor.readBytes(32).toString('hex');
+      const sig = cursor.readBytes(65).toString('hex');
+      return { type: 'accepted', hash: blockHash, sig } as const;
     }
     case BlockResponseTypePrefix.Rejected: {
-      const reason = msg.readVecString();
-      const reasonCode = parseBlockResponseRejectCode(msg);
-      const signerSignatureHash = msg.readBytes(32);
-      const chainId = msg.readU32BE();
-      const signature = msg.readBytes(65);
+      const reason = cursor.readVecString();
+      const reasonCode = parseBlockResponseRejectCode(cursor);
+      const signerSignatureHash = cursor.readBytes(32).toString('hex');
+      const chainId = cursor.readU32BE();
+      const signature = cursor.readBytes(65).toString('hex');
       return { type: 'rejected', reason, reasonCode, signerSignatureHash, chainId, signature } as const;
     }
     default:
@@ -75,312 +95,93 @@ const RejectCodeTypePrefix = {
   TestingDirective: 5
 } as const;
 
-const ValidateRejectCode = {
-  BadBlockHash: 0,
-  BadTransaction: 1,
-  InvalidBlock: 2,
-  ChainstateError: 3,
-  UnknownParent: 4,
-  NonCanonicalTenure: 5,
-  NoSuchTenure: 6
-} as const;
+enum ValidateRejectCode {
+  BadBlockHash = 0,
+  BadTransaction = 1,
+  InvalidBlock = 2,
+  ChainstateError = 3,
+  UnknownParent = 4,
+  NonCanonicalTenure = 5,
+  NoSuchTenure = 6
+}
 
 // https://github.com/stacks-network/stacks-core/blob/cd702e7dfba71456e4983cf530d5b174e34507dc/libsigner/src/v0/messages.rs#L812
-function parseBlockResponseRejectCode(msg: BufferCursor) {
-  const rejectCode = msg.readU8Enum(RejectCodeTypePrefix);
+function parseBlockResponseRejectCode(cursor: BufferCursor) {
+  const rejectCode = cursor.readU8Enum(RejectCodeTypePrefix);
   switch (rejectCode) {
     case RejectCodeTypePrefix.ValidationFailed: {
-      const validateRejectCode = msg.readU8Enum(ValidateRejectCode);
-      return { rejectCode, validateRejectCode } as const;
+      const validateRejectCode = cursor.readU8Enum(ValidateRejectCode);
+      return {
+        rejectCode: getEnumName(RejectCodeTypePrefix, rejectCode),
+        validateRejectCode,
+      } as const;
     }
     case RejectCodeTypePrefix.ConnectivityIssues:
     case RejectCodeTypePrefix.RejectedInPriorRound:
     case RejectCodeTypePrefix.NoSortitionView:
     case RejectCodeTypePrefix.SortitionViewMismatch:
     case RejectCodeTypePrefix.TestingDirective:
-      return { rejectCode } as const;
+      return { 
+        rejectCode: getEnumName(RejectCodeTypePrefix, rejectCode),
+      } as const;
     default:
       throw new Error(`Unknown reject code type prefix: ${rejectCode}`);
   }
 }
 
-function parseBlockPushed(msg: BufferCursor) {
-  const block = parseNakamotoBlock(msg);
+function parseBlockPushed(cursor: BufferCursor) {
+  const block = parseNakamotoBlock(cursor);
   return block;
 }
 
-function parseMockProposal(msg: BufferCursor) {
+function parseMockProposal(cursor: BufferCursor) {
   console.log('MockProposal ignored');
 }
 
-function parseMockSignature(msg: BufferCursor) {
+function parseMockSignature(cursor: BufferCursor) {
   console.log('MockSignature ignored');
 }
 
-function parseMockBlock(msg: BufferCursor) {
+function parseMockBlock(cursor: BufferCursor) {
   console.log('MockBlock ignored');
 }
 
 // https://github.com/stacks-network/stacks-core/blob/cd702e7dfba71456e4983cf530d5b174e34507dc/libsigner/src/events.rs#L74
-function parseBlockProposal(msg: BufferCursor) {
-  const block = parseNakamotoBlock(msg);
-  const burnHeight = msg.readU64BE();
-  const rewardCycle = msg.readU64BE();
+function parseBlockProposal(cursor: BufferCursor) {
+  const block = parseNakamotoBlock(cursor);
+  const burnHeight = cursor.readU64BE();
+  const rewardCycle = cursor.readU64BE();
   return { block, burnHeight, rewardCycle };
 }
 
 // https://github.com/stacks-network/stacks-core/blob/30acb47f0334853def757b877773ae3ec45c6ba5/stackslib/src/chainstate/nakamoto/mod.rs#L4547-L4550
-function parseNakamotoBlock(msg: BufferCursor) {
-  const header = parseNakamotoBlockHeader(msg);
-  const tx = msg.readArray(parseStacksTransaction);
+function parseNakamotoBlock(cursor: BufferCursor) {
+  const header = parseNakamotoBlockHeader(cursor);
+  const tx = cursor.readArray(parseStacksTransaction);
   return { header, tx };
 }
 
-const TransactionAnchorMode = {
-  OnChainOnly: 1,
-  OffChainOnly: 2,
-  Any: 3,
-} as const;
-
-const TransactionPostConditionMode = {
-  Allow: 0x01,
-  Deny: 0x02,
-} as const;
-
 // https://github.com/stacks-network/stacks-core/blob/30acb47f0334853def757b877773ae3ec45c6ba5/stackslib/src/chainstate/stacks/transaction.rs#L682-L692
-function parseStacksTransaction(msg: BufferCursor) {
-  const version = msg.readU8();
-  const chainId = msg.readU32BE();
-  const auth = parseStacksTransactionAuth(msg);
-  const anchorMode = msg.readU8Enum(TransactionAnchorMode);
-  const postConditionMode = msg.readU8Enum(TransactionPostConditionMode);
-  const postConditions = msg.readArray(parseStacksTransactionPostCondition);
-  const payload = parseTransactionPayload(msg);
-  return {
-    version,
-    chainId,
-    auth,
-    anchorMode,
-    postConditionMode,
-    postConditions,
-    payload,
-  }
-}
-
-const TransactionPayloadID = {
-  TokenTransfer: 0,
-  SmartContract: 1,
-  ContractCall: 2,
-  PoisonMicroblock: 3,
-  Coinbase: 4,
-  CoinbaseToAltRecipient: 5,
-  VersionedSmartContract: 6,
-  TenureChange: 7,
-  NakamotoCoinbase: 8,
-} as const;
-
-// https://github.com/stacks-network/stacks-core/blob/cd702e7dfba71456e4983cf530d5b174e34507dc/stackslib/src/chainstate/stacks/transaction.rs#L249
-function parseTransactionPayload(msg: BufferCursor) {
-  const payloadId = msg.readU8Enum(TransactionPayloadID);
-  throw new Error(`Not yet implemented, payload ID: ${payloadId}`);
-}
-
-const AssetInfoID = {
-  STX: 0,
-  FungibleAsset: 1,
-  NonfungibleAsset: 2,
-} as const;
-
-const FungibleConditionCode = {
-  SentEq: 0x01,
-  SentGt: 0x02,
-  SentGe: 0x03,
-  SentLt: 0x04,
-  SentLe: 0x05,
-} as const;
-
-const NonfungibleConditionCode = {
-  Sent: 0x10,
-  NotSent: 0x11,
-} as const;
-
-function parseStacksTransactionPostCondition(msg: BufferCursor) {
-  const assetInfoId = msg.readU8Enum(AssetInfoID);
-  switch (assetInfoId) {
-    case AssetInfoID.STX: {
-      const principal = parsePostConditionPrincipal(msg);
-      const conditionCode = msg.readU8Enum(FungibleConditionCode);
-      const amount = msg.readU64BE();
-      return { assetInfoId, principal, conditionCode, amount } as const;
-    }
-    case AssetInfoID.FungibleAsset: {
-      const principal = parsePostConditionPrincipal(msg);
-      const asset = parseAssetInfo(msg);
-      const conditionCode = msg.readU8Enum(FungibleConditionCode);
-      const amount = msg.readU64BE();
-      return { assetInfoId, principal, asset, conditionCode, amount } as const;
-    }
-    case AssetInfoID.NonfungibleAsset: {
-      const principal = parsePostConditionPrincipal(msg);
-      const asset = parseAssetInfo(msg);
-      const assetValue = parseClarityValue(msg);
-      const conditionCode = msg.readU8Enum(NonfungibleConditionCode);
-      return { assetInfoId, principal, asset, assetValue, conditionCode } as const;
-    }
-    default:
-      throw new Error(`Unknown asset info ID: ${assetInfoId}`);
-  }
-}
-
-function parseClarityValue(msg: BufferCursor) {
-  // TODO: grab this from somewhere else where it's already implemented FML ...
-  return {};
-}
-
-function parseAssetInfo(msg: BufferCursor) {
-  const contractAddress = {
-    version: msg.readU8(),
-    hashbytes: msg.readBytes(20),
-  };
-  const contractName = msg.readUtf8String();
-  const assetName = msg.readUtf8String();
-  return { contractAddress, contractName, assetName } as const;
-}
-
-const PostConditionPrincipalID = {
-  Origin: 0x01,
-  Standard: 0x02,
-  Contract: 0x03,
-} as const;
-
-function parsePostConditionPrincipal(msg: BufferCursor) {
-  const principalId = msg.readU8Enum(PostConditionPrincipalID);
-  switch (principalId) {
-    case PostConditionPrincipalID.Origin: {
-      return { principalId } as const;
-    }
-    case PostConditionPrincipalID.Standard: {
-      const stacksAddress = {
-        version: msg.readU8(),
-        hashbytes: msg.readBytes(20),
-      };
-      return { principalId, stacksAddress } as const;
-    }
-    case PostConditionPrincipalID.Contract: {
-      const stacksAddress = {
-        version: msg.readU8(),
-        hashbytes: msg.readBytes(20),
-      };
-      const contractName = msg.readUtf8String();
-      return { principalId, stacksAddress, contractName } as const;
-    }
-    default:
-      throw new Error(`Unknown principal ID: ${principalId}`);
-  }
-}
-
-const StacksTransactionAuthType = {
-  AuthStandard: 0x04,
-  AuthSponsored: 0x05,
-} as const;
-
-function parseStacksTransactionAuth(msg: BufferCursor) {
-  const authType = msg.readU8Enum(StacksTransactionAuthType);
-  switch (authType) {
-    case StacksTransactionAuthType.AuthStandard: {
-      const originCondition = parseStacksTransactionAuthSpendingCondition(msg);
-      return { originCondition } as const;
-    }
-    case StacksTransactionAuthType.AuthSponsored: {
-      const originCondition = parseStacksTransactionAuthSpendingCondition(msg);
-      const sponsorCondition = parseStacksTransactionAuthSpendingCondition(msg);
-      return { originCondition, sponsorCondition } as const;
-    }
-    default:
-      throw new Error(`Unknown auth type: ${authType}`);
-  }
-}
-
-const HashMode = {
-  P2PKH: 0x00, // singlesig
-  P2WPKH: 0x02, // singlesig
-  P2SH: 0x01, // multisig
-  P2WSH: 0x03, // multisig
-  OrderIndependentP2SH: 0x05, // order independent multisig
-  OrderIndependentP2WSH: 0x07, // order independent multisig
-} as const;
-
-const TransactionAuthFieldID = {
-  PublicKeyCompressed: 0x00,
-  PublicKeyUncompressed: 0x01,
-  SignatureCompressed: 0x02,
-  SignatureUncompressed: 0x03,
-} as const;
-
-function parseStacksTransactionAuthSpendingCondition(msg: BufferCursor) {
-  const hashMode = msg.readU8Enum(HashMode);
-  switch (hashMode) {
-    case HashMode.P2PKH:
-    case HashMode.P2WPKH: {
-      const signer = msg.readBytes(20);
-      const nonce = msg.readU64BE();
-      const txFee = msg.readU64BE();
-      const keyEncoding = msg.readU8();
-      const signature = msg.readBytes(65);
-      return { signer, nonce, txFee, keyEncoding, signature } as const;
-    }
-    case HashMode.P2SH:
-    case HashMode.P2WSH: {
-      const signer = msg.readBytes(20);
-      const nonce = msg.readU64BE();
-      const txFee = msg.readU64BE();
-      const fields = msg.readArray(parseTransactionAuthField);
-      const signaturesRequired = msg.readU16BE();
-      return { signer, nonce, txFee, fields, signaturesRequired } as const;
-    }
-    case HashMode.OrderIndependentP2SH:
-    case HashMode.OrderIndependentP2WSH: {
-      const signer = msg.readBytes(20);
-      const nonce = msg.readU64BE();
-      const txFee = msg.readU64BE();
-      const fields = msg.readArray(parseTransactionAuthField);
-      const signaturesRequired = msg.readU16BE();
-      return { signer, nonce, txFee, fields, signaturesRequired } as const;
-    }
-    default:
-      throw new Error(`Unknown hash mode: ${hashMode}`);
-  }
-}
-
-function parseTransactionAuthField(msg: BufferCursor) {
-  const fieldId = msg.readU8Enum(TransactionAuthFieldID);
-  switch (fieldId) {
-    case TransactionAuthFieldID.PublicKeyCompressed:
-      return { compressed: true, pubkey: msg.readBytes(33) };
-    case TransactionAuthFieldID.PublicKeyUncompressed:
-      return { compressed: false, pubkey: msg.readBytes(33) };
-    case TransactionAuthFieldID.SignatureCompressed: 
-      return { compressed: true, signature: msg.readBytes(65) };
-    case TransactionAuthFieldID.SignatureUncompressed:
-      return { compressed: false, signature: msg.readBytes(65) };
-    default:
-      throw new Error(`Unknown field ID: ${fieldId}`);
-  }
+function parseStacksTransaction(cursor: BufferCursor) {
+  const bytesReader = new BytesReader(cursor.buffer);
+  const stacksTransaction = deserializeTransaction(bytesReader);
+  cursor.buffer = cursor.buffer.subarray(bytesReader.consumed);
+  return stacksTransaction;
 }
 
 // https://github.com/stacks-network/stacks-core/blob/30acb47f0334853def757b877773ae3ec45c6ba5/stackslib/src/chainstate/nakamoto/mod.rs#L696-L711
-function parseNakamotoBlockHeader(msg: BufferCursor) {
-  const version = msg.readU8();
-  const chainLength = msg.readU64BE();
-  const burnSpent = msg.readU64BE();
-  const consensusHash = msg.readBytes(20);
-  const parentBlockId = msg.readBytes(32);
-  const txMerkleRoot = msg.readBytes(32);
-  const stateIndexRoot = msg.readBytes(32);
-  const timestamp = msg.readU64BE();
-  const minerSignature = msg.readBytes(65);
-  const signerSignature = msg.readArray(c => c.readBytes(65));
-  const poxTreatment = msg.readBitVec();
+function parseNakamotoBlockHeader(cursor: BufferCursor) {
+  const version = cursor.readU8();
+  const chainLength = cursor.readU64BE();
+  const burnSpent = cursor.readU64BE();
+  const consensusHash = cursor.readBytes(20).toString('hex');
+  const parentBlockId = cursor.readBytes(32).toString('hex');
+  const txMerkleRoot = cursor.readBytes(32).toString('hex');
+  const stateIndexRoot = cursor.readBytes(32).toString('hex');
+  const timestamp = cursor.readU64BE();
+  const minerSignature = cursor.readBytes(65).toString('hex');
+  const signerSignature = cursor.readArray(c => c.readBytes(65).toString('hex'));
+  const poxTreatment = cursor.readBitVec();
 
   return {
     version,

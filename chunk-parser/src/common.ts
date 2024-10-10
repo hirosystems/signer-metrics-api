@@ -9,11 +9,30 @@ export interface ModifiedSlot {
   sig: string; // hex string (65 bytes)
 }
 
+export interface StackerDbChunk {
+  contract_id: {
+    issuer: [number, number[]];
+    name: string;
+  };
+  modified_slots: ModifiedSlot[];
+}
+
 /** Convert a u32 integer into a 4 byte big-endian buffer */
 export function toU32BeBytes(num: number): Buffer {
   const buf = Buffer.alloc(4);
   buf.writeUInt32BE(num, 0);
   return buf;
+}
+
+export function getEnumName<T extends Record<string | number, string | number>, V extends T[keyof T]>(
+  enumObj: T,
+  value: V
+): Extract<keyof T, string> {
+  const key = Object.keys(enumObj).find((key) => enumObj[key] === value) as Extract<keyof T, string> | undefined;
+  if (!key) {
+    throw new Error(`Value ${value} is not a valid enum value.`);
+  }
+  return key;
 }
 
 export class BufferCursor {
@@ -29,7 +48,7 @@ export class BufferCursor {
     return val;
   }
 
-  readU8Enum<T extends Record<string, number>>(enumObj: T): T[keyof T] {
+  readU8Enum<T extends Record<string | number, string | number>>(enumObj: T): T[keyof T] {
     const value = this.readU8();
     if (Object.values(enumObj).includes(value)) {
       return value as T[keyof T];
@@ -62,23 +81,17 @@ export class BufferCursor {
     return val;
   }
 
-  readBitVec(): boolean[] {
-    const len = this.readU16BE();
-    const byteLen = Math.ceil(len / 8);
-    const bitVecBytes = this.readBytes(byteLen);
-    return Array.from({ length: len }, (_, i) =>
-      (bitVecBytes[Math.floor(i / 8)] & (1 << (i % 8))) !== 0
-    );
+  readBitVec(): string {
+    const bitVecLength = this.readU16BE();
+    const dataVecLength = this.readU32BE();
+    const bitVecBytes = this.readBytes(dataVecLength);
+    return Array.from({ length: bitVecLength }, (_, i) =>
+      (bitVecBytes[Math.floor(i / 8)] & (1 << (i % 8))) !== 0 ? "1" : "0"
+    ).join('');
   }
 
   readArray<T>(readArrayItem: (reader: this) => T): T[] {
     return Array.from({ length: this.readU32BE() }, () => readArrayItem(this));
-  }
-
-  readUtf8String(): string {
-    const len = this.readU8();
-    const bytes = this.readBytes(len);
-    return bytes.toString('utf8');
   }
 
   /** Used for silly encodings like `write(myString.as_bytes().to_vec())` which forces a u32 vec length prefix */

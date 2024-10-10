@@ -1,5 +1,12 @@
-import eventSamples from './event-samples.json' with { type: 'json' };
+import fs from 'node:fs';
 import { recoverPubkey } from './recover-slot-pubkey';
+import { parseSignerMessage } from './signer-message';
+import { StackerDbChunk } from './common';
+
+const fullEventsJson = JSON.parse(fs.readFileSync('../testing/sample-events.json', 'utf8'));
+const eventSamples: StackerDbChunk[] = fullEventsJson
+  .filter((e: any) => e[2] === '/stackerdb_chunks')
+  .map((e: any) => e[3]);
 
 const stackerDbChunkMessages = eventSamples.map((event) => {
   return event.modified_slots.map((slot) => ({
@@ -8,12 +15,14 @@ const stackerDbChunkMessages = eventSamples.map((event) => {
   }));
 }).flat();
 
-const pubKeys = stackerDbChunkMessages.map(msg => {
+const parsedMessages = stackerDbChunkMessages.map(msg => { 
   return {
     pubkey: recoverPubkey(msg).pubkey,
-    ...msg
+    parsedData: parseSignerMessage(Buffer.from(msg.data, 'hex')), 
+    ...msg 
   };
 });
 
-console.log(pubKeys);
-
+parsedMessages.forEach(msg => {
+  console.log(msg.parsedData);
+});

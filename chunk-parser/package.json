@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@noble/secp256k1": "^2.1.0",
+    "@stacks/transactions": "^6.16.1",
     "@types/node": "^22.7.5"
   },
   "devDependencies": {
