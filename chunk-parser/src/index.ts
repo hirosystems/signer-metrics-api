@@ -24,5 +24,8 @@ const parsedMessages = stackerDbChunkMessages.map(msg => {
 });
 
 parsedMessages.forEach(msg => {
-  console.log(msg.parsedData);
+  console.log({
+    pupkey: msg.pubkey,
+    ...msg.parsedData,
+  });
 });

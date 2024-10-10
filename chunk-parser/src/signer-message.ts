@@ -65,7 +65,7 @@ function parseBlockResponse(cursor: BufferCursor) {
     case BlockResponseTypePrefix.Accepted: {
       const blockHash = cursor.readBytes(32).toString('hex');
       const sig = cursor.readBytes(65).toString('hex');
-      return { type: 'accepted', hash: blockHash, sig } as const;
+      return { type: 'accepted', blockHash, sig } as const;
     }
     case BlockResponseTypePrefix.Rejected: {
       const reason = cursor.readVecString();
