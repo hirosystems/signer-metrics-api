@@ -9,7 +9,7 @@ function authDigest(slot: ModifiedSlot): Buffer {
   hasher.update(toU32BeBytes(slot.slot_version));
 
   // Calculate the hash of the chunk bytes. This is the SHA512/256 hash of the data
-  const dataHash = crypto.hash('sha512-256', slot.data, 'buffer');
+  const dataHash = crypto.hash('sha512-256', Buffer.from(slot.data, 'hex'), 'buffer');
   hasher.update(dataHash);
 
   return hasher.digest();
