@@ -113,7 +113,7 @@ function parseBlockResponseRejectCode(cursor: BufferCursor) {
       const validateRejectCode = cursor.readU8Enum(ValidateRejectCode);
       return {
         rejectCode: getEnumName(RejectCodeTypePrefix, rejectCode),
-        validateRejectCode,
+        validateRejectCode: getEnumName(ValidateRejectCode, validateRejectCode),
       } as const;
     }
     case RejectCodeTypePrefix.ConnectivityIssues:
