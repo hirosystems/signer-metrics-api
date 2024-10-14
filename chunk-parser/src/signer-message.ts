@@ -1,5 +1,6 @@
-import { BufferCursor, getEnumName } from "./common";
+import { BufferCursor, BufferWriter, getEnumName } from "./common";
 import { deserializeTransaction, BytesReader } from '@stacks/transactions';
+import crypto from 'node:crypto';
 
 enum SignerMessageTypePrefix {
   BlockProposal = 0,
@@ -157,8 +158,9 @@ function parseBlockProposal(cursor: BufferCursor) {
 // https://github.com/stacks-network/stacks-core/blob/30acb47f0334853def757b877773ae3ec45c6ba5/stackslib/src/chainstate/nakamoto/mod.rs#L4547-L4550
 function parseNakamotoBlock(cursor: BufferCursor) {
   const header = parseNakamotoBlockHeader(cursor);
+  const blockHash = getNakamotoBlockHash(header);
   const tx = cursor.readArray(parseStacksTransaction);
-  return { header, tx };
+  return { blockHash, header, tx };
 }
 
 // https://github.com/stacks-network/stacks-core/blob/30acb47f0334853def757b877773ae3ec45c6ba5/stackslib/src/chainstate/stacks/transaction.rs#L682-L692
@@ -167,6 +169,23 @@ function parseStacksTransaction(cursor: BufferCursor) {
   const stacksTransaction = deserializeTransaction(bytesReader);
   cursor.buffer = cursor.buffer.subarray(bytesReader.consumed);
   return stacksTransaction;
+}
+
+// https://github.com/stacks-network/stacks-core/blob/a2dcd4c3ffdb625a6478bb2c0b23836bc9c72f9f/stackslib/src/chainstate/nakamoto/mod.rs#L764-L795
+function getNakamotoBlockHash(blockHeader: ReturnType<typeof parseNakamotoBlockHeader>): string {
+  const blockHeaderBytes = new BufferWriter();
+  blockHeaderBytes.writeU8(blockHeader.version);
+  blockHeaderBytes.writeU64BE(blockHeader.chainLength);
+  blockHeaderBytes.writeU64BE(blockHeader.burnSpent);
+  blockHeaderBytes.writeBytes(Buffer.from(blockHeader.consensusHash, 'hex'));
+  blockHeaderBytes.writeBytes(Buffer.from(blockHeader.parentBlockId, 'hex'));
+  blockHeaderBytes.writeBytes(Buffer.from(blockHeader.txMerkleRoot, 'hex'));
+  blockHeaderBytes.writeBytes(Buffer.from(blockHeader.stateIndexRoot, 'hex'));
+  blockHeaderBytes.writeU64BE(blockHeader.timestamp);
+  blockHeaderBytes.writeBytes(Buffer.from(blockHeader.minerSignature, 'hex'));
+  blockHeaderBytes.writeBitVec(blockHeader.poxTreatment);
+  const blockHash = crypto.hash('sha512-256', blockHeaderBytes.buffer, 'hex');
+  return blockHash;
 }
 
 // https://github.com/stacks-network/stacks-core/blob/30acb47f0334853def757b877773ae3ec45c6ba5/stackslib/src/chainstate/nakamoto/mod.rs#L696-L711
