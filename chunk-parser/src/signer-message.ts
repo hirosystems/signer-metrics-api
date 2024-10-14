@@ -159,8 +159,9 @@ function parseBlockProposal(cursor: BufferCursor) {
 function parseNakamotoBlock(cursor: BufferCursor) {
   const header = parseNakamotoBlockHeader(cursor);
   const blockHash = getNakamotoBlockHash(header);
+  const indexBlockHash = getNakamotoIndexBlockHash(blockHash, header.consensusHash);
   const tx = cursor.readArray(parseStacksTransaction);
-  return { blockHash, header, tx };
+  return { blockHash, indexBlockHash, header, tx };
 }
 
 // https://github.com/stacks-network/stacks-core/blob/30acb47f0334853def757b877773ae3ec45c6ba5/stackslib/src/chainstate/stacks/transaction.rs#L682-L692
@@ -169,6 +170,14 @@ function parseStacksTransaction(cursor: BufferCursor) {
   const stacksTransaction = deserializeTransaction(bytesReader);
   cursor.buffer = cursor.buffer.subarray(bytesReader.consumed);
   return stacksTransaction;
+}
+
+// https://github.com/stacks-network/stacks-core/blob/a2dcd4c3ffdb625a6478bb2c0b23836bc9c72f9f/stacks-common/src/types/chainstate.rs#L268-L279
+function getNakamotoIndexBlockHash(blockHash: string, consensusHash: string): string {
+  const hasher = crypto.createHash('sha512-256');
+  hasher.update(Buffer.from(blockHash, 'hex'));
+  hasher.update(Buffer.from(consensusHash, 'hex'));
+  return hasher.digest('hex');
 }
 
 // https://github.com/stacks-network/stacks-core/blob/a2dcd4c3ffdb625a6478bb2c0b23836bc9c72f9f/stackslib/src/chainstate/nakamoto/mod.rs#L764-L795
