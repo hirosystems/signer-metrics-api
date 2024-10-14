@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import util from 'node:util';
 import { recoverPubkey } from './recover-slot-pubkey';
 import { parseSignerMessage } from './signer-message';
 import { StackerDbChunk } from './common';
@@ -18,14 +19,13 @@ const stackerDbChunkMessages = eventSamples.map((event) => {
 const parsedMessages = stackerDbChunkMessages.map(msg => { 
   return {
     pubkey: recoverPubkey(msg).pubkey,
-    parsedData: parseSignerMessage(Buffer.from(msg.data, 'hex')), 
-    ...msg 
+    contract: msg.contract,
+    sig: msg.sig,
+    ...parseSignerMessage(Buffer.from(msg.data, 'hex')), 
   };
 });
 
 parsedMessages.forEach(msg => {
-  console.log({
-    pupkey: msg.pubkey,
-    ...msg.parsedData,
-  });
+  const log = util.inspect(msg, { showHidden: false, depth: null, colors: true })
+  console.log(log);
 });

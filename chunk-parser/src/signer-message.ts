@@ -63,9 +63,9 @@ function parseBlockResponse(cursor: BufferCursor) {
   const typePrefix = cursor.readU8Enum(BlockResponseTypePrefix);
   switch (typePrefix) {
     case BlockResponseTypePrefix.Accepted: {
-      const blockHash = cursor.readBytes(32).toString('hex');
+      const signerSignatureHash = cursor.readBytes(32).toString('hex');
       const sig = cursor.readBytes(65).toString('hex');
-      return { type: 'accepted', blockHash, sig } as const;
+      return { type: 'accepted', signerSignatureHash, sig } as const;
     }
     case BlockResponseTypePrefix.Rejected: {
       const reason = cursor.readVecString();
