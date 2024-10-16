@@ -111,3 +111,18 @@ type Endpoints = [
     };
   }
 ];
+
+
+/*
+## Notes
+
+I think by default these endpoints will return data only for canonical blocks _and_ blocks that have been accepted.
+In the future, we can have something like a query parameter or separate endpoints to include data for non-canonical
+and/or rejected blocks. For now seems out-of-scope for mvp.
+
+Even though we will be receiving responses from signers in real-time, I think these will only show data for blocks
+that have been fully confirmed i.e. from a /new_block event. To do otherwise seems like it would imply that response
+data has an inaccurate level of finality. However, we could have an endpoint (or query param toggle) to show real-time
+voting responses from signers that have not yet been confirmed in a block (probably ouf-of-scope for mvp).
+
+*/
