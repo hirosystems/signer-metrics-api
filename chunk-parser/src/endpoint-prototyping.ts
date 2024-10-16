@@ -75,6 +75,8 @@ type Endpoints = [
         reject_code?: 'ValidationFailed' | 'ConnectivityIssues' | 'RejectedInPriorRound' | 'NoSortitionView' | 'SortitionViewMismatch' | 'TestingDirective';
         /** Set only if `reject_code` is `ValidationFailed` */
         validation_failed_code?: 'BadBlockHash' | 'BadTransaction' | 'InvalidBlock' | 'ChainstateError' | 'UnknownParent' | 'NonCanonicalTenure' | 'NoSuchTenure';
+        /** If the vote was included in the block (miner can assembly blocks as soon as signature threshold is met which can incidentally exclude votes) */
+        included_in_block: boolean;
       }>;
     }
   },
@@ -107,6 +109,8 @@ type Endpoints = [
         reject_code?: 'ValidationFailed' | 'ConnectivityIssues' | 'RejectedInPriorRound' | 'NoSortitionView' | 'SortitionViewMismatch' | 'TestingDirective';
         /** Set only if `reject_code` is `ValidationFailed` */
         validation_failed_code?: 'BadBlockHash' | 'BadTransaction' | 'InvalidBlock' | 'ChainstateError' | 'UnknownParent' | 'NonCanonicalTenure' | 'NoSuchTenure';
+        /** If the vote was included in the block (miner can assembly blocks as soon as signature threshold is met which can incidentally exclude votes) */
+        included_in_block: boolean;
       }>;
     };
   }
