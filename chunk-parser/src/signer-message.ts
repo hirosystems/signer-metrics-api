@@ -59,6 +59,17 @@ enum BlockResponseTypePrefix {
   Rejected = 1
 }
 
+interface SignerMessageMetadata {
+  server_version: string;
+}
+
+function parseSignerMessageMetadata(cursor: BufferCursor): SignerMessageMetadata | null {
+  if (cursor.buffer.length === 0) {
+    return null;
+  }
+  return { server_version: cursor.readVecString() };
+}
+
 // https://github.com/stacks-network/stacks-core/blob/cd702e7dfba71456e4983cf530d5b174e34507dc/libsigner/src/v0/messages.rs#L650
 function parseBlockResponse(cursor: BufferCursor) {
   const typePrefix = cursor.readU8Enum(BlockResponseTypePrefix);
@@ -66,7 +77,8 @@ function parseBlockResponse(cursor: BufferCursor) {
     case BlockResponseTypePrefix.Accepted: {
       const signerSignatureHash = cursor.readBytes(32).toString('hex');
       const sig = cursor.readBytes(65).toString('hex');
-      return { type: 'accepted', signerSignatureHash, sig } as const;
+      const metadata = parseSignerMessageMetadata(cursor);
+      return { type: 'accepted', signerSignatureHash, sig, metadata } as const;
     }
     case BlockResponseTypePrefix.Rejected: {
       const reason = cursor.readVecString();
@@ -74,7 +86,8 @@ function parseBlockResponse(cursor: BufferCursor) {
       const signerSignatureHash = cursor.readBytes(32).toString('hex');
       const chainId = cursor.readU32BE();
       const signature = cursor.readBytes(65).toString('hex');
-      return { type: 'rejected', reason, reasonCode, signerSignatureHash, chainId, signature } as const;
+      const metadata = parseSignerMessageMetadata(cursor);
+      return { type: 'rejected', reason, reasonCode, signerSignatureHash, chainId, signature, metadata } as const;
     }
     default:
       throw new Error(`Unknown block response type prefix: ${typePrefix}`);
