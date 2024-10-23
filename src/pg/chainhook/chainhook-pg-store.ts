@@ -29,37 +29,38 @@ type TodoStacksEvent = StacksEvent & {
 export class ChainhookPgStore extends BasePgStoreModule {
   async processPayload(payload: StacksPayload): Promise<void> {
     await this.sqlWriteTransaction(async sql => {
-      for (const block of payload.rollback) {
-        logger.info(`ChainhookPgStore rollback block ${block.block_identifier.index}`);
-        const time = stopwatch();
-        await this.updateStacksBlock(sql, block, 'rollback');
-        logger.info(
-          `ChainhookPgStore rollback block ${
-            block.block_identifier.index
-          } finished in ${time.getElapsedSeconds()}s`
-        );
-      }
-      if (payload.rollback.length) {
-        const earliestRolledBack = Math.min(...payload.rollback.map(r => r.block_identifier.index));
-        await this.updateChainTipBlockHeight(earliestRolledBack - 1);
-      }
-      for (const block of payload.apply) {
-        if (block.block_identifier.index <= (await this.getLastIngestedBlockHeight())) {
-          logger.info(
-            `ChainhookPgStore skipping previously ingested block ${block.block_identifier.index}`
-          );
-          continue;
-        }
-        logger.info(`ChainhookPgStore apply block ${block.block_identifier.index}`);
-        const time = stopwatch();
-        await this.updateStacksBlock(sql, block, 'apply');
-        await this.updateChainTipBlockHeight(block.block_identifier.index);
-        logger.info(
-          `ChainhookPgStore apply block ${
-            block.block_identifier.index
-          } finished in ${time.getElapsedSeconds()}s`
-        );
-      }
+      logger.info({payload: payload}, 'Received payload');
+      // for (const block of payload.rollback) {
+      //   logger.info(`ChainhookPgStore rollback block ${block.block_identifier.index}`);
+      //   const time = stopwatch();
+      //   await this.updateStacksBlock(sql, block, 'rollback');
+      //   logger.info(
+      //     `ChainhookPgStore rollback block ${
+      //       block.block_identifier.index
+      //     } finished in ${time.getElapsedSeconds()}s`
+      //   );
+      // }
+      // if (payload.rollback.length) {
+      //   const earliestRolledBack = Math.min(...payload.rollback.map(r => r.block_identifier.index));
+      //   await this.updateChainTipBlockHeight(earliestRolledBack - 1);
+      // }
+      // for (const block of payload.apply) {
+      //   if (block.block_identifier.index <= (await this.getLastIngestedBlockHeight())) {
+      //     logger.info(
+      //       `ChainhookPgStore skipping previously ingested block ${block.block_identifier.index}`
+      //     );
+      //     continue;
+      //   }
+      //   logger.info(`ChainhookPgStore apply block ${block.block_identifier.index}`);
+      //   const time = stopwatch();
+      //   await this.updateStacksBlock(sql, block, 'apply');
+      //   await this.updateChainTipBlockHeight(block.block_identifier.index);
+      //   logger.info(
+      //     `ChainhookPgStore apply block ${
+      //       block.block_identifier.index
+      //     } finished in ${time.getElapsedSeconds()}s`
+      //   );
+      // }
     });
   }
 

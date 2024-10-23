@@ -14,43 +14,37 @@ export async function startChainhookServer(args: { db: PgStore }): Promise<Chain
   const blockHeight = await args.db.getChainTipBlockHeight();
   logger.info(`ChainhookServer is at block ${blockHeight}`);
 
+  const network = ENV.NETWORK as 'mainnet' | 'testnet';
   const predicates: EventObserverPredicate[] = [];
   if (ENV.CHAINHOOK_AUTO_PREDICATE_REGISTRATION) {
-    const header = {
-      name: 'signer-monitor-api-blocks',
+    // predicates.push({
+    //   name: 'signer-monitor-api-blocks',
+    //   version: 1,
+    //   chain: 'stacks',
+    //   networks: {
+    //     [network]: {
+    //       startBlock: 1,
+    //       if_this: {
+    //         scope: 'block_height',
+    //         higher_than: 1,
+    //       },
+    //     }
+    //   }
+    // });
+    predicates.push({
+      name: 'signer-monitor-api-messages',
       version: 1,
       chain: 'stacks',
-    };
-    switch (ENV.NETWORK) {
-      case 'mainnet':
-        predicates.push({
-          ...header,
-          networks: {
-            mainnet: {
-              start_block: blockHeight,
-              if_this: {
-                scope: 'block_height',
-                higher_than: 1,
-              },
-            },
+      networks: {
+        [network]: {
+          startBlock: 1,
+          if_this: {
+            scope: 'signer_message',
+            after_timestamp: 1,
           },
-        });
-        break;
-      case 'testnet':
-        predicates.push({
-          ...header,
-          networks: {
-            testnet: {
-              start_block: blockHeight,
-              if_this: {
-                scope: 'block_height',
-                higher_than: 1,
-              },
-            },
-          },
-        });
-        break;
-    }
+        }
+      }
+    });
   }
 
   const observer: EventObserverOptions = {
