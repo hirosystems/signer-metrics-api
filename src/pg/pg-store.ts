@@ -11,7 +11,7 @@ import { ChainhookPgStore } from './chainhook/chainhook-pg-store';
 export const MIGRATIONS_DIR = path.join(__dirname, '../../migrations');
 
 /**
- * Connects and queries the Token Metadata Service's local postgres DB.
+ * Connects and queries the Signer Monitor's local postgres DB.
  */
 export class PgStore extends BasePgStore {
   readonly chainhook: ChainhookPgStore;
