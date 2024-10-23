@@ -61,8 +61,8 @@ const schema = Type.Object({
   PGDATABASE: Type.String(),
   /** Limit to how many concurrent connections can be created */
   PG_CONNECTION_POOL_MAX: Type.Number({ default: 10 }),
-  PG_IDLE_TIMEOUT: Type.Number({ default: 30 }),
-  PG_MAX_LIFETIME: Type.Number({ default: 60 }),
+  PG_IDLE_TIMEOUT: Type.Number({ default: 0 }),
+  PG_MAX_LIFETIME: Type.Number({ default: 0 }),
 });
 type Env = Static<typeof schema>;
 
