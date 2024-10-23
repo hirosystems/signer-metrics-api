@@ -18,7 +18,7 @@ export function up(pgm: MigrationBuilder): void {
       notNull: true,
     },
     block_hash: {
-      type: 'text',
+      type: 'bytea',
       notNull: true,
     },
     block_time: {
@@ -26,7 +26,7 @@ export function up(pgm: MigrationBuilder): void {
       notNull: true,
     },
     index_block_hash: {
-      type: 'text',
+      type: 'bytea',
       notNull: true,
     },
     burn_block_height: {
@@ -34,7 +34,7 @@ export function up(pgm: MigrationBuilder): void {
       notNull: true,
     },
     burn_block_hash: {
-      type: 'text',
+      type: 'bytea',
       notNull: true,
     },
   });

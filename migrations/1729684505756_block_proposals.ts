@@ -14,7 +14,7 @@ export function up(pgm: MigrationBuilder): void {
       notNull: true,
     },
     miner_key: {
-      type: 'text',
+      type: 'bytea',
       notNull: true,
     },
     block_height: {
@@ -26,11 +26,11 @@ export function up(pgm: MigrationBuilder): void {
       notNull: true,
     },
     block_hash: {
-      type: 'text',
+      type: 'bytea',
       notNull: true,
     },
     index_block_hash: {
-      type: 'text',
+      type: 'bytea',
       notNull: true,
     },
   });

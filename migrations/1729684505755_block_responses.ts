@@ -14,7 +14,7 @@ export function up(pgm: MigrationBuilder): void {
       notNull: true,
     },
     signer_key: {
-      type: 'text',
+      type: 'bytea',
       notNull: true,
     },
     accepted: {
@@ -22,7 +22,7 @@ export function up(pgm: MigrationBuilder): void {
       notNull: true,
     },
     signer_sighash: {
-      type: 'text',
+      type: 'bytea',
       primaryKey: true,
     },
     metadata_server_version: {
@@ -30,7 +30,7 @@ export function up(pgm: MigrationBuilder): void {
       notNull: true,
     },
     signature: {
-      type: 'text',
+      type: 'bytea',
       notNull: true,
     },
 

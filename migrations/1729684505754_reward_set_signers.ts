@@ -22,7 +22,7 @@ export function up(pgm: MigrationBuilder): void {
       notNull: true,
     },
     signer_key: {
-      type: 'text',
+      type: 'bytea',
       notNull: true,
     },
     signer_weight: {

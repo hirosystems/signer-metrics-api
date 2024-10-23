@@ -4,21 +4,24 @@ import { MigrationBuilder, ColumnDefinitions } from 'node-pg-migrate';
 export const shorthands: ColumnDefinitions | undefined = undefined;
 
 export function up(pgm: MigrationBuilder): void {
-  pgm.createTable('block_signer_signatures', {
+  pgm.createTable('chain_tip', {
     id: {
-      type: 'serial',
+      type: 'boolean',
       primaryKey: true,
+      default: true,
     },
     block_height: {
       type: 'integer',
       notNull: true,
-    },
-    signer_signature: {
-      type: 'bytea',
-      notNull: true,
+      default: 1,
     },
   });
+  // Ensure only a single row can exist
+  pgm.addConstraint('chain_tip', 'chain_tip_one_row', 'CHECK(id)');
+  // Create the single row
+  pgm.sql('INSERT INTO chain_tip VALUES(DEFAULT)');
+}
 
-  pgm.createIndex('block_signer_signatures', ['signer_signature']);
-  pgm.createIndex('block_signer_signatures', ['block_height']);
+export function down(pgm: MigrationBuilder): void {
+  pgm.dropTable('chain_tip');
 }
