@@ -6,8 +6,7 @@ export const OpenApiSchemaOptions: SwaggerOptions = {
   openapi: {
     info: {
       title: 'Signer Monitor API',
-      description:
-        'Welcome to the API reference overview for the Signer Monitor API.',
+      description: 'Welcome to the API reference overview for the Signer Monitor API.',
       version: SERVER_VERSION.tag,
     },
     externalDocs: {

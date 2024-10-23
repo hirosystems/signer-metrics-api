@@ -1,10 +1,5 @@
 import { ENV } from '../env';
-import {
-  BasePgStore,
-  PgSqlClient,
-  connectPostgres,
-  runMigrations,
-} from '@hirosystems/api-toolkit';
+import { BasePgStore, PgSqlClient, connectPostgres, runMigrations } from '@hirosystems/api-toolkit';
 import * as path from 'path';
 import { ChainhookPgStore } from './chainhook/chainhook-pg-store';
 
@@ -48,5 +43,4 @@ export class PgStore extends BasePgStore {
     const result = await this.sql<{ block_height: number }[]>`SELECT block_height FROM chain_tip`;
     return result[0].block_height;
   }
-
 }

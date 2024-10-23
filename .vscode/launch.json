@@ -18,6 +18,7 @@
         "NODE_ENV": "development",
         "TS_NODE_SKIP_IGNORE": "true",
         "CHAINHOOK_NODE_AUTH_TOKEN": "test",
+        "EXTERNAL_HOSTNAME": "host.docker.internal",
         "NETWORK": "devnet",
         "PGDATABASE": "postgres",
         "PGHOST": "localhost",

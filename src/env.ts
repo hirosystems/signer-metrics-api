@@ -14,7 +14,10 @@ const schema = Type.Object({
     { default: 'default' }
   ),
   /** Specifies which Stacks network this API is indexing */
-  NETWORK: Type.Enum({ mainnet: 'mainnet', testnet: 'testnet', devnet: 'devnet' }, { default: 'mainnet' }),
+  NETWORK: Type.Enum(
+    { mainnet: 'mainnet', testnet: 'testnet', devnet: 'devnet' },
+    { default: 'mainnet' }
+  ),
   /** Hosname of the API server */
   API_HOST: Type.String({ default: '0.0.0.0' }),
   /** Port in which to serve the API */
@@ -29,7 +32,7 @@ const schema = Type.Object({
   PROMETHEUS_PORT: Type.Number({ default: 9154 }),
   /** Port in which to serve the profiler */
   PROFILER_PORT: Type.Number({ default: 9119 }),
-  
+
   /** Hostname of the chainhook node we'll use to register predicates */
   CHAINHOOK_NODE_RPC_HOST: Type.String({ default: '127.0.0.1' }),
   /** Control port of the chainhook node */

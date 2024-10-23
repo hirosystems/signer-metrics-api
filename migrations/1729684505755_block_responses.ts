@@ -46,7 +46,7 @@ export function up(pgm: MigrationBuilder): void {
     },
     chain_id: {
       type: 'integer',
-    }
+    },
   });
 
   pgm.createIndex('block_responses', ['signer_key']);

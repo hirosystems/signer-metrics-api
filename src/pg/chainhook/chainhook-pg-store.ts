@@ -17,13 +17,15 @@ type TodoStacksEvent = StacksEvent & {
     cycle_number: number | null;
     reward_set: {
       pox_ustx_threshold: string;
-      signers: {
-        signing_key: string;
-        weight: number;
-        stacked_amt: string;
-      }[] | null;
+      signers:
+        | {
+            signing_key: string;
+            weight: number;
+            stacked_amt: string;
+          }[]
+        | null;
     } | null;
-  }
+  };
 };
 
 export class ChainhookPgStore extends BasePgStoreModule {
@@ -62,7 +64,6 @@ export class ChainhookPgStore extends BasePgStoreModule {
       }
     });
   }
-
 
   async updateChainTipBlockHeight(blockHeight: number): Promise<void> {
     await this.sql`UPDATE chain_tip SET block_height = ${blockHeight}`;
@@ -135,12 +136,13 @@ export class ChainhookPgStore extends BasePgStoreModule {
     await sql`
       INSERT INTO blocks ${sql(dbBlock)}
     `;
-    logger.info(
-      `ChainhookPgStore apply block ${dbBlock.block_height} ${dbBlock.block_hash}`
-    );
+    logger.info(`ChainhookPgStore apply block ${dbBlock.block_height} ${dbBlock.block_hash}`);
   }
 
-  private async insertBlockSignerSignatures(sql: PgSqlClient, signerSigs: DbBlockSignerSignature[]) {
+  private async insertBlockSignerSignatures(
+    sql: PgSqlClient,
+    signerSigs: DbBlockSignerSignature[]
+  ) {
     for await (const batch of batchIterate(signerSigs, 500)) {
       await sql`
         INSERT INTO block_signer_signatures ${sql(batch)}
@@ -167,9 +169,7 @@ export class ChainhookPgStore extends BasePgStoreModule {
     const res = await sql`
       DELETE FROM blocks WHERE block_height = ${blockHeight}
     `;
-    logger.info(
-      `ChainhookPgStore rollback block ${blockHeight}`
-    );
+    logger.info(`ChainhookPgStore rollback block ${blockHeight}`);
     if (res.count !== 1) {
       logger.warn(`Unexpected number of rows deleted for block ${blockHeight}, ${res.count} rows`);
     }
@@ -206,5 +206,5 @@ function unixTimeSecondsToISO(timestampSeconds: number): string {
 
 /** Ensures a hex string has a `0x` prefix */
 function normalizeHexString(hexString: string): string {
-  return hexString.startsWith('0x') ? hexString : ('0x' + hexString);
+  return hexString.startsWith('0x') ? hexString : '0x' + hexString;
 }
