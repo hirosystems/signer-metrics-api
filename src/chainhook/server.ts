@@ -16,57 +16,34 @@ export async function startChainhookServer(args: { db: PgStore }): Promise<Chain
 
   const predicates: EventObserverPredicate[] = [];
   if (ENV.CHAINHOOK_AUTO_PREDICATE_REGISTRATION) {
-    const header = {
+    predicates.push({
+      name: 'signer-monitor-api-signer-messages',
+      version: 1,
+      chain: 'stacks',
+      networks: {
+        [ENV.NETWORK]: {
+          startBlock: 1,
+          if_this: {
+            scope: 'signer_message',
+            after_timestamp: 1,
+          },
+        },
+      },
+    });
+    predicates.push({
       name: 'signer-monitor-api-blocks',
       version: 1,
       chain: 'stacks',
-    };
-    switch (ENV.NETWORK) {
-      case 'mainnet':
-        predicates.push({
-          ...header,
-          networks: {
-            mainnet: {
-              start_block: blockHeight,
-              if_this: {
-                scope: 'block_height',
-                higher_than: 1,
-              },
-            },
+      networks: {
+        [ENV.NETWORK]: {
+          start_block: blockHeight,
+          if_this: {
+            scope: 'block_height',
+            higher_than: 1,
           },
-        });
-        break;
-      case 'testnet':
-        predicates.push({
-          ...header,
-          networks: {
-            testnet: {
-              start_block: blockHeight,
-              if_this: {
-                scope: 'block_height',
-                higher_than: 1,
-              },
-            },
-          },
-        });
-        break;
-      case 'devnet':
-        predicates.push({
-          ...header,
-          networks: {
-            ['devnet' as 'testnet']: {
-              start_block: blockHeight,
-              if_this: {
-                scope: 'block_height',
-                higher_than: 1,
-              },
-            },
-          },
-        });
-        break;
-      default:
-        throw new Error(`Unsupported network: ${ENV.NETWORK}`);
-    }
+        },
+      },
+    });
   }
 
   const observer: EventObserverOptions = {

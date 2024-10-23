@@ -14,10 +14,7 @@ const schema = Type.Object({
     { default: 'default' }
   ),
   /** Specifies which Stacks network this API is indexing */
-  NETWORK: Type.Enum(
-    { mainnet: 'mainnet', testnet: 'testnet', devnet: 'devnet' },
-    { default: 'mainnet' }
-  ),
+  NETWORK: Type.Enum({ mainnet: 'mainnet', testnet: 'testnet' }, { default: 'mainnet' }),
   /** Hosname of the API server */
   API_HOST: Type.String({ default: '0.0.0.0' }),
   /** Port in which to serve the API */
