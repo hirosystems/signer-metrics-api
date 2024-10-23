@@ -12,19 +12,6 @@ import { DbBlock, DbBlockSignerSignature, DbRewardSetSigner } from '../types';
 type TodoStacksEvent = StacksEvent & {
   metadata: {
     tenure_height: number;
-    block_time: number | null;
-    signer_signature: string[] | null;
-    cycle_number: number | null;
-    reward_set: {
-      pox_ustx_threshold: string;
-      signers:
-        | {
-            signing_key: string;
-            weight: number;
-            stacked_amt: string;
-          }[]
-        | null;
-    } | null;
   };
 };
 
