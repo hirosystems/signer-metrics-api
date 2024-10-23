@@ -50,6 +50,22 @@ export async function startChainhookServer(args: { db: PgStore }): Promise<Chain
           },
         });
         break;
+      case 'devnet':
+        predicates.push({
+          ...header,
+          networks: {
+            ['devnet' as 'testnet']: {
+              start_block: blockHeight,
+              if_this: {
+                scope: 'block_height',
+                higher_than: 1,
+              },
+            },
+          },
+        });
+        break;
+      default:
+        throw new Error(`Unsupported network: ${ENV.NETWORK}`);
     }
   }
 

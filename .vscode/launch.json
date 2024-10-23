@@ -2,7 +2,35 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Launch Program",
+      "type": "node",
+      "request": "launch",
+      "name": "Run",
+      "runtimeArgs": [
+        "-r",
+        "ts-node/register"
+      ],
+      "args": [
+        "${workspaceFolder}/src/index.ts"
+      ],
+      "outputCapture": "std",
+      "internalConsoleOptions": "openOnSessionStart",
+      "env": {
+        "NODE_ENV": "development",
+        "TS_NODE_SKIP_IGNORE": "true",
+        "CHAINHOOK_NODE_AUTH_TOKEN": "test",
+        "NETWORK": "devnet",
+        "PGDATABASE": "postgres",
+        "PGHOST": "localhost",
+        "PGPORT": "5432",
+        "PGUSER": "postgres",
+        "PGPASSWORD": "postgres",
+      },
+      "killBehavior": "polite",
+      "preLaunchTask": "npm: testenv:run",
+      "postDebugTask": "npm: testenv:stop",
+    },
+    {
+      "name": "Chunk parser prototyping",
       "type": "node",
       "request": "launch",
       "program": "${workspaceFolder}/chunk-parser/src/index.ts",
