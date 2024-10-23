@@ -12,7 +12,7 @@ import { DbBlock, DbBlockSignerSignature, DbRewardSetSigner } from '../types';
 type TodoStacksEvent = StacksEvent & {
   metadata: {
     tenure_height: number;
-    block_time: number;
+    block_time: number | null;
     signer_signature: string[] | null;
     cycle_number: number | null;
     reward_set: {
@@ -97,7 +97,7 @@ export class ChainhookPgStore extends BasePgStoreModule {
       burn_block_height: block.metadata.bitcoin_anchor_block_identifier.index,
       burn_block_hash: normalizeHexString(block.metadata.bitcoin_anchor_block_identifier.hash),
       tenure_height: block.metadata.tenure_height,
-      block_time: unixTimeSecondsToISO(block.metadata.block_time),
+      block_time: unixTimeSecondsToISO(block.metadata.block_time ?? 0),
     };
     await this.insertBlock(sql, dbBlock);
 
