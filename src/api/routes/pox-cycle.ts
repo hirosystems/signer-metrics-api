@@ -64,6 +64,12 @@ export const PoxCycleRoutes: FastifyPluginCallback<
                 proposals_missed_count: Type.Integer({
                   description: 'Number of block proposals missed by this signer',
                 }),
+                average_response_time: Type.Number({
+                  description:
+                    'Time duration (in milliseconds) taken to submit responses to block proposals (tracked best effort)',
+                }),
+                // TODO: implement these nice-to-have fields
+                /*
                 mined_blocks_accepted_included_count: Type.Integer({
                   description: 'Number of mined blocks where signer approved and was included',
                 }),
@@ -76,10 +82,7 @@ export const PoxCycleRoutes: FastifyPluginCallback<
                 mined_blocks_missing_count: Type.Integer({
                   description: 'Number of mined blocks where signer was missing',
                 }),
-                average_response_time: Type.Number({
-                  description:
-                    'Time duration (in milliseconds) taken to submit responses to block proposals (tracked best effort)',
-                }),
+                */
               })
             ),
           }),
@@ -105,12 +108,6 @@ export const PoxCycleRoutes: FastifyPluginCallback<
             proposals_rejected_count: result.proposals_rejected_count,
             proposals_missed_count: result.proposals_missed_count,
             average_response_time: result.average_response_time,
-
-            // TODO: implement the sql to get these values
-            mined_blocks_accepted_included_count: 0,
-            mined_blocks_accepted_excluded_count: 0,
-            mined_blocks_rejected_count: 0,
-            mined_blocks_missing_count: 0,
           };
         });
 
