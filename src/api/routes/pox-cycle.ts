@@ -48,8 +48,9 @@ export const PoxCycleRoutes: FastifyPluginCallback<
                 weight_percentage: Type.Number({
                   description: 'Voting weight percent (weight / total_weight)',
                 }),
-                stacked_amount: Type.Integer({
-                  description: 'Total STX stacked associated with this signer',
+                stacked_amount: Type.String({
+                  description:
+                    'Total STX stacked associated with this signer (string quoted integer)',
                 }),
                 stacked_amount_percent: Type.Number({
                   description: 'Stacked amount percent (stacked_amount / total_stacked_amount)',
@@ -75,9 +76,9 @@ export const PoxCycleRoutes: FastifyPluginCallback<
                 mined_blocks_missing_count: Type.Integer({
                   description: 'Number of mined blocks where signer was missing',
                 }),
-                average_response_time: Type.Integer({
+                average_response_time: Type.Number({
                   description:
-                    'Time duration (in seconds) taken to submit responses to block proposals (tracked best effort)',
+                    'Time duration (in milliseconds) taken to submit responses to block proposals (tracked best effort)',
                 }),
               })
             ),
