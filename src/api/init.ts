@@ -7,12 +7,14 @@ import FastifyMetrics, { IFastifyMetrics } from 'fastify-metrics';
 import { Server } from 'http';
 import { isProdEnv } from '../helpers';
 import { PINO_LOGGER_CONFIG } from '@hirosystems/api-toolkit';
+import { PoxCycleRoutes } from './routes/pox-cycle';
 
 export const Api: FastifyPluginAsync<Record<never, never>, Server, TypeBoxTypeProvider> = async (
   fastify,
   options
 ) => {
   await fastify.register(StatusRoutes);
+  await fastify.register(PoxCycleRoutes);
 };
 
 export async function buildApiServer(args: { db: PgStore }) {
@@ -26,7 +28,6 @@ export async function buildApiServer(args: { db: PgStore }) {
     await fastify.register(FastifyMetrics, { endpoint: null });
   }
   await fastify.register(FastifyCors);
-  await fastify.register(Api, { prefix: '/signer-monitor/v1' });
   await fastify.register(Api, { prefix: '/signer-monitor' });
 
   return fastify;

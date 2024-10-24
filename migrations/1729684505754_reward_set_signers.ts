@@ -9,6 +9,7 @@ export function up(pgm: MigrationBuilder): void {
       type: 'serial',
       primaryKey: true,
     },
+    // AKA reward_cycle
     cycle_number: {
       type: 'integer',
       notNull: true,

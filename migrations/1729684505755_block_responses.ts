@@ -21,6 +21,7 @@ export function up(pgm: MigrationBuilder): void {
       type: 'boolean',
       notNull: true,
     },
+    // AKA block_hash
     signer_sighash: {
       type: 'bytea',
       primaryKey: true,

@@ -25,6 +25,7 @@ export function up(pgm: MigrationBuilder): void {
       type: 'timestamptz',
       notNull: true,
     },
+    // AKA signer_sighash
     block_hash: {
       type: 'bytea',
       notNull: true,
@@ -37,6 +38,7 @@ export function up(pgm: MigrationBuilder): void {
       type: 'integer',
       notNull: true,
     },
+    // AKA cycle_number
     reward_cycle: {
       type: 'integer',
       notNull: true,
