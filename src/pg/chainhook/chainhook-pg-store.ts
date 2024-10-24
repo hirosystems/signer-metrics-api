@@ -39,6 +39,7 @@ type TodoBlockRejectReason =
   | 'NO_SORTITION_VIEW'
   | 'SORTITION_VIEW_MISMATCH'
   | 'TESTING_DIRECTIVE';
+const RejectReasonValidationFailed = 'VALIDATION_FAILED';
 
 type SignerMessage = Extract<
   StacksPayload['events'][number],
@@ -93,6 +94,8 @@ export class ChainhookPgStore extends BasePgStoreModule {
       for (const event of payload.events) {
         if (event.payload.type === 'SignerMessage') {
           await this.applySignerMessageEvent(sql, event);
+        } else {
+          logger.error(`Unknown chainhook payload event type: ${event.payload.type}`);
         }
       }
     });
@@ -123,9 +126,16 @@ export class ChainhookPgStore extends BasePgStoreModule {
           sql,
           event.received_at_ms,
           event.payload.data.pubkey,
-          event.payload.data.sig,
           event.payload.data.message.data
         );
+        break;
+      }
+      case 'BlockPushed': {
+        logger.info(`Ignoring BlockPushed StackerDB event`);
+        break;
+      }
+      default: {
+        logger.error(event.payload.data, `Unknown StackerDB event type`);
         break;
       }
     }
@@ -154,9 +164,11 @@ export class ChainhookPgStore extends BasePgStoreModule {
     sql: PgSqlClient,
     receivedAt: number,
     signerPubkey: string,
-    signature: string,
     messageData: BlockResponseData
   ) {
+    if (messageData.type !== 'Accepted' && messageData.type !== 'Rejected') {
+      logger.error(messageData, `Unexpected BlockResponse type`);
+    }
     const accepted = messageData.type === 'Accepted';
 
     // TODO: fix this unsafe cast when chainhook-client is updated
@@ -168,10 +180,9 @@ export class ChainhookPgStore extends BasePgStoreModule {
       const rejectReason = messageData.data.reason_code as TodoBlockRejectReason;
       if (typeof rejectReason === 'string') {
         rejectReasonCode = rejectReason;
-      } else if ('VALIDATION_FAILED' in rejectReason) {
-        const validationFailed = 'VALIDATION_FAILED';
-        rejectReasonCode = validationFailed;
-        rejectCode = rejectReason[validationFailed];
+      } else if (RejectReasonValidationFailed in rejectReason) {
+        rejectReasonCode = RejectReasonValidationFailed;
+        rejectCode = rejectReason[RejectReasonValidationFailed];
       }
     }
 
@@ -181,7 +192,7 @@ export class ChainhookPgStore extends BasePgStoreModule {
       accepted: accepted,
       signer_sighash: normalizeHexString(messageData.data.signer_signature_hash),
       metadata_server_version: serverVersion,
-      signature: normalizeHexString(signature),
+      signature: accepted ? normalizeHexString(messageData.data.sig) : null,
       reason_string: accepted ? null : messageData.data.reason,
       reason_code: rejectReasonCode,
       reject_code: rejectCode,

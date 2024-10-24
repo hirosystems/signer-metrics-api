@@ -31,7 +31,7 @@ export type DbBlockResponse = {
   accepted: boolean;
   signer_sighash: PgBytea;
   metadata_server_version: string;
-  signature: PgBytea;
+  signature: PgBytea | null;
   reason_string: string | null;
   reason_code: string | null;
   reject_code: string | null;

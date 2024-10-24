@@ -29,9 +29,10 @@ export function up(pgm: MigrationBuilder): void {
       type: 'text',
       notNull: true,
     },
+
+    // columns for accepted
     signature: {
       type: 'bytea',
-      notNull: true,
     },
 
     // columns for rejected
