@@ -12,6 +12,7 @@ import { DbBlock, DbBlockSignerSignature, DbRewardSetSigner } from '../types';
 type TodoStacksEvent = StacksEvent & {
   metadata: {
     tenure_height: number;
+    signer_public_keys?: string[];
   };
 };
 
@@ -88,9 +89,10 @@ export class ChainhookPgStore extends BasePgStoreModule {
     };
     await this.insertBlock(sql, dbBlock);
 
-    const dbSignerSignatures = block.metadata.signer_signature?.map(sig => {
+    const dbSignerSignatures = block.metadata.signer_signature?.map((sig, i) => {
       const dbSig: DbBlockSignerSignature = {
         block_height: dbBlock.block_height,
+        signer_key: normalizeHexString(block.metadata.signer_public_keys?.[i] ?? '0x'),
         signer_signature: normalizeHexString(sig),
       };
       return dbSig;

@@ -13,12 +13,16 @@ export function up(pgm: MigrationBuilder): void {
       type: 'integer',
       notNull: true,
     },
+    signer_key: {
+      type: 'bytea',
+      notNull: true,
+    },
     signer_signature: {
       type: 'bytea',
       notNull: true,
     },
   });
 
-  pgm.createIndex('block_signer_signatures', ['signer_signature']);
+  pgm.createIndex('block_signer_signatures', ['signer_key']);
   pgm.createIndex('block_signer_signatures', ['block_height']);
 }

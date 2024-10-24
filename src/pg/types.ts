@@ -12,6 +12,7 @@ export type DbBlock = {
 
 export type DbBlockSignerSignature = {
   block_height: number;
+  signer_key: PgBytea;
   signer_signature: PgBytea;
 };
 
