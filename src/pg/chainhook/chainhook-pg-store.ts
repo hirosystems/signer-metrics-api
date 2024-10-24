@@ -174,6 +174,9 @@ export class ChainhookPgStore extends BasePgStoreModule {
     // TODO: fix this unsafe cast when chainhook-client is updated
     const serverVersion = (messageData.data as any).metadata.server_version;
 
+    // TODO: fix this unsafe cast when chainhook-client is updated
+    const signature = (messageData.data as any).signature;
+
     let rejectReasonCode: string | null = null;
     let rejectCode: string | null = null;
     if (!accepted) {
@@ -192,7 +195,7 @@ export class ChainhookPgStore extends BasePgStoreModule {
       accepted: accepted,
       signer_sighash: normalizeHexString(messageData.data.signer_signature_hash),
       metadata_server_version: serverVersion,
-      signature: accepted ? normalizeHexString(messageData.data.sig) : null,
+      signature: signature,
       reason_string: accepted ? null : messageData.data.reason,
       reason_code: rejectReasonCode,
       reject_code: rejectCode,

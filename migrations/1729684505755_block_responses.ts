@@ -29,8 +29,6 @@ export function up(pgm: MigrationBuilder): void {
       type: 'text',
       notNull: true,
     },
-
-    // columns for accepted
     signature: {
       type: 'bytea',
     },
@@ -46,7 +44,7 @@ export function up(pgm: MigrationBuilder): void {
       type: 'text',
     },
     chain_id: {
-      type: 'integer',
+      type: 'bigint',
     },
   });
 
