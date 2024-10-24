@@ -17,6 +17,15 @@ export interface StackerDbChunk {
   modified_slots: ModifiedSlot[];
 }
 
+export interface NewNakamotoBlockMessage {
+  index_block_hash: string;
+  block_height: number;
+  block_hash: string;
+  signer_signature: string[];
+  signer_bitvec: string;
+  signer_signature_hash: string;
+}
+
 /** Convert a u32 integer into a 4 byte big-endian buffer */
 export function toU32BeBytes(num: number): Buffer {
   const buf = Buffer.alloc(4);

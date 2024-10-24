@@ -17,6 +17,7 @@ module.exports = {
     'client/*',
     'coverage/*',
     'dist/*',
+    'chunk-parser/*'
   ],
   plugins: ['@typescript-eslint', 'eslint-plugin-tsdoc', 'prettier'],
   rules: {

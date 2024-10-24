@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import * as secp from '@noble/secp256k1';
-import { ModifiedSlot, toU32BeBytes } from './common';
+import { ModifiedSlot, NewNakamotoBlockMessage, toU32BeBytes } from './common';
 
 /** Get the digest to sign that authenticates this chunk data and metadata */
 function authDigest(slot: ModifiedSlot): Buffer {
@@ -15,7 +15,7 @@ function authDigest(slot: ModifiedSlot): Buffer {
   return hasher.digest();
 }
 
-export function recoverPubkey(slot: ModifiedSlot): { pubkey: string; pubkeyHash: string; } {
+export function recoverChunkSlotPubkey(slot: ModifiedSlot): { pubkey: string; pubkeyHash: string; } {
   const digest = authDigest(slot);
   const sigBuff = Buffer.from(slot.sig, 'hex');
 
@@ -33,6 +33,22 @@ export function recoverPubkey(slot: ModifiedSlot): { pubkey: string; pubkeyHash:
   };
 }
 
+export function recoverBlockSignerPubkeys(block: NewNakamotoBlockMessage): string[] {
+  const sigHash = Buffer.from(block.signer_signature_hash.replace(/^0x/, ''), 'hex');
+  
+  return block.signer_signature.map((signerSig) => {
+    const signerSigBuff = Buffer.from(signerSig.replace(/^0x/, ''), 'hex');
+    const recid = signerSigBuff[0]; // recovery ID (first byte of the signature)
+    const sig = signerSigBuff.subarray(1); // actual signature (remaining 64 bytes)
+
+    const pubkey = secp.Signature
+      .fromCompact(sig)
+      .addRecoveryBit(recid)
+      .recoverPublicKey(sigHash);
+
+    return pubkey.toHex();
+  });
+}
 
 /*
 
