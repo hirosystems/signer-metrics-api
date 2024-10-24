@@ -6,7 +6,13 @@ import {
   stopwatch,
 } from '@hirosystems/api-toolkit';
 import { StacksEvent, StacksPayload } from '@hirosystems/chainhook-client';
-import { DbBlock, DbBlockSignerSignature, DbRewardSetSigner } from '../types';
+import {
+  DbBlock,
+  DbBlockProposal,
+  DbBlockResponse,
+  DbBlockSignerSignature,
+  DbRewardSetSigner,
+} from '../types';
 
 // TODO: update chainhook-client types to get rid of this
 type TodoStacksEvent = StacksEvent & {
@@ -15,6 +21,39 @@ type TodoStacksEvent = StacksEvent & {
     signer_public_keys?: string[];
   };
 };
+
+// TODO: update chainhook-client types to get rid of this
+type TodoBlockRejectReason =
+  | {
+      VALIDATION_FAILED:
+        | 'BAD_BLOCK_HASH'
+        | 'BAD_TRANSACTION'
+        | 'INVALID_BLOCK'
+        | 'CHAINSTATE_ERROR'
+        | 'UNKNOWN_PARENT'
+        | 'NON_CANONICAL_TENURE'
+        | 'NO_SUCH_TENURE';
+    }
+  | 'CONNECTIVITY_ISSUES'
+  | 'REJECTED_IN_PRIOR_ROUND'
+  | 'NO_SORTITION_VIEW'
+  | 'SORTITION_VIEW_MISMATCH'
+  | 'TESTING_DIRECTIVE';
+
+type SignerMessage = Extract<
+  StacksPayload['events'][number],
+  { payload: { type: 'SignerMessage' } }
+>;
+
+type BlockProposalData = Extract<
+  SignerMessage['payload']['data']['message'],
+  { type: 'BlockProposal' }
+>['data'];
+
+type BlockResponseData = Extract<
+  SignerMessage['payload']['data']['message'],
+  { type: 'BlockResponse' }
+>['data'];
 
 export class ChainhookPgStore extends BasePgStoreModule {
   async processPayload(payload: StacksPayload): Promise<void> {
@@ -50,6 +89,12 @@ export class ChainhookPgStore extends BasePgStoreModule {
           } finished in ${time.getElapsedSeconds()}s`
         );
       }
+
+      for (const event of payload.events) {
+        if (event.payload.type === 'SignerMessage') {
+          await this.applySignerMessageEvent(sql, event);
+        }
+      }
     });
   }
 
@@ -60,6 +105,91 @@ export class ChainhookPgStore extends BasePgStoreModule {
   private async getLastIngestedBlockHeight(): Promise<number> {
     const result = await this.sql<{ block_height: number }[]>`SELECT block_height FROM chain_tip`;
     return result[0].block_height;
+  }
+
+  private async applySignerMessageEvent(sql: PgSqlClient, event: SignerMessage) {
+    switch (event.payload.data.message.type) {
+      case 'BlockProposal': {
+        await this.applyBlockProposal(
+          sql,
+          event.received_at_ms,
+          event.payload.data.pubkey,
+          event.payload.data.message.data
+        );
+        break;
+      }
+      case 'BlockResponse': {
+        await this.applyBlockResponse(
+          sql,
+          event.received_at_ms,
+          event.payload.data.pubkey,
+          event.payload.data.sig,
+          event.payload.data.message.data
+        );
+        break;
+      }
+    }
+  }
+
+  private async applyBlockProposal(
+    sql: PgSqlClient,
+    receivedAt: number,
+    minerPubkey: string,
+    messageData: BlockProposalData
+  ) {
+    const dbBlockProposal: DbBlockProposal = {
+      received_at: unixTimeMillisecondsToISO(receivedAt),
+      miner_key: normalizeHexString(minerPubkey),
+      block_height: messageData.block.header.chain_length,
+      block_time: unixTimeSecondsToISO(messageData.block.header.timestamp),
+      block_hash: normalizeHexString(messageData.block.block_hash),
+      index_block_hash: normalizeHexString(messageData.block.index_block_hash),
+    };
+    await sql`
+      INSERT INTO block_proposals ${sql(dbBlockProposal)}
+    `;
+  }
+
+  private async applyBlockResponse(
+    sql: PgSqlClient,
+    receivedAt: number,
+    signerPubkey: string,
+    signature: string,
+    messageData: BlockResponseData
+  ) {
+    const accepted = messageData.type === 'Accepted';
+
+    // TODO: fix this unsafe cast when chainhook-client is updated
+    const serverVersion = (messageData.data as any).metadata.server_version;
+
+    let rejectReasonCode: string | null = null;
+    let rejectCode: string | null = null;
+    if (!accepted) {
+      const rejectReason = messageData.data.reason_code as TodoBlockRejectReason;
+      if (typeof rejectReason === 'string') {
+        rejectReasonCode = rejectReason;
+      } else if ('VALIDATION_FAILED' in rejectReason) {
+        const validationFailed = 'VALIDATION_FAILED';
+        rejectReasonCode = validationFailed;
+        rejectCode = rejectReason[validationFailed];
+      }
+    }
+
+    const dbBlockProposal: DbBlockResponse = {
+      received_at: unixTimeMillisecondsToISO(receivedAt),
+      signer_key: normalizeHexString(signerPubkey),
+      accepted: accepted,
+      signer_sighash: normalizeHexString(messageData.data.signer_signature_hash),
+      metadata_server_version: serverVersion,
+      signature: normalizeHexString(signature),
+      reason_string: accepted ? null : messageData.data.reason,
+      reason_code: rejectReasonCode,
+      reject_code: rejectCode,
+      chain_id: accepted ? null : messageData.data.chain_id,
+    };
+    await sql`
+      INSERT INTO block_responses ${sql(dbBlockProposal)}
+    `;
   }
 
   private async updateStacksBlock(

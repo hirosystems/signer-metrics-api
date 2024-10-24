@@ -39,10 +39,10 @@ export function up(pgm: MigrationBuilder): void {
       type: 'text',
     },
     reason_code: {
-      type: 'smallint',
+      type: 'text',
     },
     reject_code: {
-      type: 'smallint',
+      type: 'text',
     },
     chain_id: {
       type: 'integer',

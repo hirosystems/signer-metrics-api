@@ -33,8 +33,8 @@ export type DbBlockResponse = {
   metadata_server_version: string;
   signature: PgBytea;
   reason_string: string | null;
-  reason_code: number | null;
-  reject_code: number | null;
+  reason_code: string | null;
+  reject_code: string | null;
   chain_id: number | null;
 };
 
