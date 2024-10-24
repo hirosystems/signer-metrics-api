@@ -33,10 +33,19 @@ export function up(pgm: MigrationBuilder): void {
       type: 'bytea',
       notNull: true,
     },
+    burn_block_height: {
+      type: 'integer',
+      notNull: true,
+    },
+    reward_cycle: {
+      type: 'integer',
+      notNull: true,
+    },
   });
 
   pgm.createIndex('block_proposals', ['received_at']);
   pgm.createIndex('block_proposals', ['block_height']);
   pgm.createIndex('block_proposals', ['block_hash']);
   pgm.createIndex('block_proposals', ['index_block_hash']);
+  pgm.createIndex('block_proposals', ['reward_cycle']);
 }

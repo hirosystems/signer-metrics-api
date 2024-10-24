@@ -154,6 +154,8 @@ export class ChainhookPgStore extends BasePgStoreModule {
       block_time: unixTimeSecondsToISO(messageData.block.header.timestamp),
       block_hash: normalizeHexString(messageData.block.block_hash),
       index_block_hash: normalizeHexString(messageData.block.index_block_hash),
+      reward_cycle: messageData.reward_cycle,
+      burn_block_height: messageData.burn_height,
     };
     await sql`
       INSERT INTO block_proposals ${sql(dbBlockProposal)}

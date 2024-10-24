@@ -45,4 +45,6 @@ export type DbBlockProposal = {
   block_time: string;
   block_hash: PgBytea;
   index_block_hash: PgBytea;
+  burn_block_height: number;
+  reward_cycle: number;
 };
