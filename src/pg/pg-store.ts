@@ -63,7 +63,7 @@ export class PgStore extends BasePgStore {
     >`
       WITH signer_data AS (
         -- Fetch the signers for the given cycle
-        SELECT 
+        SELECT
           rss.signer_key,
           rss.signer_weight,
           rss.signer_stacked_amount
@@ -72,9 +72,9 @@ export class PgStore extends BasePgStore {
       ),
       proposal_data AS (
         -- Fetch the first (oldest) proposal for each block_hash for the given cycle
-        SELECT 
-          bp.block_hash, 
-          bp.block_height, 
+        SELECT
+          bp.block_hash,
+          bp.block_height,
           bp.received_at AS proposal_received_at
         FROM block_proposals bp
         WHERE bp.reward_cycle = ${cycleNumber}
@@ -128,7 +128,7 @@ export class PgStore extends BasePgStore {
         FROM signer_proposal_data spd
         GROUP BY spd.signer_key
       )
-      SELECT 
+      SELECT
         encode(sd.signer_key, 'hex') AS signer_key,
         sd.signer_weight AS weight,
         sd.signer_stacked_amount AS stacked_amount,
@@ -144,5 +144,116 @@ export class PgStore extends BasePgStore {
       ORDER BY sd.signer_weight DESC
     `;
     return dbRewardSetSigners;
+  }
+
+  async getSignerForCycle(cycleNumber: number, signerId: string) {
+    const dbRewardSetSigner = await this.sql<
+      {
+        signer_key: string;
+        weight: number;
+        weight_percentage: number;
+        stacked_amount: string;
+        stacked_amount_percentage: number;
+        stacked_amount_rank: number;
+        proposals_accepted_count: number;
+        proposals_rejected_count: number;
+        proposals_missed_count: number;
+        average_response_time_ms: number;
+      }[]
+    >`
+      WITH signer_data AS (
+        -- Fetch the signer for the given cycle
+        SELECT
+          rss.signer_key,
+          rss.signer_weight,
+          rss.signer_stacked_amount
+        FROM reward_set_signers rss
+        WHERE rss.cycle_number = ${cycleNumber}
+          AND encode(rss.signer_key, 'hex') = ${signerId}
+      ),
+      proposal_data AS (
+        -- Fetch the first (oldest) proposal for each block_hash for the given cycle
+        SELECT
+          bp.block_hash,
+          bp.block_height,
+          bp.received_at AS proposal_received_at
+        FROM block_proposals bp
+        WHERE bp.reward_cycle = ${cycleNumber}
+          AND bp.id = (
+            -- Select the earliest proposal for each block_hash
+            SELECT MIN(sub_bp.id)
+            FROM block_proposals sub_bp
+            WHERE sub_bp.block_hash = bp.block_hash
+          )
+      ),
+      response_data AS (
+        -- Fetch the first (oldest) response for each (signer_key, signer_sighash) pair
+        SELECT DISTINCT ON (br.signer_key, br.signer_sighash)
+          br.signer_key,
+          br.signer_sighash,
+          br.accepted,
+          br.received_at,
+          br.id
+        FROM block_responses br
+        WHERE br.id = (
+          -- Select the earliest response for each signer_sighash and signer_key
+          SELECT MIN(sub_br.id)
+          FROM block_responses sub_br
+          WHERE sub_br.signer_key = br.signer_key
+            AND sub_br.signer_sighash = br.signer_sighash
+        )
+      ),
+      signer_proposal_data AS (
+        -- Cross join signers with proposals and left join filtered responses
+        SELECT
+          sd.signer_key,
+          pd.block_hash,
+          pd.proposal_received_at,
+          rd.accepted,
+          rd.received_at AS response_received_at,
+          EXTRACT(MILLISECOND FROM (rd.received_at - pd.proposal_received_at)) AS response_time_ms
+        FROM signer_data sd
+        CROSS JOIN proposal_data pd -- Cross join to associate all signers with all proposals
+        LEFT JOIN response_data rd
+          ON pd.block_hash = rd.signer_sighash
+          AND sd.signer_key = rd.signer_key -- Match signers with their corresponding responses
+      ),
+      aggregated_data AS (
+        -- Aggregate the proposal and response data by signer
+        SELECT
+          spd.signer_key,
+          COUNT(CASE WHEN spd.accepted = true THEN 1 END)::integer AS proposals_accepted_count,
+          COUNT(CASE WHEN spd.accepted = false THEN 1 END)::integer AS proposals_rejected_count,
+          COUNT(CASE WHEN spd.accepted IS NULL THEN 1 END)::integer AS proposals_missed_count,
+          ROUND(AVG(spd.response_time_ms), 3)::float8 AS average_response_time_ms
+        FROM signer_proposal_data spd
+        GROUP BY spd.signer_key
+      ),
+      signer_rank AS (
+        -- Calculate the rank of the signer based on stacked amount
+        SELECT
+          signer_key,
+          RANK() OVER (ORDER BY signer_stacked_amount DESC) AS stacked_amount_rank
+        FROM reward_set_signers
+        WHERE cycle_number = ${cycleNumber}
+      )
+      SELECT
+        encode(sd.signer_key, 'hex') AS signer_key,
+        sd.signer_weight AS weight,
+        sd.signer_stacked_amount AS stacked_amount,
+        ROUND(sd.signer_weight * 100.0 / (SELECT SUM(signer_weight) FROM reward_set_signers WHERE cycle_number = ${cycleNumber}), 3)::float8 AS weight_percentage,
+        ROUND(sd.signer_stacked_amount * 100.0 / (SELECT SUM(signer_stacked_amount) FROM reward_set_signers WHERE cycle_number = ${cycleNumber}), 3)::float8 AS stacked_amount_percentage,
+        sr.stacked_amount_rank,
+        ad.proposals_accepted_count,
+        ad.proposals_rejected_count,
+        ad.proposals_missed_count,
+        COALESCE(ad.average_response_time_ms, 0) AS average_response_time_ms
+      FROM signer_data sd
+      LEFT JOIN aggregated_data ad
+        ON sd.signer_key = ad.signer_key
+      LEFT JOIN signer_rank sr
+        ON sd.signer_key = sr.signer_key
+    `;
+    return dbRewardSetSigner[0];
   }
 }
