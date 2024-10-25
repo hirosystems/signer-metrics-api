@@ -9,7 +9,7 @@ export const CycleRoutes: FastifyPluginCallback<
   TypeBoxTypeProvider
 > = (fastify, options, done) => {
   fastify.get(
-    '/v1/pox-cycle/:cycle_number/signers',
+    '/v1/cycle/:cycle_number/signers',
     {
       schema: {
         operationId: 'getPoxCycleSigners',
