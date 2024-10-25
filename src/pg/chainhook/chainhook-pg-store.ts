@@ -19,31 +19,6 @@ import {
 } from '../types';
 import { normalizeHexString, unixTimeMillisecondsToISO, unixTimeSecondsToISO } from '../../helpers';
 
-// TODO: update chainhook-client types to get rid of this
-type TodoStacksEvent = StacksEvent & {
-  metadata: {
-    tenure_height: number;
-    signer_public_keys?: string[];
-  };
-};
-
-// TODO: update chainhook-client types to get rid of this
-type TodoBlockRejectReason =
-  | {
-      VALIDATION_FAILED:
-        | 'BAD_BLOCK_HASH'
-        | 'BAD_TRANSACTION'
-        | 'INVALID_BLOCK'
-        | 'CHAINSTATE_ERROR'
-        | 'UNKNOWN_PARENT'
-        | 'NON_CANONICAL_TENURE'
-        | 'NO_SUCH_TENURE';
-    }
-  | 'CONNECTIVITY_ISSUES'
-  | 'REJECTED_IN_PRIOR_ROUND'
-  | 'NO_SORTITION_VIEW'
-  | 'SORTITION_VIEW_MISMATCH'
-  | 'TESTING_DIRECTIVE';
 const RejectReasonValidationFailed = 'VALIDATION_FAILED';
 
 type SignerMessage = Extract<
@@ -320,16 +295,10 @@ export class ChainhookPgStore extends BasePgStoreModule {
     }
     const accepted = messageData.type === 'Accepted';
 
-    // TODO: fix this unsafe cast when chainhook-client is updated
-    const serverVersion = (messageData.data as any).metadata.server_version;
-
-    // TODO: fix this unsafe cast when chainhook-client is updated
-    const signature = (messageData.data as any).signature;
-
     let rejectReasonCode: string | null = null;
     let rejectCode: string | null = null;
     if (!accepted) {
-      const rejectReason = messageData.data.reason_code as TodoBlockRejectReason;
+      const rejectReason = messageData.data.reason_code;
       if (typeof rejectReason === 'string') {
         rejectReasonCode = rejectReason;
       } else if (RejectReasonValidationFailed in rejectReason) {
@@ -343,8 +312,8 @@ export class ChainhookPgStore extends BasePgStoreModule {
       signer_key: normalizeHexString(signerPubkey),
       accepted: accepted,
       signer_sighash: normalizeHexString(messageData.data.signer_signature_hash),
-      metadata_server_version: serverVersion,
-      signature: signature,
+      metadata_server_version: messageData.data.metadata.server_version,
+      signature: messageData.data.signature,
       reason_string: accepted ? null : messageData.data.reason,
       reason_code: rejectReasonCode,
       reject_code: rejectCode,
@@ -362,7 +331,7 @@ export class ChainhookPgStore extends BasePgStoreModule {
   ) {
     switch (direction) {
       case 'apply':
-        await this.applyTransactions(sql, block as TodoStacksEvent);
+        await this.applyTransactions(sql, block);
         break;
       case 'rollback':
         await this.rollBackTransactions(sql, block);
@@ -370,7 +339,7 @@ export class ChainhookPgStore extends BasePgStoreModule {
     }
   }
 
-  private async applyTransactions(sql: PgSqlClient, block: TodoStacksEvent) {
+  private async applyTransactions(sql: PgSqlClient, block: StacksEvent) {
     const dbBlock: DbBlock = {
       block_height: block.block_identifier.index,
       block_hash: normalizeHexString(block.metadata.stacks_block_hash),
