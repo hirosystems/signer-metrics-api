@@ -169,7 +169,7 @@ export class PgStore extends BasePgStore {
           rss.signer_stacked_amount
         FROM reward_set_signers rss
         WHERE rss.cycle_number = ${cycleNumber}
-          AND encode(rss.signer_key, 'hex') = ${signerId}
+          AND rss.signer_key = ${normalizeHexString(signerId)}
       ),
       proposal_data AS (
         -- Fetch the first (oldest) proposal for each block_hash for the given cycle
