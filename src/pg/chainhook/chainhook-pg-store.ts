@@ -6,25 +6,55 @@ import {
   stopwatch,
 } from '@hirosystems/api-toolkit';
 import { StacksEvent, StacksPayload } from '@hirosystems/chainhook-client';
-import { DbBlock, DbBlockSignerSignature, DbRewardSetSigner } from '../types';
+import {
+  DbBlock,
+  DbBlockProposal,
+  DbBlockResponse,
+  DbBlockSignerSignature,
+  DbRewardSetSigner,
+} from '../types';
 
 // TODO: update chainhook-client types to get rid of this
 type TodoStacksEvent = StacksEvent & {
   metadata: {
     tenure_height: number;
-    block_time: number;
-    signer_signature: string[] | null;
-    cycle_number: number | null;
-    reward_set: {
-      pox_ustx_threshold: string;
-      signers: {
-        signing_key: string;
-        weight: number;
-        stacked_amt: string;
-      }[] | null;
-    } | null;
-  }
+    signer_public_keys?: string[];
+  };
 };
+
+// TODO: update chainhook-client types to get rid of this
+type TodoBlockRejectReason =
+  | {
+      VALIDATION_FAILED:
+        | 'BAD_BLOCK_HASH'
+        | 'BAD_TRANSACTION'
+        | 'INVALID_BLOCK'
+        | 'CHAINSTATE_ERROR'
+        | 'UNKNOWN_PARENT'
+        | 'NON_CANONICAL_TENURE'
+        | 'NO_SUCH_TENURE';
+    }
+  | 'CONNECTIVITY_ISSUES'
+  | 'REJECTED_IN_PRIOR_ROUND'
+  | 'NO_SORTITION_VIEW'
+  | 'SORTITION_VIEW_MISMATCH'
+  | 'TESTING_DIRECTIVE';
+const RejectReasonValidationFailed = 'VALIDATION_FAILED';
+
+type SignerMessage = Extract<
+  StacksPayload['events'][number],
+  { payload: { type: 'SignerMessage' } }
+>;
+
+type BlockProposalData = Extract<
+  SignerMessage['payload']['data']['message'],
+  { type: 'BlockProposal' }
+>['data'];
+
+type BlockResponseData = Extract<
+  SignerMessage['payload']['data']['message'],
+  { type: 'BlockResponse' }
+>['data'];
 
 export class ChainhookPgStore extends BasePgStoreModule {
   async processPayload(payload: StacksPayload): Promise<void> {
@@ -60,9 +90,16 @@ export class ChainhookPgStore extends BasePgStoreModule {
           } finished in ${time.getElapsedSeconds()}s`
         );
       }
+
+      for (const event of payload.events) {
+        if (event.payload.type === 'SignerMessage') {
+          await this.applySignerMessageEvent(sql, event);
+        } else {
+          logger.error(`Unknown chainhook payload event type: ${event.payload.type}`);
+        }
+      }
     });
   }
-
 
   async updateChainTipBlockHeight(blockHeight: number): Promise<void> {
     await this.sql`UPDATE chain_tip SET block_height = ${blockHeight}`;
@@ -71,6 +108,104 @@ export class ChainhookPgStore extends BasePgStoreModule {
   private async getLastIngestedBlockHeight(): Promise<number> {
     const result = await this.sql<{ block_height: number }[]>`SELECT block_height FROM chain_tip`;
     return result[0].block_height;
+  }
+
+  private async applySignerMessageEvent(sql: PgSqlClient, event: SignerMessage) {
+    switch (event.payload.data.message.type) {
+      case 'BlockProposal': {
+        await this.applyBlockProposal(
+          sql,
+          event.received_at_ms,
+          event.payload.data.pubkey,
+          event.payload.data.message.data
+        );
+        break;
+      }
+      case 'BlockResponse': {
+        await this.applyBlockResponse(
+          sql,
+          event.received_at_ms,
+          event.payload.data.pubkey,
+          event.payload.data.message.data
+        );
+        break;
+      }
+      case 'BlockPushed': {
+        logger.info(`Ignoring BlockPushed StackerDB event`);
+        break;
+      }
+      default: {
+        logger.error(event.payload.data, `Unknown StackerDB event type`);
+        break;
+      }
+    }
+  }
+
+  private async applyBlockProposal(
+    sql: PgSqlClient,
+    receivedAt: number,
+    minerPubkey: string,
+    messageData: BlockProposalData
+  ) {
+    const dbBlockProposal: DbBlockProposal = {
+      received_at: unixTimeMillisecondsToISO(receivedAt),
+      miner_key: normalizeHexString(minerPubkey),
+      block_height: messageData.block.header.chain_length,
+      block_time: unixTimeSecondsToISO(messageData.block.header.timestamp),
+      block_hash: normalizeHexString(messageData.block.block_hash),
+      index_block_hash: normalizeHexString(messageData.block.index_block_hash),
+      reward_cycle: messageData.reward_cycle,
+      burn_block_height: messageData.burn_height,
+    };
+    await sql`
+      INSERT INTO block_proposals ${sql(dbBlockProposal)}
+    `;
+  }
+
+  private async applyBlockResponse(
+    sql: PgSqlClient,
+    receivedAt: number,
+    signerPubkey: string,
+    messageData: BlockResponseData
+  ) {
+    if (messageData.type !== 'Accepted' && messageData.type !== 'Rejected') {
+      logger.error(messageData, `Unexpected BlockResponse type`);
+    }
+    const accepted = messageData.type === 'Accepted';
+
+    // TODO: fix this unsafe cast when chainhook-client is updated
+    const serverVersion = (messageData.data as any).metadata.server_version;
+
+    // TODO: fix this unsafe cast when chainhook-client is updated
+    const signature = (messageData.data as any).signature;
+
+    let rejectReasonCode: string | null = null;
+    let rejectCode: string | null = null;
+    if (!accepted) {
+      const rejectReason = messageData.data.reason_code as TodoBlockRejectReason;
+      if (typeof rejectReason === 'string') {
+        rejectReasonCode = rejectReason;
+      } else if (RejectReasonValidationFailed in rejectReason) {
+        rejectReasonCode = RejectReasonValidationFailed;
+        rejectCode = rejectReason[RejectReasonValidationFailed];
+      }
+    }
+
+    const dbBlockProposal: DbBlockResponse = {
+      received_at: unixTimeMillisecondsToISO(receivedAt),
+      signer_key: normalizeHexString(signerPubkey),
+      accepted: accepted,
+      signer_sighash: normalizeHexString(messageData.data.signer_signature_hash),
+      metadata_server_version: serverVersion,
+      signature: signature,
+      reason_string: accepted ? null : messageData.data.reason,
+      reason_code: rejectReasonCode,
+      reject_code: rejectCode,
+      chain_id: accepted ? null : messageData.data.chain_id,
+    };
+    await sql`
+      INSERT INTO block_responses ${sql(dbBlockProposal)}
+    `;
   }
 
   private async updateStacksBlock(
@@ -95,14 +230,15 @@ export class ChainhookPgStore extends BasePgStoreModule {
       index_block_hash: normalizeHexString(block.block_identifier.hash),
       burn_block_height: block.metadata.bitcoin_anchor_block_identifier.index,
       burn_block_hash: normalizeHexString(block.metadata.bitcoin_anchor_block_identifier.hash),
-      tenure_height: block.metadata.tenure_height,
-      block_time: unixTimeSecondsToISO(block.metadata.block_time),
+      tenure_height: block.metadata.tenure_height ?? 0,
+      block_time: unixTimeSecondsToISO(block.metadata.block_time ?? 0),
     };
     await this.insertBlock(sql, dbBlock);
 
-    const dbSignerSignatures = block.metadata.signer_signature?.map(sig => {
+    const dbSignerSignatures = block.metadata.signer_signature?.map((sig, i) => {
       const dbSig: DbBlockSignerSignature = {
         block_height: dbBlock.block_height,
+        signer_key: normalizeHexString(block.metadata.signer_public_keys?.[i] ?? '0x'),
         signer_signature: normalizeHexString(sig),
       };
       return dbSig;
@@ -135,12 +271,13 @@ export class ChainhookPgStore extends BasePgStoreModule {
     await sql`
       INSERT INTO blocks ${sql(dbBlock)}
     `;
-    logger.info(
-      `ChainhookPgStore apply block ${dbBlock.block_height} ${dbBlock.block_hash}`
-    );
+    logger.info(`ChainhookPgStore apply block ${dbBlock.block_height} ${dbBlock.block_hash}`);
   }
 
-  private async insertBlockSignerSignatures(sql: PgSqlClient, signerSigs: DbBlockSignerSignature[]) {
+  private async insertBlockSignerSignatures(
+    sql: PgSqlClient,
+    signerSigs: DbBlockSignerSignature[]
+  ) {
     for await (const batch of batchIterate(signerSigs, 500)) {
       await sql`
         INSERT INTO block_signer_signatures ${sql(batch)}
@@ -167,9 +304,7 @@ export class ChainhookPgStore extends BasePgStoreModule {
     const res = await sql`
       DELETE FROM blocks WHERE block_height = ${blockHeight}
     `;
-    logger.info(
-      `ChainhookPgStore rollback block ${blockHeight}`
-    );
+    logger.info(`ChainhookPgStore rollback block ${blockHeight}`);
     if (res.count !== 1) {
       logger.warn(`Unexpected number of rows deleted for block ${blockHeight}, ${res.count} rows`);
     }
@@ -206,5 +341,5 @@ function unixTimeSecondsToISO(timestampSeconds: number): string {
 
 /** Ensures a hex string has a `0x` prefix */
 function normalizeHexString(hexString: string): string {
-  return hexString.startsWith('0x') ? hexString : ('0x' + hexString);
+  return hexString.startsWith('0x') ? hexString : '0x' + hexString;
 }

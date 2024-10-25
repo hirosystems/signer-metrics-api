@@ -81,6 +81,77 @@ type Endpoints = [
     }
   },
   {
+    url: '/v1/cycle/{cycle_number}/signers';
+    response: {
+      total: number;
+      next_cursor: string;
+      prev_cursor: string;
+      cursor: string;
+      results: Array<{
+        signer_key: string;
+
+        /** Voting weight of this signer (based on slots allocated which is proportional to stacked amount) */
+        weight: number;
+        /** Voting weight percent (weight / total_weight) */
+        weight_percentage: number;
+        /** Total STX stacked associated with this signer */
+        stacked_amount: number;
+        /** Stacked amount percent (stacked_amount / total_stacked_amount) */
+        stacked_amount_percent: number;
+
+        proposals_accepted_count: number;
+        proposals_rejected_count: number;
+        proposals_missed_count: number;
+
+        /** Number of mined blocks where signer approved and was included */
+        mined_blocks_accepted_included_count: number;
+        /** Number of mined blocks where signer approved but was not included */
+        mined_blocks_accepted_excluded_count: number;
+        /** Number of mined blocks where signer rejected */
+        mined_blocks_rejected_count: number;
+        /** Number of mined blocks where signer was missing (did not submit an accept or reject response) */
+        mined_blocks_missing_count: number;
+
+        /** Time duration (in seconds) taken to submit responses to block proposals (tracked best effort) */
+        average_response_time: number;
+      }>;
+    }
+  },
+  {
+    url: '/v1/cycle/{cycle_number}/signers/{signer_key}';
+    response: {
+      signer_key: string;
+
+      /** Voting weight of this signer (based on slots allocated which is proportional to stacked amount) */
+      weight: number;
+      /** Voting weight percent (weight / total_weight) */
+      weight_percentage: number;
+      /** Total STX stacked associated with this signer */
+      stacked_amount: number;
+      /** Stacked amount percent (stacked_amount / total_stacked_amount) */
+      stacked_amount_percent: number;
+
+      /** This signer's rank in the list of all signers (for this cycle) ordered by stacked amount */
+      stacked_amount_rank: number;
+
+      proposals_accepted_count: number;
+      proposals_rejected_count: number;
+      proposals_missed_count: number;
+
+      /** Number of mined blocks where signer approved and was included */
+      mined_blocks_accepted_included_count: number;
+      /** Number of mined blocks where signer approved but was not included */
+      mined_blocks_accepted_excluded_count: number;
+      /** Number of mined blocks where signer rejected */
+      mined_blocks_rejected_count: number;
+      /** Number of mined blocks where signer was missing (did not submit an accept or reject response) */
+      mined_blocks_missing_count: number;
+
+      /** Time duration (in milliseconds) taken to submit responses to block proposals (tracked best effort) */
+      average_response_time_ms: number;
+    }
+  },
+  {
     /** List of most recent signer responses */
     url: '/v1/signer-responses';
     response: {

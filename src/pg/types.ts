@@ -12,6 +12,7 @@ export type DbBlock = {
 
 export type DbBlockSignerSignature = {
   block_height: number;
+  signer_key: PgBytea;
   signer_signature: PgBytea;
 };
 
@@ -30,10 +31,10 @@ export type DbBlockResponse = {
   accepted: boolean;
   signer_sighash: PgBytea;
   metadata_server_version: string;
-  signature: PgBytea;
+  signature: PgBytea | null;
   reason_string: string | null;
-  reason_code: number | null;
-  reject_code: number | null;
+  reason_code: string | null;
+  reject_code: string | null;
   chain_id: number | null;
 };
 
@@ -44,4 +45,6 @@ export type DbBlockProposal = {
   block_time: string;
   block_hash: PgBytea;
   index_block_hash: PgBytea;
+  burn_block_height: number;
+  reward_cycle: number;
 };

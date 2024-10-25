@@ -21,6 +21,7 @@ export function up(pgm: MigrationBuilder): void {
       type: 'boolean',
       notNull: true,
     },
+    // AKA block_hash
     signer_sighash: {
       type: 'bytea',
       primaryKey: true,
@@ -31,7 +32,6 @@ export function up(pgm: MigrationBuilder): void {
     },
     signature: {
       type: 'bytea',
-      notNull: true,
     },
 
     // columns for rejected
@@ -39,14 +39,14 @@ export function up(pgm: MigrationBuilder): void {
       type: 'text',
     },
     reason_code: {
-      type: 'smallint',
+      type: 'text',
     },
     reject_code: {
-      type: 'smallint',
+      type: 'text',
     },
     chain_id: {
-      type: 'integer',
-    }
+      type: 'bigint',
+    },
   });
 
   pgm.createIndex('block_responses', ['signer_key']);

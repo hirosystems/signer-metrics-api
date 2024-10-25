@@ -1,10 +1,7 @@
 import { PgStore } from './pg/pg-store';
-import { JobQueue } from './token-processor/queue/job-queue';
 import { buildApiServer, buildPromServer } from './api/init';
-import { TokenProcessorMetrics } from './token-processor/token-processor-metrics';
 import { ENV } from './env';
-import { buildAdminRpcServer } from './admin-rpc/init';
-import { isProdEnv } from './api/util/helpers';
+import { isProdEnv } from './helpers';
 import { buildProfilerServer, logger, registerShutdownConfig } from '@hirosystems/api-toolkit';
 import { closeChainhookServer, startChainhookServer } from './chainhook/server';
 
@@ -15,16 +12,6 @@ import { closeChainhookServer, startChainhookServer } from './chainhook/server';
 async function initBackgroundServices(db: PgStore) {
   logger.info('Initializing background services...');
 
-  const jobQueue = new JobQueue({ db });
-  registerShutdownConfig({
-    name: 'Job Queue',
-    forceKillable: false,
-    handler: async () => {
-      await jobQueue.stop();
-    },
-  });
-  if (ENV.JOB_QUEUE_AUTO_START) jobQueue.start();
-
   const server = await startChainhookServer({ db });
   registerShutdownConfig({
     name: 'Chainhook Server',
@@ -33,16 +20,6 @@ async function initBackgroundServices(db: PgStore) {
       await closeChainhookServer(server);
     },
   });
-
-  const adminRpcServer = await buildAdminRpcServer({ db, jobQueue });
-  registerShutdownConfig({
-    name: 'Admin RPC Server',
-    forceKillable: false,
-    handler: async () => {
-      await adminRpcServer.close();
-    },
-  });
-  await adminRpcServer.listen({ host: ENV.API_HOST, port: ENV.ADMIN_RPC_PORT });
 }
 
 /**
@@ -71,8 +48,6 @@ async function initApiService(db: PgStore) {
         await promServer.close();
       },
     });
-
-    TokenProcessorMetrics.configure(db);
     await promServer.listen({ host: ENV.API_HOST, port: ENV.PROMETHEUS_PORT });
   }
 }

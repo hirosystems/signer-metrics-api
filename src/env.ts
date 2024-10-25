@@ -27,6 +27,8 @@ const schema = Type.Object({
   EXTERNAL_HOSTNAME: Type.String({ default: '127.0.0.1' }),
   /** Port in which to serve prometheus metrics */
   PROMETHEUS_PORT: Type.Number({ default: 9154 }),
+  /** Port in which to serve the profiler */
+  PROFILER_PORT: Type.Number({ default: 9119 }),
 
   /** Hostname of the chainhook node we'll use to register predicates */
   CHAINHOOK_NODE_RPC_HOST: Type.String({ default: '127.0.0.1' }),
@@ -56,8 +58,8 @@ const schema = Type.Object({
   PGDATABASE: Type.String(),
   /** Limit to how many concurrent connections can be created */
   PG_CONNECTION_POOL_MAX: Type.Number({ default: 10 }),
-  PG_IDLE_TIMEOUT: Type.Number({ default: 30 }),
-  PG_MAX_LIFETIME: Type.Number({ default: 60 }),
+  PG_IDLE_TIMEOUT: Type.Number({ default: 0 }),
+  PG_MAX_LIFETIME: Type.Number({ default: 0 }),
 });
 type Env = Static<typeof schema>;
 
