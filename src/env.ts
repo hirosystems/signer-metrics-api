@@ -30,6 +30,9 @@ const schema = Type.Object({
   /** Port in which to serve the profiler */
   PROFILER_PORT: Type.Number({ default: 9119 }),
 
+  STACKS_NODE_RPC_HOST: Type.String(),
+  STACKS_NODE_RPC_PORT: Type.Number({ minimum: 0, maximum: 65535 }),
+
   /** Hostname of the chainhook node we'll use to register predicates */
   CHAINHOOK_NODE_RPC_HOST: Type.String({ default: '127.0.0.1' }),
   /** Control port of the chainhook node */
