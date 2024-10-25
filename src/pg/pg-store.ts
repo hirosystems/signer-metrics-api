@@ -47,7 +47,7 @@ export class PgStore extends BasePgStore {
   }
 
   async getRecentBlocks(limit: number, offset: number) {
-    // The `blocks` table (and it's associated block_signer_signatures table) is the source of truth that is
+    // The `blocks` table (and its associated block_signer_signatures table) is the source of truth that is
     // never missing blocks and does not contain duplicate rows per block.
     //
     // The block_proposals and block_responses tables can have duplicate rows. Duplicates can be detected in
