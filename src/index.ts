@@ -4,6 +4,7 @@ import { ENV } from './env';
 import { isProdEnv } from './helpers';
 import { buildProfilerServer, logger, registerShutdownConfig } from '@hirosystems/api-toolkit';
 import { closeChainhookServer, startChainhookServer } from './chainhook/server';
+import { startPoxInfoUpdater } from './stacks-core-rpc/pox-info-updater';
 
 /**
  * Initializes background services. Only for `default` and `writeonly` run modes.
@@ -11,6 +12,15 @@ import { closeChainhookServer, startChainhookServer } from './chainhook/server';
  */
 async function initBackgroundServices(db: PgStore) {
   logger.info('Initializing background services...');
+
+  const poxInfoUpdater = startPoxInfoUpdater({ db });
+  registerShutdownConfig({
+    name: 'stacks-core RPC PoX fetcher',
+    forceKillable: false,
+    handler: () => {
+      poxInfoUpdater.close();
+    },
+  });
 
   const server = await startChainhookServer({ db });
   registerShutdownConfig({

@@ -46,6 +46,34 @@ export class PgStore extends BasePgStore {
     return result[0].block_height;
   }
 
+  async getPoxInfo() {
+    const result = await this.sql<
+      { first_burnchain_block_height: number | null; reward_cycle_length: number | null }[]
+    >`
+      SELECT first_burnchain_block_height, reward_cycle_length FROM chain_tip
+    `;
+    return result[0];
+  }
+
+  async updatePoxInfo(poxInfo: {
+    first_burnchain_block_height: number;
+    reward_cycle_length: number;
+  }): Promise<{ rowUpdated: boolean }> {
+    // Update the first_burnchain_block_height and reward_cycle_length columns in the chain_tip table only if
+    // they differ from the existing values. Return true if the row was updated, false otherwise.
+    // Should only update the row if the values are null (i.e. the first time the values are set).
+    const updateResult = await this.sql`
+      UPDATE chain_tip 
+      SET 
+        first_burnchain_block_height = ${poxInfo.first_burnchain_block_height},
+        reward_cycle_length = ${poxInfo.reward_cycle_length}
+      WHERE
+        first_burnchain_block_height IS DISTINCT FROM ${poxInfo.first_burnchain_block_height} 
+        OR reward_cycle_length IS DISTINCT FROM ${poxInfo.reward_cycle_length}
+    `;
+    return { rowUpdated: updateResult.count > 0 };
+  }
+
   async getRecentBlocks(limit: number, offset: number) {
     // The `blocks` table (and its associated block_signer_signatures table) is the source of truth that is
     // never missing blocks and does not contain duplicate rows per block.
