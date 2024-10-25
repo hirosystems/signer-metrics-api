@@ -64,7 +64,7 @@ export const PoxCycleRoutes: FastifyPluginCallback<
                 proposals_missed_count: Type.Integer({
                   description: 'Number of block proposals missed by this signer',
                 }),
-                average_response_time: Type.Number({
+                average_response_time_ms: Type.Number({
                   description:
                     'Time duration (in milliseconds) taken to submit responses to block proposals (tracked best effort)',
                 }),
@@ -107,7 +107,7 @@ export const PoxCycleRoutes: FastifyPluginCallback<
             proposals_accepted_count: result.proposals_accepted_count,
             proposals_rejected_count: result.proposals_rejected_count,
             proposals_missed_count: result.proposals_missed_count,
-            average_response_time: result.average_response_time,
+            average_response_time_ms: result.average_response_time_ms,
           };
         });
 

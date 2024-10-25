@@ -58,7 +58,7 @@ export class PgStore extends BasePgStore {
         proposals_accepted_count: number;
         proposals_rejected_count: number;
         proposals_missed_count: number;
-        average_response_time: number;
+        average_response_time_ms: number;
       }[]
     >`
       WITH signer_data AS (
@@ -124,7 +124,7 @@ export class PgStore extends BasePgStore {
           COUNT(CASE WHEN spd.accepted = true THEN 1 END)::integer AS proposals_accepted_count,
           COUNT(CASE WHEN spd.accepted = false THEN 1 END)::integer AS proposals_rejected_count,
           COUNT(CASE WHEN spd.accepted IS NULL THEN 1 END)::integer AS proposals_missed_count,
-          ROUND(AVG(spd.response_time_ms), 3)::float8 AS average_response_time
+          ROUND(AVG(spd.response_time_ms), 3)::float8 AS average_response_time_ms
         FROM signer_proposal_data spd
         GROUP BY spd.signer_key
       )
@@ -137,7 +137,7 @@ export class PgStore extends BasePgStore {
         ad.proposals_accepted_count,
         ad.proposals_rejected_count,
         ad.proposals_missed_count,
-        COALESCE(ad.average_response_time, 0) AS average_response_time
+        COALESCE(ad.average_response_time_ms, 0) AS average_response_time_ms
       FROM signer_data sd
       LEFT JOIN aggregated_data ad
         ON sd.signer_key = ad.signer_key
