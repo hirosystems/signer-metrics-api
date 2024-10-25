@@ -13,6 +13,7 @@ import {
   DbBlockSignerSignature,
   DbRewardSetSigner,
 } from '../types';
+import { normalizeHexString, unixTimeMillisecondsToISO, unixTimeSecondsToISO } from '../../helpers';
 
 // TODO: update chainhook-client types to get rid of this
 type TodoStacksEvent = StacksEvent & {
@@ -327,19 +328,4 @@ export class ChainhookPgStore extends BasePgStoreModule {
       `ChainhookPgStore rollback reward set signers for block ${blockHeight}, deleted ${res.count} rows`
     );
   }
-}
-
-/** Convert a unix timestamp in milliseconds to an ISO string */
-function unixTimeMillisecondsToISO(timestampMilliseconds: number): string {
-  return new Date(timestampMilliseconds).toISOString();
-}
-
-/** Convert a unix timestamp in seconds to an ISO string */
-function unixTimeSecondsToISO(timestampSeconds: number): string {
-  return unixTimeMillisecondsToISO(timestampSeconds * 1000);
-}
-
-/** Ensures a hex string has a `0x` prefix */
-function normalizeHexString(hexString: string): string {
-  return hexString.startsWith('0x') ? hexString : '0x' + hexString;
 }
