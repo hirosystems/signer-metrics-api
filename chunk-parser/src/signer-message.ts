@@ -149,15 +149,48 @@ function parseBlockPushed(cursor: BufferCursor) {
 }
 
 function parseMockProposal(cursor: BufferCursor) {
-  console.log('MockProposal ignored');
+  const peerInfo = parseMockPeerInfo(cursor);
+  const signature = cursor.readBytes(65).toString('hex');
+  return { peerInfo, signature };
+}
+
+// https://github.com/stacks-network/stacks-core/blob/09d920cd1926422a8e3fb76fe4e1b1ef649546b4/libsigner/src/v0/messages.rs#L283
+function parseMockPeerInfo(cursor: BufferCursor) {
+  const burnBlockHeight = cursor.readU64BE();
+  const stacksTipConsensusHash = cursor.readBytes(20).toString('hex');
+  const stacksTip = cursor.readBytes(32).toString('hex');
+  const stacksTipHeight = cursor.readU64BE();
+  const serverVersion = cursor.readU8LengthPrefixedString();
+  const poxConsensusHash = cursor.readBytes(20).toString('hex');
+  const networkId = cursor.readU32BE();
+  const indexBlockHash = getIndexBlockHash(stacksTip, stacksTipConsensusHash);
+  return {
+    burnBlockHeight,
+    stacksTipConsensusHash,
+    stacksTip,
+    stacksTipHeight,
+    serverVersion,
+    poxConsensusHash,
+    networkId,
+    indexBlockHash,
+  }
 }
 
 function parseMockSignature(cursor: BufferCursor) {
-  console.log('MockSignature ignored');
+  const signature = cursor.readBytes(65).toString('hex');
+  const mockProposal = parseMockProposal(cursor);
+  const metadata = parseSignerMessageMetadata(cursor);
+  return {
+    signature,
+    mockProposal,
+    metadata,
+  }
 }
 
 function parseMockBlock(cursor: BufferCursor) {
-  console.log('MockBlock ignored');
+  const mockProposal = parseMockProposal(cursor);
+  const mockSignatures = cursor.readArray(parseMockSignature);
+  return { mockProposal, mockSignatures };
 }
 
 // https://github.com/stacks-network/stacks-core/blob/cd702e7dfba71456e4983cf530d5b174e34507dc/libsigner/src/events.rs#L74
@@ -172,7 +205,7 @@ function parseBlockProposal(cursor: BufferCursor) {
 function parseNakamotoBlock(cursor: BufferCursor) {
   const header = parseNakamotoBlockHeader(cursor);
   const blockHash = getNakamotoBlockHash(header);
-  const indexBlockHash = getNakamotoIndexBlockHash(blockHash, header.consensusHash);
+  const indexBlockHash = getIndexBlockHash(blockHash, header.consensusHash);
   const tx = cursor.readArray(parseStacksTransaction);
   return { blockHash, indexBlockHash, header, tx };
 }
@@ -186,7 +219,7 @@ function parseStacksTransaction(cursor: BufferCursor) {
 }
 
 // https://github.com/stacks-network/stacks-core/blob/a2dcd4c3ffdb625a6478bb2c0b23836bc9c72f9f/stacks-common/src/types/chainstate.rs#L268-L279
-function getNakamotoIndexBlockHash(blockHash: string, consensusHash: string): string {
+function getIndexBlockHash(blockHash: string, consensusHash: string): string {
   const hasher = crypto.createHash('sha512-256');
   hasher.update(Buffer.from(blockHash, 'hex'));
   hasher.update(Buffer.from(consensusHash, 'hex'));
