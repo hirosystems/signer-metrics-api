@@ -16,6 +16,7 @@ type Endpoints = [
 
         /** Total number of signers expected for this block */
         total_signer_count: number;
+        
         /** Number of signers that submitted a approval for this block */
         signer_accepted_count: number;
         /** Number of signers that submitted a rejection for this block */
@@ -23,10 +24,10 @@ type Endpoints = [
         /** Number of signers that failed to submit any response/vote for this block */
         signer_missing_count: number;
 
-        /** Average time duration (in seconds) taken by signers to submit a response for this block (tracked best effort) */
-        average_signer_response_time: number;
-        /** Unix timestamp of when the block was first proposed (tracked best effort) */
-        block_proposal_time: number;
+        /** Average time duration (in milliseconds) taken by signers to submit a response for this block (tracked best effort) */
+        average_signer_response_time_ms: number;
+        /** Unix timestamp in milliseconds of when the block was first proposed (tracked best effort) */
+        block_proposal_time_ms: number;
 
         /** Sum of total STX stacked of signers who approved the block */
         accepted_stacked_amount: number;
