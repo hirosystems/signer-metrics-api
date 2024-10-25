@@ -1,5 +1,5 @@
 {
-  "name": "@hirosystems/signer-monitoring-api",
+  "name": "@hirosystems/signer-metrics-api",
   "description": "A microservice that indexes signer data from the Stacks blockchain and exposes it via JSON REST API endpoints",
   "version": "1.0.0",
   "main": "index.js",
