@@ -11,6 +11,10 @@ import {
   DbBlockProposal,
   DbBlockResponse,
   DbBlockSignerSignature,
+  DbMockBlock,
+  DbMockBlockSignerSignature,
+  DbMockProposal,
+  DbMockSignature,
   DbRewardSetSigner,
 } from '../types';
 import { normalizeHexString, unixTimeMillisecondsToISO, unixTimeSecondsToISO } from '../../helpers';
@@ -55,6 +59,21 @@ type BlockProposalData = Extract<
 type BlockResponseData = Extract<
   SignerMessage['payload']['data']['message'],
   { type: 'BlockResponse' }
+>['data'];
+
+type MockProposalData = Extract<
+  SignerMessage['payload']['data']['message'],
+  { type: 'MockProposal' }
+>['data'];
+
+type MockSignatureData = Extract<
+  SignerMessage['payload']['data']['message'],
+  { type: 'MockSignature' }
+>['data'];
+
+type MockBlockData = Extract<
+  SignerMessage['payload']['data']['message'],
+  { type: 'MockBlock' }
 >['data'];
 
 export class ChainhookPgStore extends BasePgStoreModule {
@@ -135,11 +154,137 @@ export class ChainhookPgStore extends BasePgStoreModule {
         logger.info(`Ignoring BlockPushed StackerDB event`);
         break;
       }
+      case 'MockProposal': {
+        await this.applyMockProposal(
+          sql,
+          event.received_at_ms,
+          event.payload.data.pubkey,
+          event.payload.data.message.data
+        );
+        break;
+      }
+      case 'MockSignature': {
+        await this.applyMockSignature(
+          sql,
+          event.received_at_ms,
+          event.payload.data.pubkey,
+          event.payload.data.message.data
+        );
+        break;
+      }
+      case 'MockBlock': {
+        await this.applyMockBlock(
+          sql,
+          event.received_at_ms,
+          event.payload.data.pubkey,
+          event.payload.data.sig,
+          event.payload.data.message.data
+        );
+        break;
+      }
       default: {
         logger.error(event.payload.data, `Unknown StackerDB event type`);
         break;
       }
     }
+  }
+
+  private async applyMockBlock(
+    sql: PgSqlClient,
+    receivedAt: number,
+    minerPubkey: string,
+    minerSignature: string,
+    messageData: MockBlockData
+  ) {
+    const dbMockBlock: DbMockBlock = {
+      received_at: unixTimeMillisecondsToISO(receivedAt),
+      miner_key: normalizeHexString(minerPubkey),
+      signature: normalizeHexString(minerSignature),
+
+      // Mock proposal fields
+      burn_block_height: messageData.mock_proposal.peer_info.burn_block_height,
+      stacks_tip_consensus_hash: normalizeHexString(
+        messageData.mock_proposal.peer_info.stacks_tip_consensus_hash
+      ),
+      stacks_tip: normalizeHexString(messageData.mock_proposal.peer_info.stacks_tip),
+      stacks_tip_height: messageData.mock_proposal.peer_info.stacks_tip_height,
+      server_version: messageData.mock_proposal.peer_info.server_version,
+      pox_consensus_hash: normalizeHexString(messageData.mock_proposal.peer_info.pox_consensus),
+      network_id: messageData.mock_proposal.peer_info.network_id,
+      index_block_hash: normalizeHexString(messageData.mock_proposal.peer_info.index_block_hash),
+    };
+    await sql`
+      INSERT INTO mock_blocks ${sql(dbMockBlock)}
+    `;
+
+    for (const batch of batchIterate(messageData.mock_signatures, 500)) {
+      const sigs = batch.map(sig => {
+        const dbSig: DbMockBlockSignerSignature = {
+          signer_key: normalizeHexString(sig.pubkey),
+          signer_signature: normalizeHexString(sig.signature),
+          stacks_tip: sig.mock_proposal.peer_info.stacks_tip,
+          index_block_hash: sig.mock_proposal.peer_info.index_block_hash,
+        };
+        return dbSig;
+      });
+      await sql`
+        INSERT INTO mock_block_signer_signatures ${sql(sigs)}
+      `;
+    }
+  }
+
+  private async applyMockSignature(
+    sql: PgSqlClient,
+    receivedAt: number,
+    signerPubkey: string,
+    messageData: MockSignatureData
+  ) {
+    const dbMockSignature: DbMockSignature = {
+      received_at: unixTimeMillisecondsToISO(receivedAt),
+      signer_key: normalizeHexString(signerPubkey),
+      signature: normalizeHexString(messageData.signature),
+
+      // Mock proposal fields
+      burn_block_height: messageData.mock_proposal.peer_info.burn_block_height,
+      stacks_tip_consensus_hash: normalizeHexString(
+        messageData.mock_proposal.peer_info.stacks_tip_consensus_hash
+      ),
+      stacks_tip: normalizeHexString(messageData.mock_proposal.peer_info.stacks_tip),
+      stacks_tip_height: messageData.mock_proposal.peer_info.stacks_tip_height,
+      server_version: messageData.mock_proposal.peer_info.server_version,
+      pox_consensus_hash: normalizeHexString(messageData.mock_proposal.peer_info.pox_consensus),
+      network_id: messageData.mock_proposal.peer_info.network_id,
+      index_block_hash: normalizeHexString(messageData.mock_proposal.peer_info.index_block_hash),
+
+      // Metadata fields
+      metadata_server_version: messageData.metadata.server_version,
+    };
+    await sql`
+      INSERT INTO mock_signatures ${sql(dbMockSignature)}
+    `;
+  }
+
+  private async applyMockProposal(
+    sql: PgSqlClient,
+    receivedAt: number,
+    minerPubkey: string,
+    messageData: MockProposalData
+  ) {
+    const dbMockProposal: DbMockProposal = {
+      received_at: unixTimeMillisecondsToISO(receivedAt),
+      miner_key: normalizeHexString(minerPubkey),
+      burn_block_height: messageData.burn_block_height,
+      stacks_tip_consensus_hash: normalizeHexString(messageData.stacks_tip_consensus_hash),
+      stacks_tip: normalizeHexString(messageData.stacks_tip),
+      stacks_tip_height: messageData.stacks_tip_height,
+      server_version: messageData.server_version,
+      pox_consensus_hash: normalizeHexString(messageData.pox_consensus),
+      network_id: messageData.network_id,
+      index_block_hash: normalizeHexString(messageData.index_block_hash),
+    };
+    await sql`
+      INSERT INTO mock_proposals ${sql(dbMockProposal)}
+    `;
   }
 
   private async applyBlockProposal(

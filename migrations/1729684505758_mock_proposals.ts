@@ -44,7 +44,7 @@ export function up(pgm: MigrationBuilder): void {
       notNull: true,
     },
     network_id: {
-      type: 'integer',
+      type: 'bigint',
       notNull: true,
     },
     index_block_hash: {

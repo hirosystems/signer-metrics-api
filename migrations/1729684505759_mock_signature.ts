@@ -23,14 +23,6 @@ export function up(pgm: MigrationBuilder): void {
     },
 
     // Mock proposal fields
-    mock_proposal_miner_key: {
-      type: 'bytea',
-      notNull: true,
-    },
-    mock_proposal_signature: {
-      type: 'bytea',
-      notNull: true,
-    },
     burn_block_height: {
       type: 'integer',
       notNull: true,
@@ -58,7 +50,7 @@ export function up(pgm: MigrationBuilder): void {
       notNull: true,
     },
     network_id: {
-      type: 'integer',
+      type: 'bigint',
       notNull: true,
     },
     index_block_hash: {

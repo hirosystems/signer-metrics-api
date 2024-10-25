@@ -68,8 +68,6 @@ export type DbMockSignature = {
   signature: PgBytea;
 
   // Mock proposal fields
-  mock_proposal_miner_key: PgBytea;
-  mock_proposal_signature: PgBytea;
   burn_block_height: number;
   stacks_tip_consensus_hash: PgBytea;
   stacks_tip: PgBytea;
@@ -89,8 +87,6 @@ export type DbMockBlock = {
   signature: PgBytea;
 
   // Mock proposal fields
-  mock_proposal_miner_key: PgBytea;
-  mock_proposal_signature: PgBytea;
   burn_block_height: number;
   stacks_tip_consensus_hash: PgBytea;
   stacks_tip: PgBytea;
