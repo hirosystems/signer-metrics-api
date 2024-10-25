@@ -43,3 +43,71 @@ export const ApiStatusResponse = Type.Object(
   },
   { title: 'Api Status Response' }
 );
+
+export const BlocksEntryHeaderSchema = Type.Object({
+  block_height: Type.Integer(),
+  block_hash: Type.String(),
+  index_block_hash: Type.String(),
+  burn_block_height: Type.Integer(),
+  tenure_height: Type.Integer(),
+});
+export type BlocksEntryHeader = Static<typeof BlocksEntryHeaderSchema>;
+
+export const BlocksEntrySignerDataSchema = Type.Object({
+  total_signer_count: Type.Integer({
+    description: 'Total number of signers expected for this block',
+  }),
+
+  accepted_count: Type.Integer({
+    description: 'Number of signers that submitted an approval for this block',
+  }),
+  rejected_count: Type.Integer({
+    description: 'Number of signers that submitted a rejection for this block',
+  }),
+  missing_count: Type.Integer({
+    description: 'Number of signers that failed to submit any response/vote for this block',
+  }),
+
+  accepted_excluded_count: Type.Integer({
+    description:
+      'Number of signers that submitted an approval but where not included in time by the miner (this is a subset of the accepted_count)',
+  }),
+
+  average_response_time_ms: Type.Number({
+    description:
+      'Average time duration (in milliseconds) taken by signers to submit a response for this block (tracked best effort)',
+  }),
+  block_proposal_time_ms: Type.Number({
+    description:
+      'Unix timestamp in milliseconds of when the block was first proposed (tracked best effort)',
+  }),
+
+  accepted_stacked_amount: Type.String({
+    description: 'Sum of total STX stacked of signers who approved the block',
+  }),
+  rejected_stacked_amount: Type.String({
+    description: 'Sum of total STX stacked of signers who rejected the block',
+  }),
+  missing_stacked_amount: Type.String({
+    description: 'Sum of total STX stacked of missing signers',
+  }),
+
+  accepted_weight: Type.Integer({
+    description:
+      'Sum of voting weight of signers who approved the block (based on slots allocated to each signer proportional to stacked amount)',
+  }),
+  rejected_weight: Type.Integer({
+    description: 'Sum of voting weight of signers who rejected the block',
+  }),
+  missing_weight: Type.Integer({
+    description: 'Sum of voting weight of missing signers',
+  }),
+});
+export type BlocksEntrySignerData = Static<typeof BlocksEntrySignerDataSchema>;
+
+export const BlockEntrySchema = Type.Union(
+  [BlocksEntryHeaderSchema, Type.Composite([BlocksEntryHeaderSchema, BlocksEntrySignerDataSchema])],
+  { description: 'Signer related data can by null if it was not detected by the monitor service' }
+);
+
+export type BlocksEntry = Static<typeof BlockEntrySchema>;

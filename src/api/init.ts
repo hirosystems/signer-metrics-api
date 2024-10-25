@@ -8,6 +8,7 @@ import { Server } from 'http';
 import { isProdEnv } from '../helpers';
 import { PINO_LOGGER_CONFIG } from '@hirosystems/api-toolkit';
 import { CycleRoutes } from './routes/cycle';
+import { BlockRoutes } from './routes/blocks';
 
 export const Api: FastifyPluginAsync<Record<never, never>, Server, TypeBoxTypeProvider> = async (
   fastify,
@@ -15,6 +16,7 @@ export const Api: FastifyPluginAsync<Record<never, never>, Server, TypeBoxTypePr
 ) => {
   await fastify.register(StatusRoutes);
   await fastify.register(CycleRoutes);
+  await fastify.register(BlockRoutes);
 };
 
 export async function buildApiServer(args: { db: PgStore }) {
