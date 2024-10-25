@@ -38,6 +38,10 @@ export function up(pgm: MigrationBuilder): void {
       type: 'bytea',
       notNull: true,
     },
+    is_nakamoto_block: {
+      type: 'boolean',
+      notNull: true,
+    },
   });
 
   pgm.createIndex('blocks', ['block_height']);

@@ -110,6 +110,12 @@ export class BufferCursor {
     return bytes.toString('utf8');
   }
 
+  readU8LengthPrefixedString(): string {
+    const length = this.readU8();
+    const bytes = this.readBytes(length);
+    return bytes.toString('utf8');
+  }
+
 }
 
 export class BufferWriter {
