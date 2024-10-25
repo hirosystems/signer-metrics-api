@@ -1,12 +1,7 @@
 import { Type, TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import { FastifyPluginCallback } from 'fastify';
 import { Server } from 'http';
-import {
-  BlockEntrySchema,
-  BlocksEntry,
-  BlocksEntryHeader,
-  BlocksEntrySignerData,
-} from '../schemas';
+import { BlockEntrySchema, BlocksEntry, BlocksEntrySignerData } from '../schemas';
 
 export const BlockRoutes: FastifyPluginCallback<
   Record<never, never>,
@@ -50,20 +45,22 @@ export const BlockRoutes: FastifyPluginCallback<
         const results = await fastify.db.getRecentBlocks(request.query.limit, request.query.offset);
 
         const formatted: BlocksEntry[] = results.map(result => {
-          const entryHeader: BlocksEntryHeader = {
+          const entry: BlocksEntry = {
             block_height: result.block_height,
             block_hash: result.block_hash,
             index_block_hash: result.index_block_hash,
             burn_block_height: result.burn_block_height,
             tenure_height: result.tenure_height,
+            block_time: result.block_time,
           };
 
-          if (!result.block_proposal_time_ms) {
+          if (!result.block_proposal_time_ms || !result.cycle_number) {
             // no signer data available for this, only return the block header data
-            return entryHeader satisfies BlocksEntry;
+            return entry;
           }
 
           const entrySignerData: BlocksEntrySignerData = {
+            cycle_number: result.cycle_number,
             total_signer_count: result.total_signer_count,
             accepted_count:
               result.signer_accepted_mined_count + result.signer_accepted_excluded_count,
@@ -84,7 +81,7 @@ export const BlockRoutes: FastifyPluginCallback<
             rejected_weight: result.rejected_weight,
             missing_weight: result.missing_weight,
           };
-          const entry: BlocksEntry = { ...entryHeader, ...entrySignerData };
+          entry.signer_data = entrySignerData;
           return entry;
         });
 

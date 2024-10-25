@@ -191,7 +191,7 @@ export class PgStore extends BasePgStore {
           lb.tenure_height,
           EXTRACT(EPOCH FROM lb.block_time)::integer AS block_time,
           bsa.cycle_number,
-		      (EXTRACT(EPOCH FROM bsa.block_proposal_time_ms) * 1000)::bigint AS block_proposal_time_ms,
+          (EXTRACT(EPOCH FROM bsa.block_proposal_time_ms) * 1000)::bigint AS block_proposal_time_ms,
           bsa.total_signer_count::integer,
           bsa.signer_accepted_mined_count::integer,
           bsa.signer_accepted_excluded_count::integer,
