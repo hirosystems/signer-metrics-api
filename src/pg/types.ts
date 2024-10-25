@@ -8,6 +8,7 @@ export type DbBlock = {
   index_block_hash: PgBytea;
   burn_block_height: number;
   burn_block_hash: PgBytea;
+  is_nakamoto_block: boolean;
 };
 
 export type DbBlockSignerSignature = {

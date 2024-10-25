@@ -348,6 +348,7 @@ export class ChainhookPgStore extends BasePgStoreModule {
       burn_block_hash: normalizeHexString(block.metadata.bitcoin_anchor_block_identifier.hash),
       tenure_height: block.metadata.tenure_height ?? 0,
       block_time: unixTimeSecondsToISO(block.metadata.block_time ?? 0),
+      is_nakamoto_block: !!block.metadata.signer_bitvec,
     };
     await this.insertBlock(sql, dbBlock);
 
