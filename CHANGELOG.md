@@ -1,3 +1,12 @@
+## [0.2.0](https://github.com/hirosystems/signer-metrics-api/compare/v0.1.0...v0.2.0) (2024-10-25)
+
+
+### Features
+
+* include is_nakamoto_block flag in blocks table ([bde4666](https://github.com/hirosystems/signer-metrics-api/commit/bde46665e45e02c0da7e9701874b9ba2647b4211))
+* pg schema for mock payload tables ([2511f77](https://github.com/hirosystems/signer-metrics-api/commit/2511f77409e954c93153f60cdd9bb4ffe8b08a0c))
+* sql writes for mock payloads ([fb06793](https://github.com/hirosystems/signer-metrics-api/commit/fb06793a8619b13df52e3fd31186dca856e6add3))
+
 ## [0.1.0](https://github.com/hirosystems/signer-metrics-api/compare/v0.0.1...v0.1.0) (2024-10-25)
 
 
