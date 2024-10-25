@@ -79,9 +79,14 @@ export function up(pgm: MigrationBuilder): void {
       type: 'bytea',
       notNull: true,
     },
-    // AKA block_height
+    // AKA block_hash
     stacks_tip: {
       type: 'bytea',
+      notNull: true,
+    },
+    // AKA block_height
+    stacks_tip_height: {
+      type: 'integer',
       notNull: true,
     },
     index_block_hash: {
@@ -92,5 +97,6 @@ export function up(pgm: MigrationBuilder): void {
 
   pgm.createIndex('mock_block_signer_signatures', ['signer_key']);
   pgm.createIndex('mock_block_signer_signatures', ['stacks_tip']);
+  pgm.createIndex('mock_block_signer_signatures', ['stacks_tip_height']);
   pgm.createIndex('mock_block_signer_signatures', ['index_block_hash']);
 }

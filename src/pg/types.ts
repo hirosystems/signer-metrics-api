@@ -101,5 +101,6 @@ export type DbMockBlockSignerSignature = {
   signer_key: PgBytea;
   signer_signature: PgBytea;
   stacks_tip: PgBytea;
+  stacks_tip_height: number;
   index_block_hash: PgBytea;
 };

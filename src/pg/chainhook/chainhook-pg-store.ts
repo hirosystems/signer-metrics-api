@@ -223,6 +223,7 @@ export class ChainhookPgStore extends BasePgStoreModule {
           signer_key: normalizeHexString(sig.pubkey),
           signer_signature: normalizeHexString(sig.signature),
           stacks_tip: sig.mock_proposal.peer_info.stacks_tip,
+          stacks_tip_height: sig.mock_proposal.peer_info.stacks_tip_height,
           index_block_hash: sig.mock_proposal.peer_info.index_block_hash,
         };
         return dbSig;
