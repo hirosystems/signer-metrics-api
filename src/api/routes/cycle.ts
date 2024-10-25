@@ -166,6 +166,8 @@ export const CycleRoutes: FastifyPluginCallback<
             proposals_missed_count: Type.Integer({
               description: 'Number of block proposals missed by this signer',
             }),
+            // TODO: implement these nice-to-have fields
+            /*
             mined_blocks_accepted_included_count: Type.Integer({
               description: 'Number of mined blocks where signer approved and was included',
             }),
@@ -179,6 +181,7 @@ export const CycleRoutes: FastifyPluginCallback<
               description:
                 'Number of mined blocks where signer was missing (did not submit an accept or reject response)',
             }),
+            */
             average_response_time_ms: Type.Number({
               description:
                 'Time duration (in milliseconds) taken to submit responses to block proposals (tracked best effort)',
@@ -210,10 +213,6 @@ export const CycleRoutes: FastifyPluginCallback<
           proposals_accepted_count: signer.proposals_accepted_count,
           proposals_rejected_count: signer.proposals_rejected_count,
           proposals_missed_count: signer.proposals_missed_count,
-          mined_blocks_accepted_included_count: -1,
-          mined_blocks_accepted_excluded_count: -1,
-          mined_blocks_rejected_count: -1,
-          mined_blocks_missing_count: -1,
           average_response_time_ms: signer.average_response_time_ms,
         };
       });

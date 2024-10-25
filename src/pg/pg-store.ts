@@ -3,6 +3,7 @@ import { BasePgStore, PgSqlClient, connectPostgres, runMigrations } from '@hiros
 import * as path from 'path';
 import { ChainhookPgStore } from './chainhook/chainhook-pg-store';
 import { DbRewardSetSigner } from './types';
+import { normalizeHexString } from '../helpers';
 
 export const MIGRATIONS_DIR = path.join(__dirname, '../../migrations');
 
