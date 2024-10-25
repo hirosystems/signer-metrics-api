@@ -3,7 +3,7 @@ import { FastifyPluginCallback } from 'fastify';
 import { Server } from 'http';
 import { ApiStatusResponse } from '../schemas';
 
-export const PoxCycleRoutes: FastifyPluginCallback<
+export const CycleRoutes: FastifyPluginCallback<
   Record<never, never>,
   Server,
   TypeBoxTypeProvider

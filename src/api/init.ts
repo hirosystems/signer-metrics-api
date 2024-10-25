@@ -7,14 +7,14 @@ import FastifyMetrics, { IFastifyMetrics } from 'fastify-metrics';
 import { Server } from 'http';
 import { isProdEnv } from '../helpers';
 import { PINO_LOGGER_CONFIG } from '@hirosystems/api-toolkit';
-import { PoxCycleRoutes } from './routes/pox-cycle';
+import { CycleRoutes } from './routes/cycle';
 
 export const Api: FastifyPluginAsync<Record<never, never>, Server, TypeBoxTypeProvider> = async (
   fastify,
   options
 ) => {
   await fastify.register(StatusRoutes);
-  await fastify.register(PoxCycleRoutes);
+  await fastify.register(CycleRoutes);
 };
 
 export async function buildApiServer(args: { db: PgStore }) {

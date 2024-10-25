@@ -81,7 +81,7 @@ type Endpoints = [
     }
   },
   {
-    url: '/v1/pox-cycle/{cycle_number}/signers';
+    url: '/v1/cycle/{cycle_number}/signers';
     response: {
       total: number;
       next_cursor: string;
