@@ -5,3 +5,18 @@ export const isProdEnv =
   process.env.NODE_ENV === 'prod' ||
   !process.env.NODE_ENV ||
   (!isTestEnv && !isDevEnv);
+
+/** Convert a unix timestamp in milliseconds to an ISO string */
+export function unixTimeMillisecondsToISO(timestampMilliseconds: number): string {
+  return new Date(timestampMilliseconds).toISOString();
+}
+
+/** Convert a unix timestamp in seconds to an ISO string */
+export function unixTimeSecondsToISO(timestampSeconds: number): string {
+  return unixTimeMillisecondsToISO(timestampSeconds * 1000);
+}
+
+/** Ensures a hex string has a `0x` prefix */
+export function normalizeHexString(hexString: string): string {
+  return hexString.startsWith('0x') ? hexString : '0x' + hexString;
+}

@@ -121,5 +121,104 @@ export const CycleRoutes: FastifyPluginCallback<
       await reply.send(result);
     }
   );
+
+  fastify.get(
+    '/v1/cycle/:cycle_number/signer/:signer_id',
+    {
+      schema: {
+        operationId: 'getPoxCycleSigner',
+        summary: 'PoX Cycle Signer',
+        description: 'Get stats for a specific signer in a given PoX cycle',
+        tags: ['Signers'],
+        params: Type.Object({
+          cycle_number: Type.Integer({ description: 'PoX cycle number' }),
+          signer_id: Type.String({ description: 'Signer public key (hex encoded)' }),
+        }),
+        response: {
+          404: Type.Object({
+            error: Type.String({ description: 'Error message when signer is not found' }),
+          }),
+          200: Type.Object({
+            signer_key: Type.String(),
+            weight: Type.Integer({
+              description:
+                'Voting weight of this signer (based on slots allocated which is proportional to stacked amount)',
+            }),
+            weight_percentage: Type.Number({
+              description: 'Voting weight percent (weight / total_weight)',
+            }),
+            stacked_amount: Type.String({
+              description: 'Total STX stacked associated with this signer (string quoted integer)',
+            }),
+            stacked_amount_percent: Type.Number({
+              description: 'Stacked amount percent (stacked_amount / total_stacked_amount)',
+            }),
+            stacked_amount_rank: Type.Integer({
+              description:
+                "This signer's rank in the list of all signers (for this cycle) ordered by stacked amount",
+            }),
+            proposals_accepted_count: Type.Integer({
+              description: 'Number of block proposals accepted by this signer',
+            }),
+            proposals_rejected_count: Type.Integer({
+              description: 'Number of block proposals rejected by this signer',
+            }),
+            proposals_missed_count: Type.Integer({
+              description: 'Number of block proposals missed by this signer',
+            }),
+            // TODO: implement these nice-to-have fields
+            /*
+            mined_blocks_accepted_included_count: Type.Integer({
+              description: 'Number of mined blocks where signer approved and was included',
+            }),
+            mined_blocks_accepted_excluded_count: Type.Integer({
+              description: 'Number of mined blocks where signer approved but was not included',
+            }),
+            mined_blocks_rejected_count: Type.Integer({
+              description: 'Number of mined blocks where signer rejected',
+            }),
+            mined_blocks_missing_count: Type.Integer({
+              description:
+                'Number of mined blocks where signer was missing (did not submit an accept or reject response)',
+            }),
+            */
+            average_response_time_ms: Type.Number({
+              description:
+                'Time duration (in milliseconds) taken to submit responses to block proposals (tracked best effort)',
+            }),
+          }),
+        },
+      },
+    },
+    async (request, reply) => {
+      const result = await fastify.db.sqlTransaction(async sql => {
+        const signer = await fastify.db.getSignerForCycle(
+          request.params.cycle_number,
+          request.params.signer_id
+        );
+
+        if (!signer) {
+          return reply.status(404).send({
+            error: 'Signer not found',
+          });
+        }
+
+        return {
+          signer_key: signer.signer_key,
+          weight: signer.weight,
+          weight_percentage: signer.weight_percentage,
+          stacked_amount: signer.stacked_amount,
+          stacked_amount_percent: signer.stacked_amount_percentage,
+          stacked_amount_rank: signer.stacked_amount_rank,
+          proposals_accepted_count: signer.proposals_accepted_count,
+          proposals_rejected_count: signer.proposals_rejected_count,
+          proposals_missed_count: signer.proposals_missed_count,
+          average_response_time_ms: signer.average_response_time_ms,
+        };
+      });
+      await reply.send(result);
+    }
+  );
+
   done();
 };
