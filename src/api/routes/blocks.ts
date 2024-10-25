@@ -72,8 +72,10 @@ export const BlockRoutes: FastifyPluginCallback<
             average_response_time_ms: result.average_response_time_ms,
             block_proposal_time_ms: Number.parseInt(result.block_proposal_time_ms),
 
-            accepted_stacked_amount:
-              result.accepted_mined_stacked_amount + result.accepted_excluded_stacked_amount,
+            accepted_stacked_amount: (
+              BigInt(result.accepted_mined_stacked_amount) +
+              BigInt(result.accepted_excluded_stacked_amount)
+            ).toString(),
             rejected_stacked_amount: result.rejected_stacked_amount,
             missing_stacked_amount: result.missing_stacked_amount,
 
