@@ -435,11 +435,17 @@ export class ChainhookPgStore extends BasePgStoreModule {
     }
   }
 
-  private async insertRewardSetSigners(sql: PgSqlClient, rewardSetSigners: DbRewardSetSigner[]) {
+  async insertRewardSetSigners(sql: PgSqlClient, rewardSetSigners: DbRewardSetSigner[]) {
     for await (const batch of batchIterate(rewardSetSigners, 500)) {
-      await sql`
+      const result = await sql`
         INSERT INTO reward_set_signers ${sql(batch)}
+        ON CONFLICT ON CONSTRAINT reward_set_signers_cycle_unique DO NOTHING
       `;
+      if (result.count === 0) {
+        logger.warn(
+          `Skipped inserting duplicate reward set signers for cycle ${rewardSetSigners[0].cycle_number}`
+        );
+      }
     }
   }
 
