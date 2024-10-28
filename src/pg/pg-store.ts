@@ -154,11 +154,6 @@ export class PgStore extends BasePgStore {
         LIMIT ${limit}
         OFFSET ${offset}
       ),
-      filtered_block_proposals AS (
-        SELECT DISTINCT ON (block_hash) id, block_hash, received_at, reward_cycle AS cycle_number
-        FROM block_proposals
-        ORDER BY block_hash, id
-      ),
       filtered_block_responses AS (
         SELECT DISTINCT ON (signer_key, signer_sighash) *
         FROM block_responses
@@ -172,7 +167,7 @@ export class PgStore extends BasePgStore {
           lb.block_hash,
           lb.index_block_hash,
           lb.burn_block_height,
-          bp.cycle_number,
+          bp.reward_cycle as cycle_number,
           bp.received_at AS block_proposal_time_ms,
           rs.signer_key,
           COALESCE(rs.signer_weight, 0) AS signer_weight,
@@ -185,8 +180,8 @@ export class PgStore extends BasePgStore {
           END AS signer_status,
           EXTRACT(MILLISECOND FROM (fbr.received_at - bp.received_at)) AS response_time_ms
         FROM latest_blocks lb
-        LEFT JOIN filtered_block_proposals bp ON lb.block_hash = bp.block_hash
-        LEFT JOIN reward_set_signers rs ON bp.cycle_number = rs.cycle_number
+        LEFT JOIN block_proposals bp ON lb.block_hash = bp.block_hash
+        LEFT JOIN reward_set_signers rs ON bp.reward_cycle = rs.cycle_number
         LEFT JOIN block_signer_signatures bss ON lb.block_height = bss.block_height AND rs.signer_key = bss.signer_key
         LEFT JOIN filtered_block_responses fbr ON fbr.signer_key = rs.signer_key AND fbr.signer_sighash = lb.block_hash
       ),
