@@ -31,9 +31,19 @@ export interface RpcStackerSetResponse {
   };
 }
 
-export async function fetchStackerSet(cycleNumber: number, abortSignal: AbortSignal) {
+export async function fetchStackerSet(
+  cycleNumber: number,
+  abortSignal: AbortSignal
+): Promise<{ prePox4: true } | { prePox4: false; response: RpcStackerSetResponse }> {
   const url = `${getStacksNodeUrl()}/v3/stacker_set/${cycleNumber}`;
   const res = await fetch(url, { signal: abortSignal });
   const json = await res.json();
-  return json as RpcStackerSetResponse;
+  if (!res.ok) {
+    const err = JSON.stringify(json);
+    if (/Pre-PoX-4/i.test(err)) {
+      return { prePox4: true };
+    }
+    throw new Error(`Failed to fetch stacker set for cycle ${cycleNumber}: ${err}`);
+  }
+  return { prePox4: false, response: json as RpcStackerSetResponse };
 }

@@ -1,6 +1,6 @@
 import { PgStore } from '../pg/pg-store';
 import PQueue from 'p-queue';
-import { fetchStackerSet } from './stacks-core-rpc-client';
+import { fetchStackerSet, getStacksNodeUrl } from './stacks-core-rpc-client';
 import { sleep } from '../helpers';
 import { logger } from '@hirosystems/api-toolkit';
 import { DbRewardSetSigner } from '../pg/types';
@@ -24,6 +24,9 @@ export class StackerSetUpdator {
     this.queue = new PQueue({
       concurrency: FETCH_STACKER_SET_CONCURRENCY_LIMIT,
       autoStart: true,
+    });
+    this.db.chainhook.events.on('missingStackerSet', ({ cycleNumber }) => {
+      this.add({ cycleNumber });
     });
   }
 
@@ -52,8 +55,15 @@ export class StackerSetUpdator {
   private async fetchStackerSet(cycleNumber: number) {
     while (!this.abortController.signal.aborted) {
       try {
+        logger.info(`Fetching stacker set for cycle ${cycleNumber} from stacks-core RPC ...`);
         const stackerSet = await fetchStackerSet(cycleNumber, this.abortController.signal);
-        const dbRewardSetSigners = stackerSet.stacker_set.signers.map(entry => {
+        if (stackerSet.prePox4) {
+          logger.info(`Skipping stacker set update for cycle ${cycleNumber}, PoX-4 not yet active`);
+          this.queuedCycleNumbers.delete(cycleNumber);
+          return; // Exit loop after successful fetch
+        }
+        logger.info(`Fetched stacker set for cycle ${cycleNumber}, updating database ...`);
+        const dbRewardSetSigners = stackerSet.response.stacker_set.signers.map(entry => {
           const rewardSetSigner: DbRewardSetSigner = {
             cycle_number: cycleNumber,
             block_height: 0,
@@ -67,8 +77,11 @@ export class StackerSetUpdator {
         await this.db.chainhook.sqlWriteTransaction(async sql => {
           await this.db.chainhook.insertRewardSetSigners(sql, dbRewardSetSigners);
         });
+        logger.info(
+          `Updated database with stacker set for cycle ${cycleNumber}, ${dbRewardSetSigners.length} signers`
+        );
         this.queuedCycleNumbers.delete(cycleNumber);
-        return; // Exit loop after successful fetch and database update
+        return; // Exit loop after successful database update
       } catch (error) {
         if (this.abortController.signal.aborted) {
           return; // Updater service was stopped, ignore error and exit loop
