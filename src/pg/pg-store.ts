@@ -346,7 +346,7 @@ export class PgStore extends BasePgStore {
       }[]
     >`
       WITH signer_data AS (
-        -- Fetch the signer for the given cycle
+        -- Fetch the specific signer for the given cycle
         SELECT
           rss.signer_key,
           rss.signer_weight,
@@ -356,39 +356,28 @@ export class PgStore extends BasePgStore {
           AND rss.signer_key = ${normalizeHexString(signerId)}
       ),
       proposal_data AS (
-        -- Fetch the first (oldest) proposal for each block_hash for the given cycle
+        -- Select all proposals for the given cycle
         SELECT
           bp.block_hash,
           bp.block_height,
           bp.received_at AS proposal_received_at
         FROM block_proposals bp
         WHERE bp.reward_cycle = ${cycleNumber}
-          AND bp.id = (
-            -- Select the earliest proposal for each block_hash
-            SELECT MIN(sub_bp.id)
-            FROM block_proposals sub_bp
-            WHERE sub_bp.block_hash = bp.block_hash
-          )
       ),
       response_data AS (
-        -- Fetch the first (oldest) response for each (signer_key, signer_sighash) pair
-        SELECT DISTINCT ON (br.signer_key, br.signer_sighash)
+        -- Select all responses for the proposals in the given cycle
+        SELECT
           br.signer_key,
           br.signer_sighash,
           br.accepted,
           br.received_at,
           br.id
         FROM block_responses br
-        WHERE br.id = (
-          -- Select the earliest response for each signer_sighash and signer_key
-          SELECT MIN(sub_br.id)
-          FROM block_responses sub_br
-          WHERE sub_br.signer_key = br.signer_key
-            AND sub_br.signer_sighash = br.signer_sighash
-        )
+        JOIN proposal_data pd ON br.signer_sighash = pd.block_hash
+        WHERE br.signer_key = ${normalizeHexString(signerId)} -- Filter for the specific signer
       ),
       signer_proposal_data AS (
-        -- Cross join signers with proposals and left join filtered responses
+        -- Cross join the specific signer with proposals and left join filtered responses
         SELECT
           sd.signer_key,
           pd.block_hash,
@@ -397,13 +386,13 @@ export class PgStore extends BasePgStore {
           rd.received_at AS response_received_at,
           EXTRACT(MILLISECOND FROM (rd.received_at - pd.proposal_received_at)) AS response_time_ms
         FROM signer_data sd
-        CROSS JOIN proposal_data pd -- Cross join to associate all signers with all proposals
+        CROSS JOIN proposal_data pd
         LEFT JOIN response_data rd
           ON pd.block_hash = rd.signer_sighash
           AND sd.signer_key = rd.signer_key -- Match signers with their corresponding responses
       ),
       aggregated_data AS (
-        -- Aggregate the proposal and response data by signer
+        -- Aggregate the proposal and response data for the specific signer
         SELECT
           spd.signer_key,
           COUNT(CASE WHEN spd.accepted = true THEN 1 END)::integer AS proposals_accepted_count,
