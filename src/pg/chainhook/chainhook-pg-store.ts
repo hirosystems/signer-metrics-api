@@ -279,9 +279,15 @@ export class ChainhookPgStore extends BasePgStoreModule {
       reward_cycle: messageData.reward_cycle,
       burn_block_height: messageData.burn_height,
     };
-    await sql`
+    const result = await sql`
       INSERT INTO block_proposals ${sql(dbBlockProposal)}
+      ON CONFLICT ON CONSTRAINT block_proposals_block_hash_unique DO NOTHING
     `;
+    if (result.count === 0) {
+      logger.info(
+        `Skipped inserting duplicate block proposal height=${dbBlockProposal.block_height}, hash=${dbBlockProposal.block_hash}`
+      );
+    }
   }
 
   private async applyBlockResponse(
@@ -307,7 +313,7 @@ export class ChainhookPgStore extends BasePgStoreModule {
       }
     }
 
-    const dbBlockProposal: DbBlockResponse = {
+    const dbBlockResponse: DbBlockResponse = {
       received_at: unixTimeMillisecondsToISO(receivedAt),
       signer_key: normalizeHexString(signerPubkey),
       accepted: accepted,
@@ -319,9 +325,16 @@ export class ChainhookPgStore extends BasePgStoreModule {
       reject_code: rejectCode,
       chain_id: accepted ? null : messageData.data.chain_id,
     };
-    await sql`
-      INSERT INTO block_responses ${sql(dbBlockProposal)}
+    const result = await sql`
+      INSERT INTO block_responses ${sql(dbBlockResponse)}
+      ON CONFLICT ON CONSTRAINT block_responses_signer_key_sighash_unique DO NOTHING
     `;
+
+    if (result.count === 0) {
+      logger.info(
+        `Skipped inserting duplicate block response signer_key=${dbBlockResponse.signer_key}, hash=${dbBlockResponse.signer_sighash}`
+      );
+    }
   }
 
   private async updateStacksBlock(

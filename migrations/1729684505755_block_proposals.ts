@@ -50,4 +50,8 @@ export function up(pgm: MigrationBuilder): void {
   pgm.createIndex('block_proposals', ['block_hash']);
   pgm.createIndex('block_proposals', ['index_block_hash']);
   pgm.createIndex('block_proposals', ['reward_cycle']);
+
+  pgm.createConstraint('block_proposals', 'block_proposals_block_hash_unique', {
+    unique: ['block_hash'],
+  });
 }
