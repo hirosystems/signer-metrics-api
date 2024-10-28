@@ -267,36 +267,24 @@ export class PgStore extends BasePgStore {
         WHERE rss.cycle_number = ${cycleNumber}
       ),
       proposal_data AS (
-        -- Fetch the first (oldest) proposal for each block_hash for the given cycle
+        -- Select all proposals for the given cycle
         SELECT
           bp.block_hash,
           bp.block_height,
           bp.received_at AS proposal_received_at
         FROM block_proposals bp
         WHERE bp.reward_cycle = ${cycleNumber}
-          AND bp.id = (
-            -- Select the earliest proposal for each block_hash
-            SELECT MIN(sub_bp.id)
-            FROM block_proposals sub_bp
-            WHERE sub_bp.block_hash = bp.block_hash
-          )
       ),
       response_data AS (
-        -- Fetch the first (oldest) response for each (signer_key, signer_sighash) pair
-        SELECT DISTINCT ON (br.signer_key, br.signer_sighash)
+        -- Select responses associated with the proposals from the given cycle
+        SELECT
           br.signer_key,
           br.signer_sighash,
           br.accepted,
           br.received_at,
           br.id
         FROM block_responses br
-        WHERE br.id = (
-          -- Select the earliest response for each signer_sighash and signer_key
-          SELECT MIN(sub_br.id)
-          FROM block_responses sub_br
-          WHERE sub_br.signer_key = br.signer_key
-            AND sub_br.signer_sighash = br.signer_sighash
-        )
+        JOIN proposal_data pd ON br.signer_sighash = pd.block_hash -- Only responses linked to selected proposals
       ),
       signer_proposal_data AS (
         -- Cross join signers with proposals and left join filtered responses
