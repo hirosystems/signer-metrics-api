@@ -78,11 +78,6 @@ export class PgStore extends BasePgStore {
     // The `blocks` table (and its associated block_signer_signatures table) is the source of truth that is
     // never missing blocks and does not contain duplicate rows per block.
     //
-    // The block_proposals and block_responses tables can have duplicate rows. Duplicates can be detected in
-    // block_proposals using the block_hash column. Duplicates can be detected in block_responses by looking
-    // at (signer_key, signer_sighash). For both tables filter duplicates by using only the first row (the
-    // oldest id column).
-    //
     // Each block has a known set of signer_keys which can be determined by first looking up the block's
     // cycle_number from the `block_proposals` table matching on block_hash, then using cycle_number to look
     // up the set of signer_keys from the reward_set_signers table (matching cycle_number with reward_cycle).
@@ -154,16 +149,6 @@ export class PgStore extends BasePgStore {
         LIMIT ${limit}
         OFFSET ${offset}
       ),
-      filtered_block_proposals AS (
-        SELECT DISTINCT ON (block_hash) id, block_hash, received_at, reward_cycle AS cycle_number
-        FROM block_proposals
-        ORDER BY block_hash, id
-      ),
-      filtered_block_responses AS (
-        SELECT DISTINCT ON (signer_key, signer_sighash) *
-        FROM block_responses
-        ORDER BY signer_key, signer_sighash, id
-      ),
       block_signers AS (
         SELECT
           lb.id AS block_id,
@@ -172,7 +157,7 @@ export class PgStore extends BasePgStore {
           lb.block_hash,
           lb.index_block_hash,
           lb.burn_block_height,
-          bp.cycle_number,
+          bp.reward_cycle as cycle_number,
           bp.received_at AS block_proposal_time_ms,
           rs.signer_key,
           COALESCE(rs.signer_weight, 0) AS signer_weight,
@@ -185,10 +170,10 @@ export class PgStore extends BasePgStore {
           END AS signer_status,
           EXTRACT(MILLISECOND FROM (fbr.received_at - bp.received_at)) AS response_time_ms
         FROM latest_blocks lb
-        LEFT JOIN filtered_block_proposals bp ON lb.block_hash = bp.block_hash
-        LEFT JOIN reward_set_signers rs ON bp.cycle_number = rs.cycle_number
+        LEFT JOIN block_proposals bp ON lb.block_hash = bp.block_hash
+        LEFT JOIN reward_set_signers rs ON bp.reward_cycle = rs.cycle_number
         LEFT JOIN block_signer_signatures bss ON lb.block_height = bss.block_height AND rs.signer_key = bss.signer_key
-        LEFT JOIN filtered_block_responses fbr ON fbr.signer_key = rs.signer_key AND fbr.signer_sighash = lb.block_hash
+        LEFT JOIN block_responses fbr ON fbr.signer_key = rs.signer_key AND fbr.signer_sighash = lb.block_hash
       ),
       signer_state_aggregation AS (
         SELECT
@@ -282,36 +267,24 @@ export class PgStore extends BasePgStore {
         WHERE rss.cycle_number = ${cycleNumber}
       ),
       proposal_data AS (
-        -- Fetch the first (oldest) proposal for each block_hash for the given cycle
+        -- Select all proposals for the given cycle
         SELECT
           bp.block_hash,
           bp.block_height,
           bp.received_at AS proposal_received_at
         FROM block_proposals bp
         WHERE bp.reward_cycle = ${cycleNumber}
-          AND bp.id = (
-            -- Select the earliest proposal for each block_hash
-            SELECT MIN(sub_bp.id)
-            FROM block_proposals sub_bp
-            WHERE sub_bp.block_hash = bp.block_hash
-          )
       ),
       response_data AS (
-        -- Fetch the first (oldest) response for each (signer_key, signer_sighash) pair
-        SELECT DISTINCT ON (br.signer_key, br.signer_sighash)
+        -- Select responses associated with the proposals from the given cycle
+        SELECT
           br.signer_key,
           br.signer_sighash,
           br.accepted,
           br.received_at,
           br.id
         FROM block_responses br
-        WHERE br.id = (
-          -- Select the earliest response for each signer_sighash and signer_key
-          SELECT MIN(sub_br.id)
-          FROM block_responses sub_br
-          WHERE sub_br.signer_key = br.signer_key
-            AND sub_br.signer_sighash = br.signer_sighash
-        )
+        JOIN proposal_data pd ON br.signer_sighash = pd.block_hash -- Only responses linked to selected proposals
       ),
       signer_proposal_data AS (
         -- Cross join signers with proposals and left join filtered responses
@@ -373,7 +346,7 @@ export class PgStore extends BasePgStore {
       }[]
     >`
       WITH signer_data AS (
-        -- Fetch the signer for the given cycle
+        -- Fetch the specific signer for the given cycle
         SELECT
           rss.signer_key,
           rss.signer_weight,
@@ -383,39 +356,28 @@ export class PgStore extends BasePgStore {
           AND rss.signer_key = ${normalizeHexString(signerId)}
       ),
       proposal_data AS (
-        -- Fetch the first (oldest) proposal for each block_hash for the given cycle
+        -- Select all proposals for the given cycle
         SELECT
           bp.block_hash,
           bp.block_height,
           bp.received_at AS proposal_received_at
         FROM block_proposals bp
         WHERE bp.reward_cycle = ${cycleNumber}
-          AND bp.id = (
-            -- Select the earliest proposal for each block_hash
-            SELECT MIN(sub_bp.id)
-            FROM block_proposals sub_bp
-            WHERE sub_bp.block_hash = bp.block_hash
-          )
       ),
       response_data AS (
-        -- Fetch the first (oldest) response for each (signer_key, signer_sighash) pair
-        SELECT DISTINCT ON (br.signer_key, br.signer_sighash)
+        -- Select all responses for the proposals in the given cycle
+        SELECT
           br.signer_key,
           br.signer_sighash,
           br.accepted,
           br.received_at,
           br.id
         FROM block_responses br
-        WHERE br.id = (
-          -- Select the earliest response for each signer_sighash and signer_key
-          SELECT MIN(sub_br.id)
-          FROM block_responses sub_br
-          WHERE sub_br.signer_key = br.signer_key
-            AND sub_br.signer_sighash = br.signer_sighash
-        )
+        JOIN proposal_data pd ON br.signer_sighash = pd.block_hash
+        WHERE br.signer_key = ${normalizeHexString(signerId)} -- Filter for the specific signer
       ),
       signer_proposal_data AS (
-        -- Cross join signers with proposals and left join filtered responses
+        -- Cross join the specific signer with proposals and left join filtered responses
         SELECT
           sd.signer_key,
           pd.block_hash,
@@ -424,13 +386,13 @@ export class PgStore extends BasePgStore {
           rd.received_at AS response_received_at,
           EXTRACT(MILLISECOND FROM (rd.received_at - pd.proposal_received_at)) AS response_time_ms
         FROM signer_data sd
-        CROSS JOIN proposal_data pd -- Cross join to associate all signers with all proposals
+        CROSS JOIN proposal_data pd
         LEFT JOIN response_data rd
           ON pd.block_hash = rd.signer_sighash
           AND sd.signer_key = rd.signer_key -- Match signers with their corresponding responses
       ),
       aggregated_data AS (
-        -- Aggregate the proposal and response data by signer
+        -- Aggregate the proposal and response data for the specific signer
         SELECT
           spd.signer_key,
           COUNT(CASE WHEN spd.accepted = true THEN 1 END)::integer AS proposals_accepted_count,

@@ -58,4 +58,8 @@ export function up(pgm: MigrationBuilder): void {
   pgm.createIndex('mock_proposals', ['stacks_tip']);
   pgm.createIndex('mock_proposals', ['index_block_hash']);
   pgm.createIndex('mock_proposals', ['burn_block_height']);
+
+  pgm.createConstraint('mock_proposals', 'mock_proposals_idb_unique', {
+    unique: ['index_block_hash'],
+  });
 }
