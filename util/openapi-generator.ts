@@ -15,7 +15,7 @@ export const ApiGenerator: FastifyPluginAsync<
   TypeBoxTypeProvider
 > = async (fastify, options) => {
   await fastify.register(FastifySwagger, OpenApiSchemaOptions);
-  await fastify.register(Api, { prefix: '/signer-monitor' });
+  await fastify.register(Api, { prefix: '/signer-metrics' });
   if (!existsSync('./tmp')) {
     mkdirSync('./tmp');
   }
