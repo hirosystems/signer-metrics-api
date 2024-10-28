@@ -39,4 +39,8 @@ export function up(pgm: MigrationBuilder): void {
   pgm.createIndex('reward_set_signers', ['signer_key']);
   pgm.createIndex('reward_set_signers', ['block_height']);
   pgm.createIndex('reward_set_signers', ['cycle_number']);
+
+  pgm.createConstraint('reward_set_signers', 'reward_set_signers_cycle_unique', {
+    unique: ['signer_key', 'cycle_number'],
+  });
 }

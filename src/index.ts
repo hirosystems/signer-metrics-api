@@ -5,6 +5,7 @@ import { isProdEnv } from './helpers';
 import { buildProfilerServer, logger, registerShutdownConfig } from '@hirosystems/api-toolkit';
 import { closeChainhookServer, startChainhookServer } from './chainhook/server';
 import { startPoxInfoUpdater } from './stacks-core-rpc/pox-info-updater';
+import { StackerSetUpdator } from './stacks-core-rpc/stacker-set-updater';
 
 /**
  * Initializes background services. Only for `default` and `writeonly` run modes.
@@ -19,6 +20,15 @@ async function initBackgroundServices(db: PgStore) {
     forceKillable: false,
     handler: () => {
       poxInfoUpdater.close();
+    },
+  });
+
+  const stackerSetUpdater = new StackerSetUpdator({ db });
+  registerShutdownConfig({
+    name: 'StackerSet fetcher',
+    forceKillable: false,
+    handler: async () => {
+      await stackerSetUpdater.stop();
     },
   });
 

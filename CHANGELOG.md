@@ -1,3 +1,25 @@
+## [0.3.0](https://github.com/hirosystems/signer-metrics-api/compare/v0.2.2...v0.3.0) (2024-10-28)
+
+
+### Features
+
+* detect and fetch missing pox cycle signer sets ([#16](https://github.com/hirosystems/signer-metrics-api/issues/16)) ([501cfaa](https://github.com/hirosystems/signer-metrics-api/commit/501cfaaf0cb75c75ef9a53bfc707c976b1e36ce1))
+
+## [0.2.2](https://github.com/hirosystems/signer-metrics-api/compare/v0.2.1...v0.2.2) (2024-10-28)
+
+
+### Bug Fixes
+
+* rename url prefix from signer-monitor to signer-metrics ([#17](https://github.com/hirosystems/signer-metrics-api/issues/17)) ([529e1c6](https://github.com/hirosystems/signer-metrics-api/commit/529e1c6e451a53482b4fb9fad849659243da5e14))
+
+## [0.2.1](https://github.com/hirosystems/signer-metrics-api/compare/v0.2.0...v0.2.1) (2024-10-28)
+
+
+### Bug Fixes
+
+* do not store duplicate BlockProposals or BlockResponses ([447cf14](https://github.com/hirosystems/signer-metrics-api/commit/447cf14b2227657d958d6b910732ae372b2256a8))
+* do not store duplicate MockProposals, MockSignatures, or MockBlocks ([eda79d0](https://github.com/hirosystems/signer-metrics-api/commit/eda79d07f804839d35fbd544dfc1c774c33c43a4))
+
 ## [0.2.0](https://github.com/hirosystems/signer-metrics-api/compare/v0.1.0...v0.2.0) (2024-10-25)
 
 

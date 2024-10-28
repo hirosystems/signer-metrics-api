@@ -30,7 +30,7 @@ export async function buildApiServer(args: { db: PgStore }) {
     await fastify.register(FastifyMetrics, { endpoint: null });
   }
   await fastify.register(FastifyCors);
-  await fastify.register(Api, { prefix: '/signer-monitor' });
+  await fastify.register(Api, { prefix: '/signer-metrics' });
 
   return fastify;
 }

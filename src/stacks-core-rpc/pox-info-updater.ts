@@ -1,7 +1,7 @@
 import { logger } from '@hirosystems/api-toolkit';
 import { PgStore } from '../pg/pg-store';
 import { sleep } from '../helpers';
-import { ENV } from '../env';
+import { fetchRpcPoxInfo, getStacksNodeUrl } from './stacks-core-rpc-client';
 
 // How long to wait between PoX rpc fetches when the database already has PoX info
 const POX_INFO_UPDATE_INTERVAL_MS = 30000;
@@ -60,20 +60,4 @@ async function runPoxInfoBackgroundJob(db: PgStore, abortSignal: AbortSignal) {
       }
     }
   }
-}
-
-interface PoxInfo {
-  first_burnchain_block_height: number;
-  reward_cycle_length: number;
-}
-
-function getStacksNodeUrl(): string {
-  return `http://${ENV.STACKS_NODE_RPC_HOST}:${ENV.STACKS_NODE_RPC_PORT}`;
-}
-
-async function fetchRpcPoxInfo(abortSignal: AbortSignal) {
-  const url = `${getStacksNodeUrl()}/v2/pox`;
-  const res = await fetch(url, { signal: abortSignal });
-  const json = await res.json();
-  return json as PoxInfo;
 }
