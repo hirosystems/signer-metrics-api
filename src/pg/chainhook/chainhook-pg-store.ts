@@ -188,9 +188,17 @@ export class ChainhookPgStore extends BasePgStoreModule {
       network_id: messageData.mock_proposal.peer_info.network_id,
       index_block_hash: normalizeHexString(messageData.mock_proposal.peer_info.index_block_hash),
     };
-    await sql`
+    const result = await sql`
       INSERT INTO mock_blocks ${sql(dbMockBlock)}
+      ON CONFLICT ON CONSTRAINT mock_blocks_idb_unique DO NOTHING
     `;
+
+    if (result.count === 0) {
+      logger.info(
+        `Skipped inserting duplicate mock block height=${dbMockBlock.stacks_tip_height}, hash=${dbMockBlock.stacks_tip}`
+      );
+      return;
+    }
 
     for (const batch of batchIterate(messageData.mock_signatures, 500)) {
       const sigs = batch.map(sig => {
@@ -235,9 +243,15 @@ export class ChainhookPgStore extends BasePgStoreModule {
       // Metadata fields
       metadata_server_version: messageData.metadata.server_version,
     };
-    await sql`
+    const result = await sql`
       INSERT INTO mock_signatures ${sql(dbMockSignature)}
+      ON CONFLICT ON CONSTRAINT mock_signatures_signer_key_idb_unique DO NOTHING
     `;
+    if (result.count === 0) {
+      logger.info(
+        `Skipped inserting duplicate mock signature height=${dbMockSignature.stacks_tip_height}, hash=${dbMockSignature.stacks_tip}, signer=${dbMockSignature.signer_key}`
+      );
+    }
   }
 
   private async applyMockProposal(
@@ -258,9 +272,15 @@ export class ChainhookPgStore extends BasePgStoreModule {
       network_id: messageData.network_id,
       index_block_hash: normalizeHexString(messageData.index_block_hash),
     };
-    await sql`
+    const result = await sql`
       INSERT INTO mock_proposals ${sql(dbMockProposal)}
+      ON CONFLICT ON CONSTRAINT mock_proposals_idb_unique DO NOTHING
     `;
+    if (result.count === 0) {
+      logger.info(
+        `Skipped inserting duplicate mock proposal height=${dbMockProposal.stacks_tip_height}, hash=${dbMockProposal.stacks_tip}`
+      );
+    }
   }
 
   private async applyBlockProposal(
@@ -332,7 +352,7 @@ export class ChainhookPgStore extends BasePgStoreModule {
 
     if (result.count === 0) {
       logger.info(
-        `Skipped inserting duplicate block response signer_key=${dbBlockResponse.signer_key}, hash=${dbBlockResponse.signer_sighash}`
+        `Skipped inserting duplicate block response signer=${dbBlockResponse.signer_key}, hash=${dbBlockResponse.signer_sighash}`
       );
     }
   }
