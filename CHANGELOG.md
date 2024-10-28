@@ -1,3 +1,10 @@
+## [0.3.0](https://github.com/hirosystems/signer-metrics-api/compare/v0.2.2...v0.3.0) (2024-10-28)
+
+
+### Features
+
+* detect and fetch missing pox cycle signer sets ([#16](https://github.com/hirosystems/signer-metrics-api/issues/16)) ([501cfaa](https://github.com/hirosystems/signer-metrics-api/commit/501cfaaf0cb75c75ef9a53bfc707c976b1e36ce1))
+
 ## [0.2.2](https://github.com/hirosystems/signer-metrics-api/compare/v0.2.1...v0.2.2) (2024-10-28)
 
 
