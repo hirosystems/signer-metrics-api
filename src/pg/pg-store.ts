@@ -78,11 +78,6 @@ export class PgStore extends BasePgStore {
     // The `blocks` table (and its associated block_signer_signatures table) is the source of truth that is
     // never missing blocks and does not contain duplicate rows per block.
     //
-    // The block_proposals and block_responses tables can have duplicate rows. Duplicates can be detected in
-    // block_proposals using the block_hash column. Duplicates can be detected in block_responses by looking
-    // at (signer_key, signer_sighash). For both tables filter duplicates by using only the first row (the
-    // oldest id column).
-    //
     // Each block has a known set of signer_keys which can be determined by first looking up the block's
     // cycle_number from the `block_proposals` table matching on block_hash, then using cycle_number to look
     // up the set of signer_keys from the reward_set_signers table (matching cycle_number with reward_cycle).
@@ -154,11 +149,6 @@ export class PgStore extends BasePgStore {
         LIMIT ${limit}
         OFFSET ${offset}
       ),
-      filtered_block_responses AS (
-        SELECT DISTINCT ON (signer_key, signer_sighash) *
-        FROM block_responses
-        ORDER BY signer_key, signer_sighash, id
-      ),
       block_signers AS (
         SELECT
           lb.id AS block_id,
@@ -183,7 +173,7 @@ export class PgStore extends BasePgStore {
         LEFT JOIN block_proposals bp ON lb.block_hash = bp.block_hash
         LEFT JOIN reward_set_signers rs ON bp.reward_cycle = rs.cycle_number
         LEFT JOIN block_signer_signatures bss ON lb.block_height = bss.block_height AND rs.signer_key = bss.signer_key
-        LEFT JOIN filtered_block_responses fbr ON fbr.signer_key = rs.signer_key AND fbr.signer_sighash = lb.block_hash
+        LEFT JOIN block_responses fbr ON fbr.signer_key = rs.signer_key AND fbr.signer_sighash = lb.block_hash
       ),
       signer_state_aggregation AS (
         SELECT
