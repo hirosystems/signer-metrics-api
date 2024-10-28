@@ -53,4 +53,8 @@ export function up(pgm: MigrationBuilder): void {
   pgm.createIndex('block_responses', ['received_at']);
   pgm.createIndex('block_responses', ['signer_sighash']);
   pgm.createIndex('block_responses', ['accepted']);
+
+  pgm.createConstraint('block_responses', 'block_responses_signer_key_sighash_unique', {
+    unique: ['signer_key', 'signer_sighash'],
+  });
 }

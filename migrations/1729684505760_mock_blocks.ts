@@ -65,6 +65,10 @@ export function up(pgm: MigrationBuilder): void {
   pgm.createIndex('mock_blocks', ['index_block_hash']);
   pgm.createIndex('mock_blocks', ['burn_block_height']);
 
+  pgm.createConstraint('mock_blocks', 'mock_blocks_idb_unique', {
+    unique: ['index_block_hash'],
+  });
+
   // Mock block signer signatures
   pgm.createTable('mock_block_signer_signatures', {
     id: {
@@ -99,4 +103,8 @@ export function up(pgm: MigrationBuilder): void {
   pgm.createIndex('mock_block_signer_signatures', ['stacks_tip']);
   pgm.createIndex('mock_block_signer_signatures', ['stacks_tip_height']);
   pgm.createIndex('mock_block_signer_signatures', ['index_block_hash']);
+
+  pgm.createConstraint('mock_block_signer_signatures', 'mock_block_signers_idb_unique', {
+    unique: ['index_block_hash', 'signer_key'],
+  });
 }
