@@ -1,3 +1,10 @@
+## [0.2.2](https://github.com/hirosystems/signer-metrics-api/compare/v0.2.1...v0.2.2) (2024-10-28)
+
+
+### Bug Fixes
+
+* rename url prefix from signer-monitor to signer-metrics ([#17](https://github.com/hirosystems/signer-metrics-api/issues/17)) ([529e1c6](https://github.com/hirosystems/signer-metrics-api/commit/529e1c6e451a53482b4fb9fad849659243da5e14))
+
 ## [0.2.1](https://github.com/hirosystems/signer-metrics-api/compare/v0.2.0...v0.2.1) (2024-10-28)
 
 
