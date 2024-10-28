@@ -45,7 +45,6 @@ export class StackerSetUpdator {
       .add(() => this.fetchStackerSet(cycleNumber))
       .catch(error => {
         if (!this.abortController.signal.aborted) {
-          // Should never reach here unless there's a bug in error handling
           logger.error(error, `Unexpected stacker-set fetch queue error for cycle ${cycleNumber}`);
           this.queuedCycleNumbers.delete(cycleNumber);
         }
@@ -53,45 +52,46 @@ export class StackerSetUpdator {
   }
 
   private async fetchStackerSet(cycleNumber: number) {
-    while (!this.abortController.signal.aborted) {
-      try {
-        logger.info(`Fetching stacker set for cycle ${cycleNumber} from stacks-core RPC ...`);
-        const stackerSet = await fetchStackerSet(cycleNumber, this.abortController.signal);
-        if (stackerSet.prePox4) {
-          logger.info(`Skipping stacker set update for cycle ${cycleNumber}, PoX-4 not yet active`);
-          this.queuedCycleNumbers.delete(cycleNumber);
-          return; // Exit loop after successful fetch
-        }
-        logger.info(`Fetched stacker set for cycle ${cycleNumber}, updating database ...`);
-        const dbRewardSetSigners = stackerSet.response.stacker_set.signers.map(entry => {
-          const rewardSetSigner: DbRewardSetSigner = {
-            cycle_number: cycleNumber,
-            block_height: 0,
-            burn_block_height: 0,
-            signer_key: Buffer.from(entry.signing_key.replace(/^0x/, ''), 'hex'),
-            signer_weight: entry.weight,
-            signer_stacked_amount: entry.stacked_amt.toString(),
-          };
-          return rewardSetSigner;
-        });
-        await this.db.chainhook.sqlWriteTransaction(async sql => {
-          await this.db.chainhook.insertRewardSetSigners(sql, dbRewardSetSigners);
-        });
-        logger.info(
-          `Updated database with stacker set for cycle ${cycleNumber}, ${dbRewardSetSigners.length} signers`
-        );
+    try {
+      logger.info(`Fetching stacker set for cycle ${cycleNumber} from stacks-core RPC ...`);
+      const stackerSet = await fetchStackerSet(cycleNumber, this.abortController.signal);
+      if (stackerSet.prePox4) {
+        logger.info(`Skipping stacker set update for cycle ${cycleNumber}, PoX-4 not yet active`);
         this.queuedCycleNumbers.delete(cycleNumber);
-        return; // Exit loop after successful database update
-      } catch (error) {
-        if (this.abortController.signal.aborted) {
-          return; // Updater service was stopped, ignore error and exit loop
-        }
-        logger.warn(
-          error,
-          `Failed to fetch stacker set for cycle ${cycleNumber}, retrying in ${FETCH_STACKER_SET_RETRY_INTERVAL_MS}ms ...`
-        );
-        await sleep(FETCH_STACKER_SET_RETRY_INTERVAL_MS, this.abortController.signal);
+        return; // Exit job successful fetch
       }
+      logger.info(`Fetched stacker set for cycle ${cycleNumber}, updating database ...`);
+      const dbRewardSetSigners = stackerSet.response.stacker_set.signers.map(entry => {
+        const rewardSetSigner: DbRewardSetSigner = {
+          cycle_number: cycleNumber,
+          block_height: 0,
+          burn_block_height: 0,
+          signer_key: Buffer.from(entry.signing_key.replace(/^0x/, ''), 'hex'),
+          signer_weight: entry.weight,
+          signer_stacked_amount: entry.stacked_amt.toString(),
+        };
+        return rewardSetSigner;
+      });
+      await this.db.chainhook.sqlWriteTransaction(async sql => {
+        await this.db.chainhook.insertRewardSetSigners(sql, dbRewardSetSigners);
+      });
+      logger.info(
+        `Updated database with stacker set for cycle ${cycleNumber}, ${dbRewardSetSigners.length} signers`
+      );
+      this.queuedCycleNumbers.delete(cycleNumber);
+    } catch (error) {
+      if (this.abortController.signal.aborted) {
+        return; // Updater service was stopped, ignore error and exit loop
+      }
+      logger.warn(
+        error,
+        `Failed to fetch stacker set for cycle ${cycleNumber}, retrying in ${FETCH_STACKER_SET_RETRY_INTERVAL_MS}ms ...`
+      );
+      await sleep(FETCH_STACKER_SET_RETRY_INTERVAL_MS, this.abortController.signal);
+      setImmediate(() => {
+        this.queuedCycleNumbers.delete(cycleNumber);
+        this.add({ cycleNumber });
+      });
     }
   }
 }
