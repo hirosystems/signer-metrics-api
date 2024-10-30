@@ -32,13 +32,14 @@ export async function startChainhookServer(args: { db: PgStore }): Promise<Chain
     });
 
     const startHeight = ENV.NETWORK === 'mainnet' ? 166000 : 1;
+    const startBlock = Math.max(startHeight, blockHeight);
     predicates.push({
       name: 'signer-monitor-api-blocks',
       version: 1,
       chain: 'stacks',
       networks: {
         [ENV.NETWORK]: {
-          start_block: blockHeight,
+          start_block: startBlock,
           if_this: {
             scope: 'block_height',
             higher_than: startHeight,
