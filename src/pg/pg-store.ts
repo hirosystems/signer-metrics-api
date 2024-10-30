@@ -13,7 +13,7 @@ export const MIGRATIONS_DIR = path.join(__dirname, '../../migrations');
 export class PgStore extends BasePgStore {
   readonly chainhook: ChainhookPgStore;
 
-  static async connect(opts?: { skipMigrations: boolean }): Promise<PgStore> {
+  static async connect(opts: { skipMigrations?: boolean; isMainnet: boolean }): Promise<PgStore> {
     const pgConfig = {
       host: ENV.PGHOST,
       port: ENV.PGPORT,
@@ -30,15 +30,15 @@ export class PgStore extends BasePgStore {
         maxLifetime: ENV.PG_MAX_LIFETIME,
       },
     });
-    if (opts?.skipMigrations !== true) {
+    if (opts.skipMigrations !== true) {
       await runMigrations(MIGRATIONS_DIR, 'up');
     }
-    return new PgStore(sql);
+    return new PgStore(sql, opts.isMainnet);
   }
 
-  constructor(sql: PgSqlClient) {
+  constructor(sql: PgSqlClient, isMainnet: boolean) {
     super(sql);
-    this.chainhook = new ChainhookPgStore(this);
+    this.chainhook = new ChainhookPgStore(this, isMainnet);
   }
 
   async getChainTipBlockHeight(): Promise<number> {
