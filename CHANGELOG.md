@@ -1,3 +1,10 @@
+## [0.4.2](https://github.com/hirosystems/signer-metrics-api/compare/v0.4.1...v0.4.2) (2024-10-30)
+
+
+### Bug Fixes
+
+* signer message predicate startBlock from db chaintip ([8ee51dd](https://github.com/hirosystems/signer-metrics-api/commit/8ee51dd5a578359fc65de3a36d11a6c5c869e2e3))
+
 ## [0.4.1](https://github.com/hirosystems/signer-metrics-api/compare/v0.4.0...v0.4.1) (2024-10-30)
 
 
