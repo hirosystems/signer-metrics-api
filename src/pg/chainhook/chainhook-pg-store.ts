@@ -1,4 +1,5 @@
 import {
+  BasePgStore,
   BasePgStoreModule,
   PgSqlClient,
   batchIterate,
@@ -54,6 +55,12 @@ type MockBlockData = Extract<
 
 export class ChainhookPgStore extends BasePgStoreModule {
   readonly events = new EventEmitter<{ missingStackerSet: [{ cycleNumber: number }] }>();
+  readonly isMainnet: boolean;
+
+  constructor(db: BasePgStore, isMainnet: boolean) {
+    super(db);
+    this.isMainnet = isMainnet;
+  }
 
   async processPayload(payload: StacksPayload): Promise<void> {
     await this.sqlWriteTransaction(async sql => {
@@ -421,37 +428,45 @@ export class ChainhookPgStore extends BasePgStoreModule {
   }
 
   private async insertBlock(sql: PgSqlClient, dbBlock: DbBlock) {
-    // After the block is inserted, calculate the reward_cycle_number, then check if the reward_set_signers
-    // table contains any rows for the calculated cycle_number.
-    const result = await sql<{ cycle_number: number | null; reward_set_exists: boolean }[]>`
-      WITH inserted AS (
+    const skipRewardSetCheck = this.isMainnet && dbBlock.burn_block_height < 867867;
+    if (skipRewardSetCheck) {
+      await sql`
         INSERT INTO blocks ${sql(dbBlock)}
-        RETURNING burn_block_height
-      ),
-      cycle_number AS (
-        SELECT FLOOR((inserted.burn_block_height - ct.first_burnchain_block_height) / ct.reward_cycle_length) AS cycle_number
-        FROM inserted, chain_tip AS ct
-        LIMIT 1
-      )
-      SELECT 
-        cn.cycle_number,
-        EXISTS (
-          SELECT 1 
-          FROM reward_set_signers 
-          WHERE cycle_number = cn.cycle_number
+      `;
+      return;
+    } else {
+      // After the block is inserted, calculate the reward_cycle_number, then check if the reward_set_signers
+      // table contains any rows for the calculated cycle_number.
+      const result = await sql<{ cycle_number: number | null; reward_set_exists: boolean }[]>`
+        WITH inserted AS (
+          INSERT INTO blocks ${sql(dbBlock)}
+          RETURNING burn_block_height
+        ),
+        cycle_number AS (
+          SELECT FLOOR((inserted.burn_block_height - ct.first_burnchain_block_height) / ct.reward_cycle_length) AS cycle_number
+          FROM inserted, chain_tip AS ct
           LIMIT 1
-        ) AS reward_set_exists
-      FROM cycle_number AS cn
-    `;
-    const { cycle_number, reward_set_exists } = result[0];
-    if (cycle_number === null) {
-      logger.warn(`Failed to calculate cycle number for block ${dbBlock.block_height}`);
-    } else if (cycle_number !== null && !reward_set_exists) {
-      logger.warn(
-        `Missing reward set signers for cycle ${cycle_number} in block ${dbBlock.block_height}`
-      );
-      // Use setImmediate to ensure we break out of the current sql transaction within the async context
-      setImmediate(() => this.events.emit('missingStackerSet', { cycleNumber: cycle_number }));
+        )
+        SELECT 
+          cn.cycle_number,
+          EXISTS (
+            SELECT 1 
+            FROM reward_set_signers 
+            WHERE cycle_number = cn.cycle_number
+            LIMIT 1
+          ) AS reward_set_exists
+        FROM cycle_number AS cn
+      `;
+      const { cycle_number, reward_set_exists } = result[0];
+      if (cycle_number === null) {
+        logger.warn(`Failed to calculate cycle number for block ${dbBlock.block_height}`);
+      } else if (cycle_number !== null && !reward_set_exists) {
+        logger.warn(
+          `Missing reward set signers for cycle ${cycle_number} in block ${dbBlock.block_height}`
+        );
+        // Use setImmediate to ensure we break out of the current sql transaction within the async context
+        setImmediate(() => this.events.emit('missingStackerSet', { cycleNumber: cycle_number }));
+      }
     }
     logger.info(`ChainhookPgStore apply block ${dbBlock.block_height} ${dbBlock.block_hash}`);
   }
