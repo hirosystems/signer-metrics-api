@@ -1,3 +1,10 @@
+## [0.4.0](https://github.com/hirosystems/signer-metrics-api/compare/v0.3.0...v0.4.0) (2024-10-30)
+
+
+### Features
+
+* skip reward-set check query during initial mainnet block ingestion ([#18](https://github.com/hirosystems/signer-metrics-api/issues/18)) ([8212d52](https://github.com/hirosystems/signer-metrics-api/commit/8212d5247c4c40545315bc19ba09844bfd30271a))
+
 ## [0.3.0](https://github.com/hirosystems/signer-metrics-api/compare/v0.2.2...v0.3.0) (2024-10-28)
 
 
