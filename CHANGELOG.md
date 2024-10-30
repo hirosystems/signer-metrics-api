@@ -1,3 +1,10 @@
+## [0.4.1](https://github.com/hirosystems/signer-metrics-api/compare/v0.4.0...v0.4.1) (2024-10-30)
+
+
+### Bug Fixes
+
+* disable predicate healthcheck likely causing predicate restarts ([6c9b802](https://github.com/hirosystems/signer-metrics-api/commit/6c9b802f209545575ee7d3c1281bbb368243d714))
+
 ## [0.4.0](https://github.com/hirosystems/signer-metrics-api/compare/v0.3.0...v0.4.0) (2024-10-30)
 
 
