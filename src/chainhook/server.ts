@@ -22,7 +22,7 @@ export async function startChainhookServer(args: { db: PgStore }): Promise<Chain
       chain: 'stacks',
       networks: {
         [ENV.NETWORK]: {
-          startBlock: 1,
+          startBlock: blockHeight,
           if_this: {
             scope: 'signer_message',
             after_timestamp: 1,
