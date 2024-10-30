@@ -27,7 +27,7 @@ export const StatusRoutes: FastifyPluginCallback<
         const block_height = await fastify.db.getChainTipBlockHeight();
 
         return {
-          server_version: `signer-monitor-api ${SERVER_VERSION.tag} (${SERVER_VERSION.branch}:${SERVER_VERSION.commit})`,
+          server_version: `signer-metrics-api ${SERVER_VERSION.tag} (${SERVER_VERSION.branch}:${SERVER_VERSION.commit})`,
           status: 'ready',
           chain_tip: {
             block_height,

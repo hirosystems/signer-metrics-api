@@ -5,12 +5,12 @@ import { Static, TSchema, Type } from '@sinclair/typebox';
 export const OpenApiSchemaOptions: SwaggerOptions = {
   openapi: {
     info: {
-      title: 'Signer Monitor API',
-      description: 'Welcome to the API reference overview for the Signer Monitor API.',
+      title: 'Signer Metrics API',
+      description: 'Welcome to the API reference overview for the Signer Metrics API.',
       version: SERVER_VERSION.tag,
     },
     externalDocs: {
-      url: 'https://github.com/hirosystems/signer-monitor',
+      url: 'https://github.com/hirosystems/signer-metrics-api',
       description: 'Source Repository',
     },
     servers: [
@@ -35,7 +35,7 @@ export const OpenApiSchemaOptions: SwaggerOptions = {
 
 export const ApiStatusResponse = Type.Object(
   {
-    server_version: Type.String({ examples: ['signer-monitor-api v0.0.1 (master:a1b2c3)'] }),
+    server_version: Type.String({ examples: ['signer-metrics-api v0.0.1 (master:a1b2c3)'] }),
     status: Type.String({ examples: ['ready'] }),
     chain_tip: Type.Object({
       block_height: Type.Integer({ examples: [163541] }),
@@ -96,7 +96,7 @@ export const BlocksEntrySignerDataSchema = Type.Object(
       description: 'Sum of voting weight of missing signers',
     }),
   },
-  { description: 'Signer data can by null if it was not detected by the monitor service' }
+  { description: 'Signer data can by null if it was not detected by the metrics service' }
 );
 
 export type BlocksEntrySignerData = Static<typeof BlocksEntrySignerDataSchema>;

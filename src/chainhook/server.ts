@@ -17,7 +17,7 @@ export async function startChainhookServer(args: { db: PgStore }): Promise<Chain
   const predicates: EventObserverPredicate[] = [];
   if (ENV.CHAINHOOK_AUTO_PREDICATE_REGISTRATION) {
     predicates.push({
-      name: 'signer-monitor-api-signer-messages',
+      name: 'signer-metrics-api-signer-messages',
       version: 1,
       chain: 'stacks',
       networks: {
@@ -34,7 +34,7 @@ export async function startChainhookServer(args: { db: PgStore }): Promise<Chain
     const startHeight = ENV.NETWORK === 'mainnet' ? 171800 : 1;
     const startBlock = Math.max(startHeight, blockHeight);
     predicates.push({
-      name: 'signer-monitor-api-blocks',
+      name: 'signer-metrics-api-blocks',
       version: 1,
       chain: 'stacks',
       networks: {

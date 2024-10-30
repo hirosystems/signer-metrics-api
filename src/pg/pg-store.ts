@@ -8,7 +8,7 @@ import { normalizeHexString } from '../helpers';
 export const MIGRATIONS_DIR = path.join(__dirname, '../../migrations');
 
 /**
- * Connects and queries the Signer Monitor's local postgres DB.
+ * Connects and queries the Signer Metrics API's local postgres DB.
  */
 export class PgStore extends BasePgStore {
   readonly chainhook: ChainhookPgStore;
@@ -22,7 +22,7 @@ export class PgStore extends BasePgStore {
       database: ENV.PGDATABASE,
     };
     const sql = await connectPostgres({
-      usageName: 'signer-monitor-pg-store',
+      usageName: 'signer-metrics-pg-store',
       connectionArgs: pgConfig,
       connectionConfig: {
         poolMax: ENV.PG_CONNECTION_POOL_MAX,
