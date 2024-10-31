@@ -21,15 +21,20 @@ export function normalizeHexString(hexString: string): string {
   return hexString.startsWith('0x') ? hexString : '0x' + hexString;
 }
 
+// TODO: refactor to use addAbortListener from `node:events`, e.g.:
+//    const disposable = events.addAbortListener(signal, event => { ... });
+//    disposable?.[Symbol.dispose]();
 export function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
-    if (signal?.aborted) {
-      return reject(signal.reason);
-    }
-    const timeout = setTimeout(() => resolve(), ms);
-    signal?.addEventListener('abort', () => {
+    if (signal?.aborted) return reject(signal.reason);
+    const timeout = setTimeout(() => {
+      resolve();
+      signal?.removeEventListener('abort', onAbort);
+    }, ms);
+    function onAbort() {
       clearTimeout(timeout);
-      reject(signal.reason);
-    });
+      reject(signal?.reason);
+    }
+    signal?.addEventListener('abort', onAbort, { once: true });
   });
 }

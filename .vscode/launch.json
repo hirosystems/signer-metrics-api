@@ -36,6 +36,19 @@
       "postDebugTask": "npm: testenv:stop",
     },
     {
+      "type": "node",
+      "request": "launch",
+      "name": "Jest: unit tests",
+      "program": "${workspaceFolder}/node_modules/jest/bin/jest",
+      "args": [
+        "--testTimeout=3600000",
+        "--runInBand",
+        "--no-cache",
+      ],
+      "outputCapture": "std",
+      "console": "internalConsole",
+    },
+    {
       "name": "Chunk parser prototyping",
       "type": "node",
       "request": "launch",
