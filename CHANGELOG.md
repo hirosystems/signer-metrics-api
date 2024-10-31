@@ -1,3 +1,10 @@
+## [0.4.4](https://github.com/hirosystems/signer-metrics-api/compare/v0.4.3...v0.4.4) (2024-10-31)
+
+
+### Bug Fixes
+
+* skip postgres ingestion for pre-nakamoto blocks ([dda2167](https://github.com/hirosystems/signer-metrics-api/commit/dda2167d0ae30b58acbcc3a4adb3303379b44a68))
+
 ## [0.4.3](https://github.com/hirosystems/signer-metrics-api/compare/v0.4.2...v0.4.3) (2024-10-31)
 
 
