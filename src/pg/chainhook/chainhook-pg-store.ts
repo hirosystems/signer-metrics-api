@@ -428,8 +428,8 @@ export class ChainhookPgStore extends BasePgStoreModule {
   }
 
   private async insertBlock(sql: PgSqlClient, dbBlock: DbBlock) {
-    const skipRewardSetCheck = this.isMainnet && dbBlock.burn_block_height < 867867;
-    if (skipRewardSetCheck) {
+    // Skip the reward_set_signers check for non-nakamoto blocks
+    if (!dbBlock.is_nakamoto_block) {
       await sql`
         INSERT INTO blocks ${sql(dbBlock)}
       `;
