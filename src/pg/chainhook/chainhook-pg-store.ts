@@ -428,12 +428,11 @@ export class ChainhookPgStore extends BasePgStoreModule {
   }
 
   private async insertBlock(sql: PgSqlClient, dbBlock: DbBlock) {
-    // Skip the reward_set_signers check for non-nakamoto blocks
+    // Skip pre-nakamoto blocks
     if (!dbBlock.is_nakamoto_block) {
-      await sql`
-        INSERT INTO blocks ${sql(dbBlock)}
-      `;
-      return;
+      logger.info(
+        `ChainhookPgStore skipping apply for pre-nakamoto block ${dbBlock.block_height} ${dbBlock.block_hash}`
+      );
     } else {
       // After the block is inserted, calculate the reward_cycle_number, then check if the reward_set_signers
       // table contains any rows for the calculated cycle_number.
@@ -467,8 +466,8 @@ export class ChainhookPgStore extends BasePgStoreModule {
         // Use setImmediate to ensure we break out of the current sql transaction within the async context
         setImmediate(() => this.events.emit('missingStackerSet', { cycleNumber: cycle_number }));
       }
+      logger.info(`ChainhookPgStore apply block ${dbBlock.block_height} ${dbBlock.block_hash}`);
     }
-    logger.info(`ChainhookPgStore apply block ${dbBlock.block_height} ${dbBlock.block_hash}`);
   }
 
   private async insertBlockSignerSignatures(
