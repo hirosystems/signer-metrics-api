@@ -5,14 +5,11 @@ const jestConfig: JestConfigWithTsJest = {
   transform: {
     ...createDefaultPreset().transform,
   },
-
   testMatch: ['**/tests/unit/**/*.test.ts'],
-
   collectCoverageFrom: [
     'src/**/*.ts',
     'migrations/*.ts',
   ],
-  collectCoverage: true,
   coverageProvider: 'v8',
 };
 
