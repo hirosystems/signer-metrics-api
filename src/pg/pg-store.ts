@@ -1,8 +1,13 @@
 import { ENV } from '../env';
-import { BasePgStore, PgSqlClient, connectPostgres, runMigrations } from '@hirosystems/api-toolkit';
+import {
+  BasePgStore,
+  PgConnectionArgs,
+  PgSqlClient,
+  connectPostgres,
+  runMigrations,
+} from '@hirosystems/api-toolkit';
 import * as path from 'path';
 import { ChainhookPgStore } from './chainhook/chainhook-pg-store';
-import { DbRewardSetSigner } from './types';
 import { normalizeHexString } from '../helpers';
 
 export const MIGRATIONS_DIR = path.join(__dirname, '../../migrations');
@@ -14,7 +19,7 @@ export class PgStore extends BasePgStore {
   readonly chainhook: ChainhookPgStore;
 
   static async connect(opts: { skipMigrations?: boolean; isMainnet: boolean }): Promise<PgStore> {
-    const pgConfig = {
+    const pgConfig: PgConnectionArgs = {
       host: ENV.PGHOST,
       port: ENV.PGPORT,
       user: ENV.PGUSER,
