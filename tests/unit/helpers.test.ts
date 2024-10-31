@@ -2,7 +2,7 @@ import { sleep } from '../../src/helpers';
 import * as events from 'node:events';
 
 describe('Helper tests', () => {
-  test('sleep function should not cause memory leak by accumulating abort listeners', async () => {
+  test('sleep function should not cause memory leak by accumulating abort listeners on abort', async () => {
     const controller = new AbortController();
     const { signal } = controller;
 
@@ -27,6 +27,26 @@ describe('Helper tests', () => {
 
     // Final check to confirm listeners are cleaned up
     expect(countListeners()).toBe(0);
-    console.log(`Final abort listeners: ${countListeners()}`);
+  });
+
+  test('sleep function should not cause memory leak by accumulating abort listeners on successful completion', async () => {
+    const controller = new AbortController();
+    const { signal } = controller;
+
+    const countListeners = () => events.getEventListeners(signal, 'abort').length;
+
+    // Ensure the initial listener count is zero
+    expect(countListeners()).toBe(0);
+
+    // Run enough iterations to detect a pattern
+    for (let i = 0; i < 100; i++) {
+      await sleep(2, signal); // Complete sleep without abort
+
+      // Assert that listener count does not increase
+      expect(countListeners()).toBe(0); // No listeners should remain after successful sleep completion
+    }
+
+    // Final check to confirm listeners are cleaned up
+    expect(countListeners()).toBe(0);
   });
 });
