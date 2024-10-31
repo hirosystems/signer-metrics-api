@@ -1,3 +1,10 @@
+## [0.4.3](https://github.com/hirosystems/signer-metrics-api/compare/v0.4.2...v0.4.3) (2024-10-31)
+
+
+### Bug Fixes
+
+* memleak in sleep abort event listener ([e68e90e](https://github.com/hirosystems/signer-metrics-api/commit/e68e90e0aaad878aa01222afca7efb7a1fd6c873))
+
 ## [0.4.2](https://github.com/hirosystems/signer-metrics-api/compare/v0.4.1...v0.4.2) (2024-10-30)
 
 
