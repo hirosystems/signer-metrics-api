@@ -1,3 +1,5 @@
+import { addAbortListener } from 'node:events';
+
 export const isDevEnv = process.env.NODE_ENV === 'development';
 export const isTestEnv = process.env.NODE_ENV === 'test';
 export const isProdEnv =
@@ -23,13 +25,15 @@ export function normalizeHexString(hexString: string): string {
 
 export function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
-    if (signal?.aborted) {
-      return reject(signal.reason);
-    }
-    const timeout = setTimeout(() => resolve(), ms);
-    signal?.addEventListener('abort', () => {
+    if (signal?.aborted) return reject(signal.reason);
+    const disposable = signal ? addAbortListener(signal, onAbort) : undefined;
+    const timeout = setTimeout(() => {
+      disposable?.[Symbol.dispose ?? (Symbol.for('nodejs.dispose') as typeof Symbol.dispose)]();
+      resolve();
+    }, ms);
+    function onAbort() {
       clearTimeout(timeout);
-      reject(signal.reason);
-    });
+      reject(signal?.reason);
+    }
   });
 }
