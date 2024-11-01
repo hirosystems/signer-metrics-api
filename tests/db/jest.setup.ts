@@ -9,21 +9,55 @@ const pgConfig = {
   PGDATABASE: 'testdb',
 };
 
+function isDockerImagePulled(docker: Docker, imgName: string) {
+  return docker
+    .getImage(imgName)
+    .inspect()
+    .then(
+      () => true,
+      () => false
+    );
+}
+
+async function pullDockerImage(docker: Docker, imgName: string) {
+  await new Promise<void>((resolve, reject) => {
+    docker.pull(imgName, {}, (err, stream) => {
+      if (err || !stream) return reject(err);
+      docker.modem.followProgress(stream, err => (err ? reject(err) : resolve()), console.log);
+    });
+  });
+}
+
+async function pruneContainers(docker: Docker, label: string) {
+  const containers = await docker.listContainers({ all: true, filters: { label: [label] } });
+  for (const container of containers) {
+    const c = docker.getContainer(container.Id);
+    if (container.State !== 'exited') {
+      await c.stop().catch(_err => {});
+    }
+    await c.remove();
+  }
+  return containers.length;
+}
+
 async function startPostgresContainer(): Promise<void> {
+  const pgImage = 'postgres:17';
+  const label = 'signer-metrics-pg-tests';
   try {
     const docker = new Docker();
-
-    console.log('Pulling PostgreSQL image...');
-    await new Promise<void>((resolve, reject) => {
-      void docker.pull('postgres:latest', {}, (_err, stream) => {
-        if (!stream) throw new Error('Stream is undefined');
-        docker.modem.followProgress(stream, err => (err ? reject(err) : resolve()), console.log);
-      });
-    });
-
+    const imgPulled = await isDockerImagePulled(docker, pgImage);
+    if (!imgPulled) {
+      console.log('Pulling PostgreSQL image...');
+      await pullDockerImage(docker, pgImage);
+    }
+    const prunedCount = await pruneContainers(docker, label);
+    if (prunedCount > 0) {
+      console.log(`Pruned ${prunedCount} existing PostgreSQL containers`);
+    }
     console.log('Creating PostgreSQL container...');
     const container = await docker.createContainer({
-      Image: 'postgres:latest',
+      Labels: { [label]: 'true' },
+      Image: pgImage,
       ExposedPorts: { '5432/tcp': {} },
       HostConfig: {
         PortBindings: {

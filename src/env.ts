@@ -59,6 +59,7 @@ const schema = Type.Object({
   PGUSER: Type.String(),
   PGPASSWORD: Type.String(),
   PGDATABASE: Type.String(),
+  PGSCHEMA: Type.Optional(Type.String()),
   /** Limit to how many concurrent connections can be created */
   PG_CONNECTION_POOL_MAX: Type.Number({ default: 10 }),
   PG_IDLE_TIMEOUT: Type.Number({ default: 0 }),
@@ -66,7 +67,19 @@ const schema = Type.Object({
 });
 type Env = Static<typeof schema>;
 
-export const ENV = envSchema<Env>({
-  schema: schema,
-  dotenv: true,
-});
+function getEnv() {
+  const env = {};
+  function reload() {
+    Object.keys(env).forEach(key => delete (env as Record<string, any>)[key]);
+    return Object.assign(env, {
+      reload,
+      ...envSchema<Env>({
+        schema: schema,
+        dotenv: true,
+      }),
+    });
+  }
+  return reload();
+}
+
+export const ENV = getEnv();

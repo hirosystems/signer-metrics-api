@@ -76,7 +76,6 @@ async function initApp() {
   logger.info(`Initializing in ${ENV.RUN_MODE} run mode...`);
   const db = await PgStore.connect({
     skipMigrations: ENV.RUN_MODE === 'readonly',
-    isMainnet: ENV.NETWORK === 'mainnet',
   });
 
   if (['default', 'writeonly'].includes(ENV.RUN_MODE)) {
