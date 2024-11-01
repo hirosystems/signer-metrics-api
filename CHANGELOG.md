@@ -1,3 +1,10 @@
+## [0.4.5](https://github.com/hirosystems/signer-metrics-api/compare/v0.4.4...v0.4.5) (2024-11-01)
+
+
+### Bug Fixes
+
+* max start block height for signer predicate messages ([#29](https://github.com/hirosystems/signer-metrics-api/issues/29)) ([6d16ff2](https://github.com/hirosystems/signer-metrics-api/commit/6d16ff2798d1384a4098a974f4d093719df36bbb))
+
 ## [0.4.4](https://github.com/hirosystems/signer-metrics-api/compare/v0.4.3...v0.4.4) (2024-10-31)
 
 
