@@ -1,7 +1,7 @@
 import { Type, TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import { FastifyPluginCallback } from 'fastify';
 import { Server } from 'http';
-import { BlockEntrySchema, BlocksEntry, BlocksEntrySignerData } from '../schemas';
+import { BlocksEntry, BlocksEntrySignerData, BlocksResponseSchema } from '../schemas';
 
 export const BlockRoutes: FastifyPluginCallback<
   Record<never, never>,
@@ -27,16 +27,7 @@ export const BlockRoutes: FastifyPluginCallback<
           }),
         }),
         response: {
-          200: Type.Object({
-            total: Type.Integer(),
-            // TODO: implement cursor pagination
-            // next_cursor: Type.String(),
-            // prev_cursor: Type.String(),
-            // cursor: Type.String(),
-            limit: Type.Integer(),
-            offset: Type.Integer(),
-            results: Type.Array(BlockEntrySchema),
-          }),
+          200: BlocksResponseSchema,
         },
       },
     },

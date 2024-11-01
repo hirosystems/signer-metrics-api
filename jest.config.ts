@@ -18,8 +18,9 @@ const jestConfig: JestConfigWithTsJest = {
       transform,
       displayName: 'db-tests',
       testMatch: ['**/tests/db/**/*.test.ts'],
-      globalSetup: './tests/db/jest.setup.ts',
-      globalTeardown: './tests/db/jest.teardown.ts',
+      globalSetup: './tests/db/jest-global-setup.ts',
+      globalTeardown: './tests/db/jest-global-teardown.ts',
+      setupFilesAfterEnv: ['./tests/db/jest-setup.ts'],
     },
   ]
 };
