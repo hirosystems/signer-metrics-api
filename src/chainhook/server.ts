@@ -14,6 +14,9 @@ export async function startChainhookServer(args: { db: PgStore }): Promise<Chain
   const blockHeight = await args.db.getChainTipBlockHeight();
   logger.info(`ChainhookServer is at block ${blockHeight}`);
 
+  const startHeight = ENV.NETWORK === 'mainnet' ? 171800 : 1;
+  const startBlock = Math.max(startHeight, blockHeight);
+
   const predicates: EventObserverPredicate[] = [];
   if (ENV.CHAINHOOK_AUTO_PREDICATE_REGISTRATION) {
     predicates.push({
@@ -22,7 +25,7 @@ export async function startChainhookServer(args: { db: PgStore }): Promise<Chain
       chain: 'stacks',
       networks: {
         [ENV.NETWORK]: {
-          startBlock: blockHeight,
+          start_block: startBlock,
           if_this: {
             scope: 'signer_message',
             after_timestamp: 1,
@@ -30,9 +33,6 @@ export async function startChainhookServer(args: { db: PgStore }): Promise<Chain
         },
       },
     });
-
-    const startHeight = ENV.NETWORK === 'mainnet' ? 171800 : 1;
-    const startBlock = Math.max(startHeight, blockHeight);
     predicates.push({
       name: 'signer-metrics-api-blocks',
       version: 1,
