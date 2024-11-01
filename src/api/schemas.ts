@@ -113,3 +113,16 @@ export const BlockEntrySchema = Type.Object({
   signer_data: Type.Optional(BlocksEntrySignerDataSchema),
 });
 export type BlocksEntry = Static<typeof BlockEntrySchema>;
+
+export const BlocksResponseSchema = Type.Object({
+  total: Type.Integer(),
+  // TODO: implement cursor pagination
+  // next_cursor: Type.String(),
+  // prev_cursor: Type.String(),
+  // cursor: Type.String(),
+  limit: Type.Integer(),
+  offset: Type.Integer(),
+  results: Type.Array(BlockEntrySchema),
+});
+
+export type BlocksResponse = Static<typeof BlocksResponseSchema>;

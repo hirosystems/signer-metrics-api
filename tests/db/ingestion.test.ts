@@ -1,22 +1,16 @@
-import { connectPostgres, logger, PgConnectionArgs } from '@hirosystems/api-toolkit';
-import { sleep } from '../../src/helpers';
-import * as events from 'node:events';
-import { ENV } from '../../src/env';
 import { PgStore } from '../../src/pg/pg-store';
 import * as fs from 'node:fs';
 import * as readline from 'node:readline/promises';
 import { StacksPayload } from '@hirosystems/chainhook-client';
-import * as crypto from 'node:crypto';
 
 describe('Postgres ingestion tests', () => {
   let db: PgStore;
   beforeAll(async () => {
-    // use a random PGSCHEMA for each test to avoid conflicts
-    const pgSchema = `test_${crypto.randomUUID()}`;
-    logger.error(`Using schema: ${pgSchema}`);
-    process.env.PGSCHEMA = pgSchema;
-    ENV.reload();
     db = await PgStore.connect();
+  });
+
+  afterAll(async () => {
+    await db.close();
   });
 
   test('db chaintip starts at 1', async () => {
