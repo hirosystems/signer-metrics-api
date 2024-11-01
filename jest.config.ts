@@ -1,16 +1,27 @@
 import { createDefaultPreset, type JestConfigWithTsJest } from 'ts-jest';
 
+const transform = { ...createDefaultPreset().transform };
 const jestConfig: JestConfigWithTsJest = {
   testEnvironment: 'node',
-  transform: {
-    ...createDefaultPreset().transform,
-  },
-  testMatch: ['**/tests/unit/**/*.test.ts'],
+  coverageProvider: 'v8',
   collectCoverageFrom: [
     'src/**/*.ts',
     'migrations/*.ts',
   ],
-  coverageProvider: 'v8',
+  projects: [
+    {
+      transform,
+      displayName: 'unit-tests',
+      testMatch: ['**/tests/unit/**/*.test.ts'],
+    },
+    {
+      transform,
+      displayName: 'db-tests',
+      testMatch: ['**/tests/db/**/*.test.ts'],
+      globalSetup: './tests/db/jest.setup.ts',
+      globalTeardown: './tests/db/jest.teardown.ts',
+    },
+  ]
 };
 
 export default jestConfig;

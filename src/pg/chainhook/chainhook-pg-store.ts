@@ -55,11 +55,9 @@ type MockBlockData = Extract<
 
 export class ChainhookPgStore extends BasePgStoreModule {
   readonly events = new EventEmitter<{ missingStackerSet: [{ cycleNumber: number }] }>();
-  readonly isMainnet: boolean;
 
-  constructor(db: BasePgStore, isMainnet: boolean) {
+  constructor(db: BasePgStore) {
     super(db);
-    this.isMainnet = isMainnet;
   }
 
   async processPayload(payload: StacksPayload): Promise<void> {
