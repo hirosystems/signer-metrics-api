@@ -33,6 +33,7 @@
     "@stacks/eslint-config": "^1.2.0",
     "@types/dockerode": "^3.3.31",
     "@types/jest": "^29.5.11",
+    "@types/supertest": "^6.0.2",
     "@typescript-eslint/eslint-plugin": "^5.43.0",
     "@typescript-eslint/parser": "^5.43.0",
     "dockerode": "^4.0.2",
@@ -44,6 +45,7 @@
     "prettier": "^2.7.1",
     "redoc-cli": "^0.13.20",
     "rimraf": "^3.0.2",
+    "supertest": "^7.0.0",
     "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.6.3"

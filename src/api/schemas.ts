@@ -113,3 +113,133 @@ export const BlockEntrySchema = Type.Object({
   signer_data: Type.Optional(BlocksEntrySignerDataSchema),
 });
 export type BlocksEntry = Static<typeof BlockEntrySchema>;
+
+export const BlocksResponseSchema = Type.Object({
+  total: Type.Integer(),
+  // TODO: implement cursor pagination
+  // next_cursor: Type.String(),
+  // prev_cursor: Type.String(),
+  // cursor: Type.String(),
+  limit: Type.Integer(),
+  offset: Type.Integer(),
+  results: Type.Array(BlockEntrySchema),
+});
+
+export type BlocksResponse = Static<typeof BlocksResponseSchema>;
+
+export const CycleSignerSchema = Type.Object({
+  signer_key: Type.String(),
+  weight: Type.Integer({
+    description:
+      'Voting weight of this signer (based on slots allocated which is proportional to stacked amount)',
+  }),
+  weight_percentage: Type.Number({
+    description: 'Voting weight percent (weight / total_weight)',
+  }),
+  stacked_amount: Type.String({
+    description: 'Total STX stacked associated with this signer (string quoted integer)',
+  }),
+  stacked_amount_percent: Type.Number({
+    description: 'Stacked amount percent (stacked_amount / total_stacked_amount)',
+  }),
+  // TODO: implement this field
+  /*
+  stacked_amount_rank: Type.Integer({
+    description:
+      "This signer's rank in the list of all signers (for this cycle) ordered by stacked amount",
+  }),
+  */
+  proposals_accepted_count: Type.Integer({
+    description: 'Number of block proposals accepted by this signer',
+  }),
+  proposals_rejected_count: Type.Integer({
+    description: 'Number of block proposals rejected by this signer',
+  }),
+  proposals_missed_count: Type.Integer({
+    description: 'Number of block proposals missed by this signer',
+  }),
+  average_response_time_ms: Type.Number({
+    description:
+      'Time duration (in milliseconds) taken to submit responses to block proposals (tracked best effort)',
+  }),
+  // TODO: implement these nice-to-have fields
+  /*
+  mined_blocks_accepted_included_count: Type.Integer({
+    description: 'Number of mined blocks where signer approved and was included',
+  }),
+  mined_blocks_accepted_excluded_count: Type.Integer({
+    description: 'Number of mined blocks where signer approved but was not included',
+  }),
+  mined_blocks_rejected_count: Type.Integer({
+    description: 'Number of mined blocks where signer rejected',
+  }),
+  mined_blocks_missing_count: Type.Integer({
+    description: 'Number of mined blocks where signer was missing',
+  }),
+  */
+});
+export type CycleSigner = Static<typeof CycleSignerSchema>;
+
+export const CycleSignersResponseSchema = Type.Object({
+  total: Type.Integer(),
+  // TODO: implement cursor pagination
+  // next_cursor: Type.String(),
+  // prev_cursor: Type.String(),
+  // cursor: Type.String(),
+  limit: Type.Integer(),
+  offset: Type.Integer(),
+  results: Type.Array(CycleSignerSchema),
+});
+export type CycleSignersResponse = Static<typeof CycleSignersResponseSchema>;
+
+export const CycleSignerResponseSchema = Type.Object({
+  signer_key: Type.String(),
+  weight: Type.Integer({
+    description:
+      'Voting weight of this signer (based on slots allocated which is proportional to stacked amount)',
+  }),
+  weight_percentage: Type.Number({
+    description: 'Voting weight percent (weight / total_weight)',
+  }),
+  stacked_amount: Type.String({
+    description: 'Total STX stacked associated with this signer (string quoted integer)',
+  }),
+  stacked_amount_percent: Type.Number({
+    description: 'Stacked amount percent (stacked_amount / total_stacked_amount)',
+  }),
+  stacked_amount_rank: Type.Integer({
+    description:
+      "This signer's rank in the list of all signers (for this cycle) ordered by stacked amount",
+  }),
+  proposals_accepted_count: Type.Integer({
+    description: 'Number of block proposals accepted by this signer',
+  }),
+  proposals_rejected_count: Type.Integer({
+    description: 'Number of block proposals rejected by this signer',
+  }),
+  proposals_missed_count: Type.Integer({
+    description: 'Number of block proposals missed by this signer',
+  }),
+  // TODO: implement these nice-to-have fields
+  /*
+  mined_blocks_accepted_included_count: Type.Integer({
+    description: 'Number of mined blocks where signer approved and was included',
+  }),
+  mined_blocks_accepted_excluded_count: Type.Integer({
+    description: 'Number of mined blocks where signer approved but was not included',
+  }),
+  mined_blocks_rejected_count: Type.Integer({
+    description: 'Number of mined blocks where signer rejected',
+  }),
+  mined_blocks_missing_count: Type.Integer({
+    description:
+      'Number of mined blocks where signer was missing (did not submit an accept or reject response)',
+  }),
+  */
+  average_response_time_ms: Type.Number({
+    description:
+      'Time duration (in milliseconds) taken to submit responses to block proposals (tracked best effort)',
+  }),
+});
+
+export type CycleSignerResponse = Static<typeof CycleSignerResponseSchema>;
