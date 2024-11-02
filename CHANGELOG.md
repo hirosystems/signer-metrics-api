@@ -1,3 +1,10 @@
+## [0.4.6](https://github.com/hirosystems/signer-metrics-api/compare/v0.4.5...v0.4.6) (2024-11-02)
+
+
+### Bug Fixes
+
+* correct ordering for cycle signers endpoint ([#31](https://github.com/hirosystems/signer-metrics-api/issues/31)) ([9fd2fc4](https://github.com/hirosystems/signer-metrics-api/commit/9fd2fc456ff0f46cf0a5e90a507c9541b58d314f))
+
 ## [0.4.5](https://github.com/hirosystems/signer-metrics-api/compare/v0.4.4...v0.4.5) (2024-11-01)
 
 
