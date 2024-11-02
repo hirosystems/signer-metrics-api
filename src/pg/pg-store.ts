@@ -277,6 +277,7 @@ export class PgStore extends BasePgStore {
         weight_percentage: number;
         stacked_amount: string;
         stacked_amount_percentage: number;
+        stacked_amount_rank: number;
         proposals_accepted_count: number;
         proposals_rejected_count: number;
         proposals_missed_count: number;
@@ -337,6 +338,14 @@ export class PgStore extends BasePgStore {
           ROUND(AVG(spd.response_time_ms), 3)::float8 AS average_response_time_ms
         FROM signer_proposal_data spd
         GROUP BY spd.signer_key
+      ),
+      signer_rank AS (
+        -- Calculate the rank of each signer based on stacked amount
+        SELECT
+          signer_key,
+          RANK() OVER (ORDER BY signer_stacked_amount DESC) AS stacked_amount_rank
+        FROM reward_set_signers
+        WHERE cycle_number = ${cycleNumber}
       )
       SELECT
         sd.signer_key,
@@ -344,6 +353,7 @@ export class PgStore extends BasePgStore {
         sd.signer_stacked_amount AS stacked_amount,
         ROUND(sd.signer_weight * 100.0 / (SELECT SUM(signer_weight) FROM reward_set_signers WHERE cycle_number = ${cycleNumber}), 3)::float8 AS weight_percentage,
         ROUND(sd.signer_stacked_amount * 100.0 / (SELECT SUM(signer_stacked_amount) FROM reward_set_signers WHERE cycle_number = ${cycleNumber}), 3)::float8 AS stacked_amount_percentage,
+        sr.stacked_amount_rank,
         ad.proposals_accepted_count,
         ad.proposals_rejected_count,
         ad.proposals_missed_count,
@@ -351,7 +361,9 @@ export class PgStore extends BasePgStore {
       FROM signer_data sd
       LEFT JOIN aggregated_data ad
         ON sd.signer_key = ad.signer_key
-      ORDER BY sd.signer_weight DESC
+      LEFT JOIN signer_rank sr
+        ON sd.signer_key = sr.signer_key
+      ORDER BY sd.signer_stacked_amount DESC, sd.signer_key ASC
     `;
     return dbRewardSetSigners;
   }
