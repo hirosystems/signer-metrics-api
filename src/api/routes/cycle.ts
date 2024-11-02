@@ -49,6 +49,7 @@ export const CycleRoutes: FastifyPluginCallback<
             weight_percentage: result.weight_percentage,
             stacked_amount: result.stacked_amount,
             stacked_amount_percent: result.stacked_amount_percentage,
+            stacked_amount_rank: result.stacked_amount_rank,
             proposals_accepted_count: result.proposals_accepted_count,
             proposals_rejected_count: result.proposals_rejected_count,
             proposals_missed_count: result.proposals_missed_count,

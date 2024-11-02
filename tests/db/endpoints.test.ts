@@ -130,6 +130,7 @@ describe('Postgres ingestion tests', () => {
       weight_percentage: 76,
       stacked_amount: '250000000000000',
       stacked_amount_percent: 74.127,
+      stacked_amount_rank: 1,
       proposals_accepted_count: 84,
       proposals_rejected_count: 12,
       proposals_missed_count: 3,
