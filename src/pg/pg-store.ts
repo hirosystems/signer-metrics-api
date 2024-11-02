@@ -437,7 +437,7 @@ export class PgStore extends BasePgStore {
         WHERE cycle_number = ${cycleNumber}
       )
       SELECT
-        encode(sd.signer_key, 'hex') AS signer_key,
+        sd.signer_key,
         sd.signer_weight AS weight,
         sd.signer_stacked_amount AS stacked_amount,
         ROUND(sd.signer_weight * 100.0 / (SELECT SUM(signer_weight) FROM reward_set_signers WHERE cycle_number = ${cycleNumber}), 3)::float8 AS weight_percentage,

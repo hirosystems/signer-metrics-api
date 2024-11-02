@@ -11,6 +11,7 @@ import {
   BlocksEntry,
   BlocksResponse,
   CycleSigner,
+  CycleSignerResponse,
   CycleSignersResponse,
 } from '../../src/api/schemas';
 import { PoxInfo, RpcStackerSetResponse } from '../../src/stacks-core-rpc/stacks-core-rpc-client';
@@ -135,5 +136,27 @@ describe('Postgres ingestion tests', () => {
       average_response_time_ms: 26273.979,
     };
     expect(testSigner).toEqual(expectedSignerData);
+  });
+
+  test('get signer for cycle', async () => {
+    // this signer has all states (missing, rejected, accepted)
+    const testSignerKey = '0x02e8620935d58ebffa23c260f6917cbd0915ea17d7a46df17e131540237d335504';
+    const responseTest = await supertest(apiServer.server)
+      .get(`/signer-metrics/v1/cycles/72/signers/${testSignerKey}`)
+      .expect(200);
+    const body: CycleSignerResponse = responseTest.body;
+    const expectedSignerData: CycleSignerResponse = {
+      signer_key: '0x02e8620935d58ebffa23c260f6917cbd0915ea17d7a46df17e131540237d335504',
+      weight: 38,
+      weight_percentage: 76,
+      stacked_amount: '250000000000000',
+      stacked_amount_percent: 74.127,
+      stacked_amount_rank: 1,
+      proposals_accepted_count: 84,
+      proposals_rejected_count: 12,
+      proposals_missed_count: 3,
+      average_response_time_ms: 26273.979,
+    };
+    expect(body).toEqual(expectedSignerData);
   });
 });
