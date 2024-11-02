@@ -1,6 +1,6 @@
 import { PgStore } from '../pg/pg-store';
 import PQueue from 'p-queue';
-import { fetchStackerSet, getStacksNodeUrl } from './stacks-core-rpc-client';
+import { fetchStackerSet, getStacksNodeUrl, RpcStackerSetResponse } from './stacks-core-rpc-client';
 import { sleep } from '../helpers';
 import { logger } from '@hirosystems/api-toolkit';
 import { DbRewardSetSigner } from '../pg/types';
@@ -61,17 +61,10 @@ export class StackerSetUpdator {
         return; // Exit job successful fetch
       }
       logger.info(`Fetched stacker set for cycle ${cycleNumber}, updating database ...`);
-      const dbRewardSetSigners = stackerSet.response.stacker_set.signers.map(entry => {
-        const rewardSetSigner: DbRewardSetSigner = {
-          cycle_number: cycleNumber,
-          block_height: 0,
-          burn_block_height: 0,
-          signer_key: Buffer.from(entry.signing_key.replace(/^0x/, ''), 'hex'),
-          signer_weight: entry.weight,
-          signer_stacked_amount: entry.stacked_amt.toString(),
-        };
-        return rewardSetSigner;
-      });
+      const dbRewardSetSigners = rpcStackerSetToDbRewardSetSigners(
+        stackerSet.response,
+        cycleNumber
+      );
       await this.db.chainhook.sqlWriteTransaction(async sql => {
         await this.db.chainhook.insertRewardSetSigners(sql, dbRewardSetSigners);
       });
@@ -94,4 +87,21 @@ export class StackerSetUpdator {
       });
     }
   }
+}
+
+export function rpcStackerSetToDbRewardSetSigners(
+  rpcResponse: RpcStackerSetResponse,
+  cycleNumber: number
+): DbRewardSetSigner[] {
+  return rpcResponse.stacker_set.signers.map(entry => {
+    const rewardSetSigner: DbRewardSetSigner = {
+      cycle_number: cycleNumber,
+      block_height: 0,
+      burn_block_height: 0,
+      signer_key: Buffer.from(entry.signing_key.replace(/^0x/, ''), 'hex'),
+      signer_weight: entry.weight,
+      signer_stacked_amount: entry.stacked_amt.toString(),
+    };
+    return rewardSetSigner;
+  });
 }
