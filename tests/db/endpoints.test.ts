@@ -7,7 +7,12 @@ import { FastifyInstance } from 'fastify';
 import { StacksPayload } from '@hirosystems/chainhook-client';
 import { buildApiServer } from '../../src/api/init';
 import { PgStore } from '../../src/pg/pg-store';
-import { BlocksEntry, BlocksResponse } from '../../src/api/schemas';
+import {
+  BlocksEntry,
+  BlocksResponse,
+  CycleSigner,
+  CycleSignersResponse,
+} from '../../src/api/schemas';
 import { PoxInfo, RpcStackerSetResponse } from '../../src/stacks-core-rpc/stacks-core-rpc-client';
 import { rpcStackerSetToDbRewardSetSigners } from '../../src/stacks-core-rpc/stacker-set-updater';
 
@@ -107,5 +112,28 @@ describe('Postgres ingestion tests', () => {
       },
     };
     expect(testBlock).toEqual(expectedBlockData);
+  });
+
+  test('get signers for cycle', async () => {
+    const responseTest = await supertest(apiServer.server)
+      .get('/signer-metrics/v1/cycles/72/signers')
+      .expect(200);
+    const body: CycleSignersResponse = responseTest.body;
+
+    // this signer has all states (missing, rejected, accepted)
+    const testSignerKey = '0x02e8620935d58ebffa23c260f6917cbd0915ea17d7a46df17e131540237d335504';
+    const testSigner = body.results.find(r => r.signer_key === testSignerKey);
+    const expectedSignerData: CycleSigner = {
+      signer_key: '0x02e8620935d58ebffa23c260f6917cbd0915ea17d7a46df17e131540237d335504',
+      weight: 38,
+      weight_percentage: 76,
+      stacked_amount: '250000000000000',
+      stacked_amount_percent: 74.127,
+      proposals_accepted_count: 84,
+      proposals_rejected_count: 12,
+      proposals_missed_count: 3,
+      average_response_time_ms: 26273.979,
+    };
+    expect(testSigner).toEqual(expectedSignerData);
   });
 });
