@@ -2,6 +2,8 @@ import { Type, TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import { FastifyPluginCallback } from 'fastify';
 import { Server } from 'http';
 import { CycleSignerResponseSchema, CycleSignersResponseSchema } from '../schemas';
+import { parseTime } from '../../helpers';
+import { InvalidRequestError } from '../errors';
 
 export const CycleRoutes: FastifyPluginCallback<
   Record<never, never>,
@@ -20,6 +22,12 @@ export const CycleRoutes: FastifyPluginCallback<
           cycle_number: Type.Integer({ description: 'PoX cycle number' }),
         }),
         querystring: Type.Object({
+          from: Type.Optional(
+            Type.String({ description: 'Start of time range (e.g., now-2h or ISO timestamp)' })
+          ),
+          to: Type.Optional(
+            Type.String({ description: 'End of time range (e.g., now or ISO timestamp)' })
+          ),
           limit: Type.Integer({
             description: 'Number of results to return (default: 100)',
             default: 100,
@@ -35,12 +43,29 @@ export const CycleRoutes: FastifyPluginCallback<
       },
     },
     async (request, reply) => {
+      const { from, to, limit, offset } = request.query;
+
+      const fromDate = from ? parseTime(from) : null;
+      const toDate = to ? parseTime(to) : null;
+      if (from && !fromDate) {
+        throw new InvalidRequestError('`from` parameter has an invalid format.');
+      }
+      if (to && !toDate) {
+        throw new InvalidRequestError('`to` parameter has an invalid format.');
+      }
+      if (fromDate && toDate && fromDate > toDate) {
+        throw new InvalidRequestError('`from` parameter must be earlier than `to` parameter.');
+      }
+
       const result = await fastify.db.sqlTransaction(async sql => {
-        const results = await fastify.db.getSignersForCycle(
-          request.params.cycle_number,
-          request.query.limit,
-          request.query.offset
-        );
+        const results = await fastify.db.getSignersForCycle({
+          sql,
+          cycleNumber: request.params.cycle_number,
+          fromDate: fromDate ?? undefined,
+          toDate: toDate ?? undefined,
+          limit,
+          offset,
+        });
 
         const formatted = results.map(result => {
           return {
