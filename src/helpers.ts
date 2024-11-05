@@ -50,7 +50,7 @@ export function parseTime(timeStr: string): Date | null {
   }
 
   if (timeStr.startsWith('now-')) {
-    const relativeMatch = timeStr.match(/now-(\d+)(s|m|h|d|w|mo|y)/i);
+    const relativeMatch = timeStr.match(/now-(\d+)(s|mo|m|h|d|w|y)/i);
     if (relativeMatch) {
       const [, amount, unit] = relativeMatch;
       const unitsMap: Record<string, keyof Duration> = {
