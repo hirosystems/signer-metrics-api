@@ -1,3 +1,10 @@
+## [0.6.0](https://github.com/hirosystems/signer-metrics-api/compare/v0.5.0...v0.6.0) (2024-11-05)
+
+
+### Features
+
+* add signer last_seen and version fields ([bcc0b16](https://github.com/hirosystems/signer-metrics-api/commit/bcc0b16b00c321564169f93da59319481d0cd636))
+
 ## [0.5.0](https://github.com/hirosystems/signer-metrics-api/compare/v0.4.6...v0.5.0) (2024-11-05)
 
 
