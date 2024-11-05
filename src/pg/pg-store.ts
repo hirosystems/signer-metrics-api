@@ -255,7 +255,21 @@ export class PgStore extends BasePgStore {
     return result;
   }
 
-  async getSignersForCycle(cycleNumber: number, limit: number, offset: number) {
+  async getSignersForCycle({
+    sql,
+    cycleNumber,
+    limit,
+    offset,
+    fromDate,
+    toDate,
+  }: {
+    sql: PgSqlClient;
+    cycleNumber: number;
+    limit: number;
+    offset: number;
+    fromDate?: Date;
+    toDate?: Date;
+  }) {
     // TODO: add pagination
     // TODO: joins against the block_signer_signatures table to determine mined_blocks_* values
 
@@ -270,7 +284,10 @@ export class PgStore extends BasePgStore {
     //  * Number of block_proposal entries that are missing an associated block_response entry.
     //  * The average time duration between block_proposal.received_at and block_response.received_at.
 
-    const dbRewardSetSigners = await this.sql<
+    const fromFilter = fromDate ? sql`AND bp.received_at >= ${fromDate}` : sql``;
+    const toFilter = toDate ? sql`AND bp.received_at < ${toDate}` : sql``;
+
+    const dbRewardSetSigners = await sql<
       {
         signer_key: string;
         weight: number;
@@ -300,7 +317,10 @@ export class PgStore extends BasePgStore {
           bp.block_height,
           bp.received_at AS proposal_received_at
         FROM block_proposals bp
-        WHERE bp.reward_cycle = ${cycleNumber}
+        WHERE 
+          bp.reward_cycle = ${cycleNumber}
+          ${fromFilter}
+          ${toFilter}
       ),
       response_data AS (
         -- Select responses associated with the proposals from the given cycle

@@ -1,9 +1,11 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as fs from 'node:fs';
 import * as readline from 'node:readline/promises';
 import * as assert from 'node:assert';
 import * as zlib from 'node:zlib';
 import * as supertest from 'supertest';
 import { FastifyInstance } from 'fastify';
+import * as dateFns from 'date-fns';
 import { StacksPayload } from '@hirosystems/chainhook-client';
 import { buildApiServer } from '../../src/api/init';
 import { PgStore } from '../../src/pg/pg-store';
@@ -85,6 +87,10 @@ describe('Postgres ingestion tests', () => {
       .expect(200);
     const body: BlocksResponse = responseTest.body;
 
+    const firstBlockTime = new Date(body.results[0].block_time * 1000).toISOString();
+    const lastBlockTime = new Date((body.results.at(-1)?.block_time ?? 0) * 1000).toISOString();
+    console.log(`First block time: ${firstBlockTime}, Last block time: ${lastBlockTime}`);
+
     // block 112274 has all signer states (missing, rejected, accepted, accepted_excluded)
     const testBlock = body.results.find(r => r.block_height === 112274);
     assert.ok(testBlock);
@@ -139,6 +145,77 @@ describe('Postgres ingestion tests', () => {
       average_response_time_ms: 26273.979,
     };
     expect(testSigner).toEqual(expectedSignerData);
+  });
+
+  test('get signers for cycle with time range', async () => {
+    const blocksResponse = await supertest(apiServer.server)
+      .get('/signer-metrics/v1/blocks?limit=20')
+      .expect(200);
+    const { results: allBlocks } = blocksResponse.body as BlocksResponse;
+    const blocks = allBlocks.filter(b => b.signer_data);
+
+    const latestBlockTime = new Date(blocks[0].signer_data!.block_proposal_time_ms);
+    const secondLatestBlockTime = new Date(blocks[1].signer_data!.block_proposal_time_ms);
+    const oldestBlock = new Date(blocks.at(-1)!.signer_data!.block_proposal_time_ms);
+
+    // Get a range that includes the first two blocks
+    const from1 = dateFns.subSeconds(secondLatestBlockTime, 1);
+    const to1 = dateFns.addSeconds(latestBlockTime, 1);
+
+    const signersResp1 = await supertest(apiServer.server)
+      .get(
+        `/signer-metrics/v1/cycles/72/signers?from=${from1.toISOString()}&to=${to1.toISOString()}`
+      )
+      .expect(200);
+    const signersBody1: CycleSignersResponse = signersResp1.body;
+    const testSignerKey1 = '0x02e8620935d58ebffa23c260f6917cbd0915ea17d7a46df17e131540237d335504';
+    const testSigner1 = signersBody1.results.find(r => r.signer_key === testSignerKey1);
+    const expectedSignerData1: CycleSigner = {
+      signer_key: '0x02e8620935d58ebffa23c260f6917cbd0915ea17d7a46df17e131540237d335504',
+      weight: 38,
+      weight_percentage: 76,
+      stacked_amount: '250000000000000',
+      stacked_amount_percent: 74.127,
+      stacked_amount_rank: 1,
+      proposals_accepted_count: 1,
+      proposals_rejected_count: 0,
+      proposals_missed_count: 1,
+      average_response_time_ms: 28515,
+    };
+    expect(testSigner1).toEqual(expectedSignerData1);
+
+    // number of seconds between now and the second latest block
+    let latestBlockSecondsAgo = dateFns.differenceInSeconds(new Date(), secondLatestBlockTime);
+    latestBlockSecondsAgo += 10; // add a few seconds to account for test execution time
+    const signersResp2 = await supertest(apiServer.server)
+      .get(`/signer-metrics/v1/cycles/72/signers?from=now-${latestBlockSecondsAgo}s&to=now`)
+      .expect(200);
+    const signersBody2: CycleSignersResponse = signersResp2.body;
+    const testSigner2 = signersBody2.results.find(r => r.signer_key === testSignerKey1);
+    // should return data for the last 2 blocks
+    expect(testSigner2).toEqual(expectedSignerData1);
+
+    const oldestBlockSecondsAgo = dateFns.differenceInSeconds(new Date(), oldestBlock);
+    const signersResp3 = await supertest(apiServer.server)
+      .get(
+        `/signer-metrics/v1/cycles/72/signers?from=${oldestBlock.toISOString()}&to=now-${oldestBlockSecondsAgo}s`
+      )
+      .expect(200);
+    const signersBody3: CycleSignersResponse = signersResp3.body;
+    const testSigner3 = signersBody3.results.find(r => r.signer_key === testSignerKey1);
+    // should return data for the oldest block
+    expect(testSigner3).toEqual({
+      signer_key: '0x02e8620935d58ebffa23c260f6917cbd0915ea17d7a46df17e131540237d335504',
+      weight: 38,
+      weight_percentage: 76,
+      stacked_amount: '250000000000000',
+      stacked_amount_percent: 74.127,
+      stacked_amount_rank: 1,
+      proposals_accepted_count: 1,
+      proposals_rejected_count: 0,
+      proposals_missed_count: 0,
+      average_response_time_ms: 29020,
+    });
   });
 
   test('get signer for cycle', async () => {
