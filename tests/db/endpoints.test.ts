@@ -26,17 +26,6 @@ describe('Postgres ingestion tests', () => {
     apiServer = await buildApiServer({ db });
     await apiServer.listen({ port: 0, host: '127.0.0.1' });
 
-    // insert chainhook-payloads dump
-    const payloadDumpFile = './tests/dumps/dump-chainhook-payloads-2024-11-02.ndjson.gz';
-    const rl = readline.createInterface({
-      input: fs.createReadStream(payloadDumpFile).pipe(zlib.createGunzip()),
-      crlfDelay: Infinity,
-    });
-    for await (const line of rl) {
-      await db.chainhook.processPayload(JSON.parse(line) as StacksPayload);
-    }
-    rl.close();
-
     // insert pox-info dump
     const poxInfoDump = JSON.parse(
       fs.readFileSync('./tests/dumps/dump-pox-info-2024-11-02.json', 'utf8')
@@ -51,6 +40,19 @@ describe('Postgres ingestion tests', () => {
       db.sql,
       rpcStackerSetToDbRewardSetSigners(stackerSetDump, 72)
     );
+
+    // insert chainhook-payloads dump
+    const spyInfoLog = jest.spyOn(db.chainhook.logger, 'info').mockImplementation(() => {}); // Surpress noisy logs during bulk insertion test
+    const payloadDumpFile = './tests/dumps/dump-chainhook-payloads-2024-11-02.ndjson.gz';
+    const rl = readline.createInterface({
+      input: fs.createReadStream(payloadDumpFile).pipe(zlib.createGunzip()),
+      crlfDelay: Infinity,
+    });
+    for await (const line of rl) {
+      await db.chainhook.processPayload(JSON.parse(line) as StacksPayload);
+    }
+    rl.close();
+    spyInfoLog.mockRestore();
   });
 
   afterAll(async () => {

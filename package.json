@@ -9,7 +9,7 @@
     "build": "rimraf ./dist && tsc --project tsconfig.build.json",
     "start": "node ./dist/src/index.js",
     "start-ts": "ts-node ./src/index.ts",
-    "test": "jest --runInBand",
+    "test": "jest",
     "test:unit": "jest --selectProjects unit-tests",
     "test:db": "jest --selectProjects db-tests",
     "test:api": "npm run test -- ./tests/api/",
