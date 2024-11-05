@@ -299,6 +299,7 @@ export class PgStore extends BasePgStore {
         proposals_rejected_count: number;
         proposals_missed_count: number;
         average_response_time_ms: number;
+        last_block_response_time: Date | null;
       }[]
     >`
       WITH signer_data AS (
@@ -332,6 +333,14 @@ export class PgStore extends BasePgStore {
           br.id
         FROM block_responses br
         JOIN proposal_data pd ON br.signer_sighash = pd.block_hash -- Only responses linked to selected proposals
+      ),
+      latest_response_data AS (
+        -- Find the latest response time for each signer
+        SELECT
+          signer_key,
+          MAX(received_at) AS last_block_response_time
+        FROM response_data
+        GROUP BY signer_key
       ),
       signer_proposal_data AS (
         -- Cross join signers with proposals and left join filtered responses
@@ -377,12 +386,15 @@ export class PgStore extends BasePgStore {
         ad.proposals_accepted_count,
         ad.proposals_rejected_count,
         ad.proposals_missed_count,
-        COALESCE(ad.average_response_time_ms, 0) AS average_response_time_ms
+        COALESCE(ad.average_response_time_ms, 0) AS average_response_time_ms,
+        COALESCE(lrd.last_block_response_time, NULL) AS last_block_response_time
       FROM signer_data sd
       LEFT JOIN aggregated_data ad
         ON sd.signer_key = ad.signer_key
       LEFT JOIN signer_rank sr
         ON sd.signer_key = sr.signer_key
+      LEFT JOIN latest_response_data lrd
+        ON sd.signer_key = lrd.signer_key -- Join the latest response time data
       ORDER BY sd.signer_stacked_amount DESC, sd.signer_key ASC
     `;
     return dbRewardSetSigners;
@@ -401,6 +413,7 @@ export class PgStore extends BasePgStore {
         proposals_rejected_count: number;
         proposals_missed_count: number;
         average_response_time_ms: number;
+        last_block_response_time: Date | null;
       }[]
     >`
       WITH signer_data AS (
@@ -433,6 +446,12 @@ export class PgStore extends BasePgStore {
         FROM block_responses br
         JOIN proposal_data pd ON br.signer_sighash = pd.block_hash
         WHERE br.signer_key = ${normalizeHexString(signerId)} -- Filter for the specific signer
+      ),
+      latest_response_data AS (
+        -- Find the latest response time for the specific signer
+        SELECT
+          MAX(received_at) AS last_block_response_time
+        FROM response_data
       ),
       signer_proposal_data AS (
         -- Cross join the specific signer with proposals and left join filtered responses
@@ -478,12 +497,15 @@ export class PgStore extends BasePgStore {
         ad.proposals_accepted_count,
         ad.proposals_rejected_count,
         ad.proposals_missed_count,
-        COALESCE(ad.average_response_time_ms, 0) AS average_response_time_ms
+        COALESCE(ad.average_response_time_ms, 0) AS average_response_time_ms,
+        COALESCE(lrd.last_block_response_time, NULL) AS last_block_response_time
       FROM signer_data sd
       LEFT JOIN aggregated_data ad
         ON sd.signer_key = ad.signer_key
       LEFT JOIN signer_rank sr
         ON sd.signer_key = sr.signer_key
+      LEFT JOIN latest_response_data lrd
+        ON true
     `;
     return dbRewardSetSigner[0];
   }

@@ -159,6 +159,12 @@ export const CycleSignerSchema = Type.Object({
     description:
       'Time duration (in milliseconds) taken to submit responses to block proposals (tracked best effort)',
   }),
+  last_seen: Type.Union([
+    Type.String({
+      description: 'ISO timestamp of the last time a message from this signer was seen',
+    }),
+    Type.Null(),
+  ]),
   // TODO: implement these nice-to-have fields
   /*
   mined_blocks_accepted_included_count: Type.Integer({
