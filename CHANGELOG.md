@@ -1,3 +1,10 @@
+## [0.5.0](https://github.com/hirosystems/signer-metrics-api/compare/v0.4.6...v0.5.0) (2024-11-05)
+
+
+### Features
+
+* support from/to time range query in cycle signers endpoint ([#37](https://github.com/hirosystems/signer-metrics-api/issues/37)) ([a96736b](https://github.com/hirosystems/signer-metrics-api/commit/a96736bf30d4dd6f9345b1fbdaf3cc88ff88ed76))
+
 ## [0.4.6](https://github.com/hirosystems/signer-metrics-api/compare/v0.4.5...v0.4.6) (2024-11-02)
 
 
