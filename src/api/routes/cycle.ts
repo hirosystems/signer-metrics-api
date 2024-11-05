@@ -85,6 +85,7 @@ export const CycleRoutes: FastifyPluginCallback<
             proposals_missed_count: result.proposals_missed_count,
             average_response_time_ms: result.average_response_time_ms,
             last_seen: result.last_block_response_time?.toISOString() ?? null,
+            version: result.last_metadata_server_version ?? null,
           };
           return cycleSinger;
         });
@@ -144,6 +145,7 @@ export const CycleRoutes: FastifyPluginCallback<
           proposals_missed_count: signer.proposals_missed_count,
           average_response_time_ms: signer.average_response_time_ms,
           last_seen: signer.last_block_response_time?.toISOString() ?? null,
+          version: signer.last_metadata_server_version ?? null,
         };
         return cycleSigner;
       });

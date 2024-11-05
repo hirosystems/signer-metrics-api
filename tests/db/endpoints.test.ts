@@ -140,6 +140,8 @@ describe('Endpoint tests', () => {
       proposals_missed_count: 3,
       average_response_time_ms: 26273.979,
       last_seen: '2024-11-02T13:33:21.831Z',
+      version:
+        'stacks-signer signer-3.0.0.0.0.1 (release/signer-3.0.0.0.0.1:b26f406, release build, linux [x86_64])',
     };
     expect(testSigner).toEqual(expectedSignerData);
 
@@ -158,6 +160,7 @@ describe('Endpoint tests', () => {
       proposals_missed_count: 99,
       average_response_time_ms: 0,
       last_seen: null,
+      version: null,
     };
     expect(miaSigner).toEqual(expectedMiaSignerData);
   });
@@ -197,6 +200,8 @@ describe('Endpoint tests', () => {
       proposals_missed_count: 1,
       average_response_time_ms: 28515,
       last_seen: '2024-11-02T13:33:21.831Z',
+      version:
+        'stacks-signer signer-3.0.0.0.0.1 (release/signer-3.0.0.0.0.1:b26f406, release build, linux [x86_64])',
     };
     expect(testSigner1).toEqual(expectedSignerData1);
 
@@ -232,6 +237,8 @@ describe('Endpoint tests', () => {
       proposals_missed_count: 0,
       average_response_time_ms: 29020,
       last_seen: '2024-11-02T13:30:43.731Z',
+      version:
+        'stacks-signer signer-3.0.0.0.0.1 (release/signer-3.0.0.0.0.1:b26f406, release build, linux [x86_64])',
     };
     expect(testSigner3).toEqual(expected3);
   });
@@ -255,6 +262,8 @@ describe('Endpoint tests', () => {
       proposals_missed_count: 3,
       average_response_time_ms: 26273.979,
       last_seen: '2024-11-02T13:33:21.831Z',
+      version:
+        'stacks-signer signer-3.0.0.0.0.1 (release/signer-3.0.0.0.0.1:b26f406, release build, linux [x86_64])',
     };
     expect(body).toEqual(expectedSignerData);
 
@@ -276,6 +285,7 @@ describe('Endpoint tests', () => {
       proposals_missed_count: 99,
       average_response_time_ms: 0,
       last_seen: null,
+      version: null,
     };
     expect(miaSigner).toEqual(expectedMiaSignerData);
   });
