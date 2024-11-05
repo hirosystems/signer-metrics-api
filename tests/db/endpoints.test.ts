@@ -19,7 +19,7 @@ import {
 import { PoxInfo, RpcStackerSetResponse } from '../../src/stacks-core-rpc/stacks-core-rpc-client';
 import { rpcStackerSetToDbRewardSetSigners } from '../../src/stacks-core-rpc/stacker-set-updater';
 
-describe('Postgres ingestion tests', () => {
+describe('Endpoint tests', () => {
   let db: PgStore;
   let apiServer: FastifyInstance;
 
@@ -87,10 +87,6 @@ describe('Postgres ingestion tests', () => {
       .expect(200);
     const body: BlocksResponse = responseTest.body;
 
-    const firstBlockTime = new Date(body.results[0].block_time * 1000).toISOString();
-    const lastBlockTime = new Date((body.results.at(-1)?.block_time ?? 0) * 1000).toISOString();
-    console.log(`First block time: ${firstBlockTime}, Last block time: ${lastBlockTime}`);
-
     // block 112274 has all signer states (missing, rejected, accepted, accepted_excluded)
     const testBlock = body.results.find(r => r.block_height === 112274);
     assert.ok(testBlock);
@@ -143,8 +139,30 @@ describe('Postgres ingestion tests', () => {
       proposals_rejected_count: 12,
       proposals_missed_count: 3,
       average_response_time_ms: 26273.979,
+      last_seen: '2024-11-02T13:33:21.831Z',
+      version:
+        'stacks-signer signer-3.0.0.0.0.1 (release/signer-3.0.0.0.0.1:b26f406, release build, linux [x86_64])',
     };
     expect(testSigner).toEqual(expectedSignerData);
+
+    // this signer has missed all block_proposal (no block_response has been seen)
+    const miaSignerKey = '0x0399649284ed10a00405f032f8567b5e5463838aaa00af8d6bc9da71dda4e19c9c';
+    const miaSigner = body.results.find(r => r.signer_key === miaSignerKey);
+    const expectedMiaSignerData: CycleSigner = {
+      signer_key: '0x0399649284ed10a00405f032f8567b5e5463838aaa00af8d6bc9da71dda4e19c9c',
+      weight: 1,
+      weight_percentage: 2,
+      stacked_amount: '7700000000000',
+      stacked_amount_percent: 2.283,
+      stacked_amount_rank: 5,
+      proposals_accepted_count: 0,
+      proposals_rejected_count: 0,
+      proposals_missed_count: 99,
+      average_response_time_ms: 0,
+      last_seen: null,
+      version: null,
+    };
+    expect(miaSigner).toEqual(expectedMiaSignerData);
   });
 
   test('get signers for cycle with time range', async () => {
@@ -181,6 +199,9 @@ describe('Postgres ingestion tests', () => {
       proposals_rejected_count: 0,
       proposals_missed_count: 1,
       average_response_time_ms: 28515,
+      last_seen: '2024-11-02T13:33:21.831Z',
+      version:
+        'stacks-signer signer-3.0.0.0.0.1 (release/signer-3.0.0.0.0.1:b26f406, release build, linux [x86_64])',
     };
     expect(testSigner1).toEqual(expectedSignerData1);
 
@@ -204,7 +225,7 @@ describe('Postgres ingestion tests', () => {
     const signersBody3: CycleSignersResponse = signersResp3.body;
     const testSigner3 = signersBody3.results.find(r => r.signer_key === testSignerKey1);
     // should return data for the oldest block
-    expect(testSigner3).toEqual({
+    const expected3: CycleSigner = {
       signer_key: '0x02e8620935d58ebffa23c260f6917cbd0915ea17d7a46df17e131540237d335504',
       weight: 38,
       weight_percentage: 76,
@@ -215,7 +236,11 @@ describe('Postgres ingestion tests', () => {
       proposals_rejected_count: 0,
       proposals_missed_count: 0,
       average_response_time_ms: 29020,
-    });
+      last_seen: '2024-11-02T13:30:43.731Z',
+      version:
+        'stacks-signer signer-3.0.0.0.0.1 (release/signer-3.0.0.0.0.1:b26f406, release build, linux [x86_64])',
+    };
+    expect(testSigner3).toEqual(expected3);
   });
 
   test('get signer for cycle', async () => {
@@ -236,7 +261,32 @@ describe('Postgres ingestion tests', () => {
       proposals_rejected_count: 12,
       proposals_missed_count: 3,
       average_response_time_ms: 26273.979,
+      last_seen: '2024-11-02T13:33:21.831Z',
+      version:
+        'stacks-signer signer-3.0.0.0.0.1 (release/signer-3.0.0.0.0.1:b26f406, release build, linux [x86_64])',
     };
     expect(body).toEqual(expectedSignerData);
+
+    // this signer has missed all block_proposal (no block_response has been seen)
+    const miaSignerKey = '0x0399649284ed10a00405f032f8567b5e5463838aaa00af8d6bc9da71dda4e19c9c';
+    const responseTest2 = await supertest(apiServer.server)
+      .get(`/signer-metrics/v1/cycles/72/signers/${miaSignerKey}`)
+      .expect(200);
+    const miaSigner: CycleSignerResponse = responseTest2.body;
+    const expectedMiaSignerData: CycleSigner = {
+      signer_key: '0x0399649284ed10a00405f032f8567b5e5463838aaa00af8d6bc9da71dda4e19c9c',
+      weight: 1,
+      weight_percentage: 2,
+      stacked_amount: '7700000000000',
+      stacked_amount_percent: 2.283,
+      stacked_amount_rank: 5,
+      proposals_accepted_count: 0,
+      proposals_rejected_count: 0,
+      proposals_missed_count: 99,
+      average_response_time_ms: 0,
+      last_seen: null,
+      version: null,
+    };
+    expect(miaSigner).toEqual(expectedMiaSignerData);
   });
 });

@@ -32,6 +32,15 @@ export async function buildApiServer(args: { db: PgStore }) {
   await fastify.register(FastifyCors);
   await fastify.register(Api, { prefix: '/signer-metrics' });
 
+  fastify.addHook('onSend', async (_req, reply, payload) => {
+    if ((reply.getHeader('Content-Type') as string).startsWith('application/json')) {
+      // Pretty-print with indentation
+      return JSON.stringify(JSON.parse(payload as string), null, 2);
+    } else {
+      return payload;
+    }
+  });
+
   return fastify;
 }
 

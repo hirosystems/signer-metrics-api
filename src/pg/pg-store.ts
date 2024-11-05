@@ -299,6 +299,8 @@ export class PgStore extends BasePgStore {
         proposals_rejected_count: number;
         proposals_missed_count: number;
         average_response_time_ms: number;
+        last_block_response_time: Date | null;
+        last_metadata_server_version: string | null;
       }[]
     >`
       WITH signer_data AS (
@@ -329,9 +331,19 @@ export class PgStore extends BasePgStore {
           br.signer_sighash,
           br.accepted,
           br.received_at,
+          br.metadata_server_version,
           br.id
         FROM block_responses br
         JOIN proposal_data pd ON br.signer_sighash = pd.block_hash -- Only responses linked to selected proposals
+      ),
+      latest_response_data AS (
+        -- Find the latest response time and corresponding metadata_server_version for each signer
+        SELECT DISTINCT ON (signer_key)
+          signer_key,
+          received_at AS last_block_response_time,
+          metadata_server_version
+        FROM response_data
+        ORDER BY signer_key, received_at DESC
       ),
       signer_proposal_data AS (
         -- Cross join signers with proposals and left join filtered responses
@@ -377,12 +389,16 @@ export class PgStore extends BasePgStore {
         ad.proposals_accepted_count,
         ad.proposals_rejected_count,
         ad.proposals_missed_count,
-        COALESCE(ad.average_response_time_ms, 0) AS average_response_time_ms
+        COALESCE(ad.average_response_time_ms, 0) AS average_response_time_ms,
+        COALESCE(lrd.last_block_response_time, NULL) AS last_block_response_time,
+        COALESCE(lrd.metadata_server_version, NULL) AS last_metadata_server_version
       FROM signer_data sd
       LEFT JOIN aggregated_data ad
         ON sd.signer_key = ad.signer_key
       LEFT JOIN signer_rank sr
         ON sd.signer_key = sr.signer_key
+      LEFT JOIN latest_response_data lrd
+        ON sd.signer_key = lrd.signer_key -- Join the latest response time and metadata server version data
       ORDER BY sd.signer_stacked_amount DESC, sd.signer_key ASC
     `;
     return dbRewardSetSigners;
@@ -401,6 +417,8 @@ export class PgStore extends BasePgStore {
         proposals_rejected_count: number;
         proposals_missed_count: number;
         average_response_time_ms: number;
+        last_block_response_time: Date | null;
+        last_metadata_server_version: string | null;
       }[]
     >`
       WITH signer_data AS (
@@ -429,10 +447,20 @@ export class PgStore extends BasePgStore {
           br.signer_sighash,
           br.accepted,
           br.received_at,
+          br.metadata_server_version,
           br.id
         FROM block_responses br
         JOIN proposal_data pd ON br.signer_sighash = pd.block_hash
         WHERE br.signer_key = ${normalizeHexString(signerId)} -- Filter for the specific signer
+      ),
+      latest_response_data AS (
+        -- Find the latest response time and corresponding metadata_server_version for the specific signer
+        SELECT DISTINCT ON (signer_key)
+          signer_key,
+          received_at AS last_block_response_time,
+          metadata_server_version
+        FROM response_data
+        ORDER BY signer_key, received_at DESC
       ),
       signer_proposal_data AS (
         -- Cross join the specific signer with proposals and left join filtered responses
@@ -442,6 +470,7 @@ export class PgStore extends BasePgStore {
           pd.proposal_received_at,
           rd.accepted,
           rd.received_at AS response_received_at,
+          rd.metadata_server_version,
           EXTRACT(MILLISECOND FROM (rd.received_at - pd.proposal_received_at)) AS response_time_ms
         FROM signer_data sd
         CROSS JOIN proposal_data pd
@@ -478,12 +507,16 @@ export class PgStore extends BasePgStore {
         ad.proposals_accepted_count,
         ad.proposals_rejected_count,
         ad.proposals_missed_count,
-        COALESCE(ad.average_response_time_ms, 0) AS average_response_time_ms
+        COALESCE(ad.average_response_time_ms, 0) AS average_response_time_ms,
+        COALESCE(lrd.last_block_response_time, NULL) AS last_block_response_time,
+        COALESCE(lrd.metadata_server_version, NULL) AS last_metadata_server_version
       FROM signer_data sd
       LEFT JOIN aggregated_data ad
         ON sd.signer_key = ad.signer_key
       LEFT JOIN signer_rank sr
         ON sd.signer_key = sr.signer_key
+      LEFT JOIN latest_response_data lrd
+        ON sd.signer_key = lrd.signer_key
     `;
     return dbRewardSetSigner[0];
   }
