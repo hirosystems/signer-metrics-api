@@ -1,4 +1,4 @@
-import Fastify, { FastifyPluginAsync } from 'fastify';
+import Fastify, { FastifyPluginAsync, FastifyServerOptions } from 'fastify';
 import { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import { PgStore } from '../pg/pg-store';
 import FastifyCors from '@fastify/cors';
@@ -20,9 +20,24 @@ export const Api: FastifyPluginAsync<Record<never, never>, Server, TypeBoxTypePr
 };
 
 export async function buildApiServer(args: { db: PgStore }) {
+  const logger: FastifyServerOptions['logger'] = {
+    ...PINO_LOGGER_CONFIG,
+    name: 'fastify-api',
+    serializers: {
+      res: reply => ({
+        statusCode: reply.statusCode,
+        method: reply.request?.method,
+        url: reply.request?.url,
+        requestBodySize:
+          parseInt(reply.request?.headers?.['content-length'] as string) || 'unknown',
+        responseBodySize: parseInt(reply.getHeader?.('content-length') as string) || 'unknown',
+      }),
+    },
+  };
+
   const fastify = Fastify({
     trustProxy: true,
-    logger: PINO_LOGGER_CONFIG,
+    logger: logger,
   }).withTypeProvider<TypeBoxTypeProvider>();
 
   fastify.decorate('db', args.db);
