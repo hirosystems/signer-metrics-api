@@ -529,7 +529,25 @@ export class ChainhookPgStore extends BasePgStoreModule {
     }
   }
 
-  async insertRewardSetSigners(sql: PgSqlClient, rewardSetSigners: DbRewardSetSigner[]) {
+  async insertRewardSetSigners(
+    sql: PgSqlClient,
+    rewardSetSigners: DbRewardSetSigner[]
+  ): Promise<{ rowsDeleted: number; rowsInserted: number }> {
+    if (rewardSetSigners.length === 0) {
+      return { rowsDeleted: 0, rowsInserted: 0 };
+    }
+
+    const cycleNumber = rewardSetSigners[0].cycle_number;
+    const deleteRows = await sql`
+        DELETE FROM reward_set_signers
+        WHERE cycle_number = ${cycleNumber}
+      `;
+    if (deleteRows.count > 0) {
+      this.logger.warn(
+        `Deleted existing reward set signers for cycle ${cycleNumber} before inserting new rows, deleted ${deleteRows.count} rows`
+      );
+    }
+
     let insertCount = 0;
     for (const batch of batchIterate(rewardSetSigners, 500)) {
       const result = await sql`
@@ -547,13 +565,13 @@ export class ChainhookPgStore extends BasePgStoreModule {
         `ChainhookPgStore apply reward_set_signers, cycle=${rewardSetSigners[0].cycle_number}, count=${insertCount}`
       );
     }
+    return { rowsDeleted: deleteRows.count, rowsInserted: insertCount };
   }
 
   private async rollBackTransactions(sql: PgSqlClient, block: StacksEvent) {
     const blockHeight = block.block_identifier.index;
     await this.rollBackBlock(sql, blockHeight);
     await this.rollBackBlockSignerSignatures(sql, blockHeight);
-    await this.rollBackRewardSetSigners(sql, blockHeight);
   }
 
   private async rollBackBlock(sql: PgSqlClient, blockHeight: number) {
@@ -574,15 +592,6 @@ export class ChainhookPgStore extends BasePgStoreModule {
     `;
     this.logger.info(
       `ChainhookPgStore rollback block signer signatures for block ${blockHeight}, deleted ${res.count} rows`
-    );
-  }
-
-  private async rollBackRewardSetSigners(sql: PgSqlClient, blockHeight: number) {
-    const res = await sql`
-      DELETE FROM reward_set_signers WHERE block_height = ${blockHeight}
-    `;
-    this.logger.info(
-      `ChainhookPgStore rollback reward set signers for block ${blockHeight}, deleted ${res.count} rows`
     );
   }
 }
