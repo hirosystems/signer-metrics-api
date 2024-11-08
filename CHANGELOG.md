@@ -1,3 +1,10 @@
+## [0.8.2](https://github.com/hirosystems/signer-metrics-api/compare/v0.8.1...v0.8.2) (2024-11-08)
+
+
+### Bug Fixes
+
+* downgrade breaking change typebox ([#54](https://github.com/hirosystems/signer-metrics-api/issues/54)) ([c11afe6](https://github.com/hirosystems/signer-metrics-api/commit/c11afe6eb10c39e3731308a15d6a62e9a069561b))
+
 ## [0.8.1](https://github.com/hirosystems/signer-metrics-api/compare/v0.8.0...v0.8.1) (2024-11-08)
 
 
