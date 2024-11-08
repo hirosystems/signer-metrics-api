@@ -20,10 +20,11 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ['testing/**']
+    ignores: ['dist/**', 'coverage/**', 'testing/**', 'chunk-parser/**']
   },
   {
     rules: {
+      "@typescript-eslint/non-nullable-type-assertion-style": "off",
       "@typescript-eslint/no-dynamic-delete": "off",
       "@typescript-eslint/no-useless-constructor": "off",
       "@typescript-eslint/no-unnecessary-condition": "off",
@@ -31,7 +32,7 @@ export default tseslint.config(
       "@typescript-eslint/restrict-template-expressions": "off",
       "@typescript-eslint/no-confusing-void-expression": ["error", { "ignoreArrowShorthand": true, "ignoreVoidOperator": true }],
       "@typescript-eslint/no-empty-function": "off",
-      "@typescript-eslint/no-explicit-any": ["warn", { ignoreRestArgs: true }],
+      "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-unused-vars": ["warn",
         {
           "args": "all",

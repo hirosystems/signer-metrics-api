@@ -398,8 +398,6 @@ export class PgStore extends BasePgStore {
   async getSignersForCycle({
     sql,
     cycleNumber,
-    limit,
-    offset,
     fromDate,
     toDate,
   }: {

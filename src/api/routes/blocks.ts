@@ -16,7 +16,7 @@ export const BlockRoutes: FastifyPluginCallback<
   Record<never, never>,
   Server,
   TypeBoxTypeProvider
-> = (fastify, options, done) => {
+> = (fastify, _options, done) => {
   fastify.get(
     '/v1/blocks',
     {

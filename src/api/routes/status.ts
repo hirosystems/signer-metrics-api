@@ -8,7 +8,7 @@ export const StatusRoutes: FastifyPluginCallback<
   Record<never, never>,
   Server,
   TypeBoxTypeProvider
-> = (fastify, options, done) => {
+> = (fastify, _options, done) => {
   fastify.get(
     '/',
     {
@@ -22,8 +22,8 @@ export const StatusRoutes: FastifyPluginCallback<
         },
       },
     },
-    async (request, reply) => {
-      const result = await fastify.db.sqlTransaction(async sql => {
+    async (_req, reply) => {
+      const result = await fastify.db.sqlTransaction(async _sql => {
         const block_height = await fastify.db.getChainTipBlockHeight();
 
         return {
