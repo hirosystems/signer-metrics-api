@@ -14,9 +14,14 @@ export const Api: FastifyPluginAsync<Record<never, never>, Server, TypeBoxTypePr
   fastify,
   options
 ) => {
-  await fastify.register(StatusRoutes);
-  await fastify.register(CycleRoutes);
-  await fastify.register(BlockRoutes);
+  await fastify.register(
+    async fastify => {
+      await fastify.register(StatusRoutes);
+      await fastify.register(CycleRoutes);
+      await fastify.register(BlockRoutes);
+    },
+    { prefix: '/signer-metrics' }
+  );
 };
 
 export async function buildApiServer(args: { db: PgStore }) {
@@ -45,7 +50,7 @@ export async function buildApiServer(args: { db: PgStore }) {
     await fastify.register(FastifyMetrics, { endpoint: null });
   }
   await fastify.register(FastifyCors);
-  await fastify.register(Api, { prefix: '/signer-metrics' });
+  await fastify.register(Api);
 
   fastify.addHook('onSend', async (_req, reply, payload) => {
     if ((reply.getHeader('Content-Type') as string).startsWith('application/json')) {
