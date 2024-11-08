@@ -129,6 +129,7 @@ export type BlocksResponse = Static<typeof BlocksResponseSchema>;
 
 export const CycleSignerSchema = Type.Object({
   signer_key: Type.String(),
+  slot_index: Type.Integer({ description: 'Index of the signer in the stacker set' }),
   weight: Type.Integer({
     description:
       'Voting weight of this signer (based on slots allocated which is proportional to stacked amount)',

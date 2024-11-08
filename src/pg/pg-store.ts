@@ -430,6 +430,7 @@ export class PgStore extends BasePgStore {
     const dbRewardSetSigners = await sql<
       {
         signer_key: string;
+        slot_index: number;
         weight: number;
         weight_percentage: number;
         stacked_amount: string;
@@ -447,6 +448,7 @@ export class PgStore extends BasePgStore {
         -- Fetch the signers for the given cycle
         SELECT
           rss.signer_key,
+          rss.slot_index,
           rss.signer_weight,
           rss.signer_stacked_amount
         FROM reward_set_signers rss
@@ -521,6 +523,7 @@ export class PgStore extends BasePgStore {
       )
       SELECT
         sd.signer_key,
+        sd.slot_index,
         sd.signer_weight AS weight,
         sd.signer_stacked_amount AS stacked_amount,
         ROUND(sd.signer_weight * 100.0 / (SELECT SUM(signer_weight) FROM reward_set_signers WHERE cycle_number = ${cycleNumber}), 3)::float8 AS weight_percentage,
@@ -548,6 +551,7 @@ export class PgStore extends BasePgStore {
     const dbRewardSetSigner = await this.sql<
       {
         signer_key: string;
+        slot_index: number;
         weight: number;
         weight_percentage: number;
         stacked_amount: string;
@@ -565,6 +569,7 @@ export class PgStore extends BasePgStore {
         -- Fetch the specific signer for the given cycle
         SELECT
           rss.signer_key,
+          rss.slot_index,
           rss.signer_weight,
           rss.signer_stacked_amount
         FROM reward_set_signers rss
@@ -639,6 +644,7 @@ export class PgStore extends BasePgStore {
       )
       SELECT
         sd.signer_key,
+        sd.slot_index,
         sd.signer_weight AS weight,
         sd.signer_stacked_amount AS stacked_amount,
         ROUND(sd.signer_weight * 100.0 / (SELECT SUM(signer_weight) FROM reward_set_signers WHERE cycle_number = ${cycleNumber}), 3)::float8 AS weight_percentage,
