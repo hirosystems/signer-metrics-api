@@ -16,7 +16,7 @@ export const Api: FastifyPluginAsync<Record<never, never>, Server, TypeBoxTypePr
   _options
 ) => {
   await fastify.register(
-    async fastify => {
+    async (fastify) => {
       await fastify.register(StatusRoutes);
       await fastify.register(CycleRoutes);
       await fastify.register(BlockRoutes);

@@ -144,7 +144,7 @@ export const CycleSignerSchema = Type.Object({
   }),
   stacked_amount_rank: Type.Integer({
     description:
-      "This signer's rank in the list of all signers (for this cycle) ordered by stacked amount",
+      'This signer\'s rank in the list of all signers (for this cycle) ordered by stacked amount',
   }),
   proposals_accepted_count: Type.Integer({
     description: 'Number of block proposals accepted by this signer',
@@ -229,8 +229,8 @@ export type BlockParams = Static<typeof BlockParamsSchema>;
  */
 export function cleanBlockHeightOrHashParam(params: { height_or_hash: string | number }) {
   if (
-    typeof params.height_or_hash === 'string' &&
-    /^[a-fA-F0-9]{64}$/i.test(params.height_or_hash)
+    typeof params.height_or_hash === 'string'
+    && /^[a-fA-F0-9]{64}$/i.test(params.height_or_hash)
   ) {
     params.height_or_hash = '0x' + params.height_or_hash;
   }
