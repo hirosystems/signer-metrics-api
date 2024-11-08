@@ -441,14 +441,13 @@ export class ChainhookPgStore extends BasePgStoreModule {
       throw new Error(`Missing cycle_number for block ${block.block_identifier.index} reward set`);
     }
 
-    const dbRewardSetSigners = block.metadata.reward_set?.signers?.map(signer => {
+    const dbRewardSetSigners = block.metadata.reward_set?.signers?.map((signer, index) => {
       const dbSigner: DbRewardSetSigner = {
         cycle_number: block.metadata.cycle_number as number,
-        burn_block_height: dbBlock.burn_block_height,
-        block_height: dbBlock.block_height,
         signer_key: normalizeHexString(signer.signing_key),
         signer_weight: signer.weight,
         signer_stacked_amount: signer.stacked_amt,
+        slot_index: index,
       };
       return dbSigner;
     });

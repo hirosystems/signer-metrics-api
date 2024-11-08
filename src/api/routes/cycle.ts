@@ -75,6 +75,7 @@ export const CycleRoutes: FastifyPluginCallback<
         const formatted = results.map(result => {
           const cycleSinger: CycleSigner = {
             signer_key: result.signer_key,
+            slot_index: result.slot_index,
             weight: result.weight,
             weight_percentage: result.weight_percentage,
             stacked_amount: result.stacked_amount,
@@ -135,6 +136,7 @@ export const CycleRoutes: FastifyPluginCallback<
         }
         const cycleSigner: CycleSignerResponse = {
           signer_key: signer.signer_key,
+          slot_index: signer.slot_index,
           weight: signer.weight,
           weight_percentage: signer.weight_percentage,
           stacked_amount: signer.stacked_amount,

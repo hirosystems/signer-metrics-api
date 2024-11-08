@@ -9,7 +9,8 @@ import {
 } from '@hirosystems/api-toolkit';
 import * as path from 'path';
 import { ChainhookPgStore } from './chainhook/chainhook-pg-store';
-import { normalizeHexString, sleep } from '../helpers';
+import { BlockIdParam, normalizeHexString, sleep } from '../helpers';
+import { Fragment } from 'postgres';
 
 export const MIGRATIONS_DIR = path.join(__dirname, '../../migrations');
 
@@ -100,7 +101,15 @@ export class PgStore extends BasePgStore {
     return { rowUpdated: updateResult.count > 0 };
   }
 
-  async getRecentBlocks(limit: number, offset: number) {
+  async getSignerDataForRecentBlocks({
+    sql,
+    limit,
+    offset,
+  }: {
+    sql: PgSqlClient;
+    limit: number;
+    offset: number;
+  }) {
     // The `blocks` table (and its associated block_signer_signatures table) is the source of truth that is
     // never missing blocks and does not contain duplicate rows per block.
     //
@@ -142,7 +151,7 @@ export class PgStore extends BasePgStore {
     //  * rejected_weight: the total signer_weight of each signer in the rejected state
     //  * missing_weight: the total signer_weight of each signer in the missing state
 
-    const result = await this.sql<
+    const result = await sql<
       {
         block_height: number;
         block_hash: string;
@@ -255,6 +264,137 @@ export class PgStore extends BasePgStore {
     return result;
   }
 
+  async getSignerDataForBlock({ sql, blockId }: { sql: PgSqlClient; blockId: BlockIdParam }) {
+    let blockFilter: Fragment;
+    switch (blockId.type) {
+      case 'height':
+        blockFilter = sql`block_height = ${blockId.height}`;
+        break;
+      case 'hash':
+        blockFilter = sql`block_hash = ${normalizeHexString(blockId.hash)}`;
+        break;
+      case 'latest':
+        blockFilter = sql`block_height = (SELECT block_height FROM chain_tip)`;
+        break;
+      default:
+        throw new Error(`Invalid blockId type: ${blockId}`);
+    }
+
+    const result = await sql<
+      {
+        block_height: number;
+        block_hash: string;
+        index_block_hash: string;
+        burn_block_height: number;
+        tenure_height: number;
+        block_time: number;
+        cycle_number: number | null;
+        block_proposal_time_ms: string | null;
+        total_signer_count: number;
+        signer_accepted_mined_count: number;
+        signer_accepted_excluded_count: number;
+        signer_rejected_count: number;
+        signer_missing_count: number;
+        average_response_time_ms: number;
+        accepted_mined_stacked_amount: string;
+        accepted_excluded_stacked_amount: string;
+        rejected_stacked_amount: string;
+        missing_stacked_amount: string;
+        accepted_mined_weight: number;
+        accepted_excluded_weight: number;
+        rejected_weight: number;
+        missing_weight: number;
+        chain_tip_block_height: number;
+      }[]
+    >`
+      WITH latest_blocks AS (
+        SELECT * FROM blocks
+        WHERE ${blockFilter}
+        LIMIT 1
+      ),
+      block_signers AS (
+        SELECT
+          lb.id AS block_id,
+          lb.block_height,
+          lb.block_time,
+          lb.block_hash,
+          lb.index_block_hash,
+          lb.burn_block_height,
+          bp.reward_cycle AS cycle_number,
+          bp.received_at AS block_proposal_time_ms,
+          rs.signer_key,
+          COALESCE(rs.signer_weight, 0) AS signer_weight,
+          COALESCE(rs.signer_stacked_amount, 0) AS signer_stacked_amount,
+          CASE
+            WHEN bss.id IS NOT NULL THEN 'accepted_mined'
+            WHEN bss.id IS NULL AND fbr.accepted = TRUE THEN 'accepted_excluded'
+            WHEN bss.id IS NULL AND fbr.accepted = FALSE THEN 'rejected'
+            WHEN bss.id IS NULL AND fbr.id IS NULL THEN 'missing'
+          END AS signer_status,
+          EXTRACT(MILLISECOND FROM (fbr.received_at - bp.received_at)) AS response_time_ms
+        FROM latest_blocks lb
+        LEFT JOIN block_proposals bp ON lb.block_hash = bp.block_hash
+        LEFT JOIN reward_set_signers rs ON bp.reward_cycle = rs.cycle_number
+        LEFT JOIN block_signer_signatures bss ON lb.block_height = bss.block_height AND rs.signer_key = bss.signer_key
+        LEFT JOIN block_responses fbr ON fbr.signer_key = rs.signer_key AND fbr.signer_sighash = lb.block_hash
+      ),
+      signer_state_aggregation AS (
+        SELECT
+          block_id,
+          MAX(cycle_number) AS cycle_number,
+          MAX(block_proposal_time_ms) AS block_proposal_time_ms,
+          COUNT(signer_key) AS total_signer_count,
+          COALESCE(COUNT(CASE WHEN signer_status = 'accepted_mined' THEN 1 END), 0) AS signer_accepted_mined_count,
+          COALESCE(COUNT(CASE WHEN signer_status = 'accepted_excluded' THEN 1 END), 0) AS signer_accepted_excluded_count,
+          COALESCE(COUNT(CASE WHEN signer_status = 'rejected' THEN 1 END), 0) AS signer_rejected_count,
+          COALESCE(COUNT(CASE WHEN signer_status = 'missing' THEN 1 END), 0) AS signer_missing_count,
+          COALESCE(AVG(response_time_ms) FILTER (WHERE signer_status IN ('accepted_mined', 'accepted_excluded', 'rejected')), 0) AS average_response_time_ms,
+          COALESCE(SUM(CASE WHEN signer_status = 'accepted_mined' THEN signer_stacked_amount END), 0) AS accepted_mined_stacked_amount,
+          COALESCE(SUM(CASE WHEN signer_status = 'accepted_excluded' THEN signer_stacked_amount END), 0) AS accepted_excluded_stacked_amount,
+          COALESCE(SUM(CASE WHEN signer_status = 'rejected' THEN signer_stacked_amount END), 0) AS rejected_stacked_amount,
+          COALESCE(SUM(CASE WHEN signer_status = 'missing' THEN signer_stacked_amount END), 0) AS missing_stacked_amount,
+          COALESCE(SUM(CASE WHEN signer_status = 'accepted_mined' THEN signer_weight END), 0) AS accepted_mined_weight,
+          COALESCE(SUM(CASE WHEN signer_status = 'accepted_excluded' THEN signer_weight END), 0) AS accepted_excluded_weight,
+          COALESCE(SUM(CASE WHEN signer_status = 'rejected' THEN signer_weight END), 0) AS rejected_weight,
+          COALESCE(SUM(CASE WHEN signer_status = 'missing' THEN signer_weight END), 0) AS missing_weight
+        FROM block_signers
+        GROUP BY block_id
+      )
+      SELECT
+        lb.block_height,
+        lb.block_hash,
+        lb.index_block_hash,
+        lb.burn_block_height,
+        lb.tenure_height,
+        EXTRACT(EPOCH FROM lb.block_time)::integer AS block_time,
+        bsa.cycle_number,
+        (EXTRACT(EPOCH FROM bsa.block_proposal_time_ms) * 1000)::bigint AS block_proposal_time_ms,
+        bsa.total_signer_count::integer,
+        bsa.signer_accepted_mined_count::integer,
+        bsa.signer_accepted_excluded_count::integer,
+        bsa.signer_rejected_count::integer,
+        bsa.signer_missing_count::integer,
+        ROUND(bsa.average_response_time_ms, 3)::float8 AS average_response_time_ms,
+        bsa.accepted_mined_stacked_amount,
+        bsa.accepted_excluded_stacked_amount,
+        bsa.rejected_stacked_amount,
+        bsa.missing_stacked_amount,
+        bsa.accepted_mined_weight::integer,
+        bsa.accepted_excluded_weight::integer,
+        bsa.rejected_weight::integer,
+        bsa.missing_weight::integer,
+        ct.block_height AS chain_tip_block_height
+      FROM latest_blocks lb
+      JOIN signer_state_aggregation bsa ON lb.id = bsa.block_id
+      CROSS JOIN chain_tip ct
+    `;
+    if (result.length === 0) {
+      return null;
+    } else {
+      return result[0];
+    }
+  }
+
   async getSignersForCycle({
     sql,
     cycleNumber,
@@ -290,6 +430,7 @@ export class PgStore extends BasePgStore {
     const dbRewardSetSigners = await sql<
       {
         signer_key: string;
+        slot_index: number;
         weight: number;
         weight_percentage: number;
         stacked_amount: string;
@@ -307,6 +448,7 @@ export class PgStore extends BasePgStore {
         -- Fetch the signers for the given cycle
         SELECT
           rss.signer_key,
+          rss.slot_index,
           rss.signer_weight,
           rss.signer_stacked_amount
         FROM reward_set_signers rss
@@ -381,6 +523,7 @@ export class PgStore extends BasePgStore {
       )
       SELECT
         sd.signer_key,
+        sd.slot_index,
         sd.signer_weight AS weight,
         sd.signer_stacked_amount AS stacked_amount,
         ROUND(sd.signer_weight * 100.0 / (SELECT SUM(signer_weight) FROM reward_set_signers WHERE cycle_number = ${cycleNumber}), 3)::float8 AS weight_percentage,
@@ -408,6 +551,7 @@ export class PgStore extends BasePgStore {
     const dbRewardSetSigner = await this.sql<
       {
         signer_key: string;
+        slot_index: number;
         weight: number;
         weight_percentage: number;
         stacked_amount: string;
@@ -425,6 +569,7 @@ export class PgStore extends BasePgStore {
         -- Fetch the specific signer for the given cycle
         SELECT
           rss.signer_key,
+          rss.slot_index,
           rss.signer_weight,
           rss.signer_stacked_amount
         FROM reward_set_signers rss
@@ -499,6 +644,7 @@ export class PgStore extends BasePgStore {
       )
       SELECT
         sd.signer_key,
+        sd.slot_index,
         sd.signer_weight AS weight,
         sd.signer_stacked_amount AS stacked_amount,
         ROUND(sd.signer_weight * 100.0 / (SELECT SUM(signer_weight) FROM reward_set_signers WHERE cycle_number = ${cycleNumber}), 3)::float8 AS weight_percentage,
