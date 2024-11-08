@@ -19,11 +19,10 @@ export type DbBlockSignerSignature = {
 
 export type DbRewardSetSigner = {
   cycle_number: number;
-  burn_block_height: number;
-  block_height: number;
   signer_key: PgBytea;
   signer_weight: number;
   signer_stacked_amount: PgNumeric;
+  slot_index: number;
 };
 
 export type DbBlockResponse = {

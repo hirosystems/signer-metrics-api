@@ -93,14 +93,13 @@ export function rpcStackerSetToDbRewardSetSigners(
   rpcResponse: RpcStackerSetResponse,
   cycleNumber: number
 ): DbRewardSetSigner[] {
-  return rpcResponse.stacker_set.signers.map(entry => {
+  return rpcResponse.stacker_set.signers.map((entry, index) => {
     const rewardSetSigner: DbRewardSetSigner = {
       cycle_number: cycleNumber,
-      block_height: 0,
-      burn_block_height: 0,
       signer_key: Buffer.from(entry.signing_key.replace(/^0x/, ''), 'hex'),
       signer_weight: entry.weight,
       signer_stacked_amount: entry.stacked_amt.toString(),
+      slot_index: index,
     };
     return rewardSetSigner;
   });

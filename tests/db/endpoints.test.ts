@@ -199,6 +199,7 @@ describe('Endpoint tests', () => {
     const testSigner = body.results.find(r => r.signer_key === testSignerKey);
     const expectedSignerData: CycleSigner = {
       signer_key: '0x02e8620935d58ebffa23c260f6917cbd0915ea17d7a46df17e131540237d335504',
+      slot_index: 3,
       weight: 38,
       weight_percentage: 76,
       stacked_amount: '250000000000000',
@@ -219,6 +220,7 @@ describe('Endpoint tests', () => {
     const miaSigner = body.results.find(r => r.signer_key === miaSignerKey);
     const expectedMiaSignerData: CycleSigner = {
       signer_key: '0x0399649284ed10a00405f032f8567b5e5463838aaa00af8d6bc9da71dda4e19c9c',
+      slot_index: 9,
       weight: 1,
       weight_percentage: 2,
       stacked_amount: '7700000000000',
@@ -259,6 +261,7 @@ describe('Endpoint tests', () => {
     const testSigner1 = signersBody1.results.find(r => r.signer_key === testSignerKey1);
     const expectedSignerData1: CycleSigner = {
       signer_key: '0x02e8620935d58ebffa23c260f6917cbd0915ea17d7a46df17e131540237d335504',
+      slot_index: 3,
       weight: 38,
       weight_percentage: 76,
       stacked_amount: '250000000000000',
@@ -296,6 +299,7 @@ describe('Endpoint tests', () => {
     // should return data for the oldest block
     const expected3: CycleSigner = {
       signer_key: '0x02e8620935d58ebffa23c260f6917cbd0915ea17d7a46df17e131540237d335504',
+      slot_index: 3,
       weight: 38,
       weight_percentage: 76,
       stacked_amount: '250000000000000',
@@ -321,6 +325,7 @@ describe('Endpoint tests', () => {
     const body: CycleSignerResponse = responseTest.body;
     const expectedSignerData: CycleSignerResponse = {
       signer_key: '0x02e8620935d58ebffa23c260f6917cbd0915ea17d7a46df17e131540237d335504',
+      slot_index: 3,
       weight: 38,
       weight_percentage: 76,
       stacked_amount: '250000000000000',
@@ -344,6 +349,7 @@ describe('Endpoint tests', () => {
     const miaSigner: CycleSignerResponse = responseTest2.body;
     const expectedMiaSignerData: CycleSigner = {
       signer_key: '0x0399649284ed10a00405f032f8567b5e5463838aaa00af8d6bc9da71dda4e19c9c',
+      slot_index: 9,
       weight: 1,
       weight_percentage: 2,
       stacked_amount: '7700000000000',
