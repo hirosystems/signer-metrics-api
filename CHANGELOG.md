@@ -1,3 +1,10 @@
+## [0.8.1](https://github.com/hirosystems/signer-metrics-api/compare/v0.8.0...v0.8.1) (2024-11-08)
+
+
+### Bug Fixes
+
+* re-org issue with cycle-signer-set data ([#53](https://github.com/hirosystems/signer-metrics-api/issues/53)) ([4f592e7](https://github.com/hirosystems/signer-metrics-api/commit/4f592e7e00907480b714dc6e72169fc0976c36e7))
+
 ## [0.8.0](https://github.com/hirosystems/signer-metrics-api/compare/v0.7.0...v0.8.0) (2024-11-08)
 
 
