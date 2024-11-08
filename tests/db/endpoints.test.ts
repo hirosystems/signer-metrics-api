@@ -119,6 +119,75 @@ describe('Endpoint tests', () => {
     expect(testBlock).toEqual(expectedBlockData);
   });
 
+  test('get block by hash or height', async () => {
+    // block 112274 has all signer states (missing, rejected, accepted, accepted_excluded)
+    const blockHeight = 112274;
+    const blockHash = '0x782d69b5955a91b110859ee6fc6454cc19814d6434cdde61d5bc91697dee50fc';
+
+    const expectedBlockData: BlocksEntry = {
+      block_height: blockHeight,
+      block_hash: blockHash,
+      block_time: 1730554291,
+      index_block_hash: '0xb5c47a7c0e444b6a96331e0435d940a528dfde98966bb079b1b0b7d706b3016f',
+      burn_block_height: 65203,
+      tenure_height: 53405,
+      signer_data: {
+        cycle_number: 72,
+        total_signer_count: 11,
+        accepted_count: 7,
+        rejected_count: 1,
+        missing_count: 3,
+        accepted_excluded_count: 1,
+        average_response_time_ms: 11727.75,
+        block_proposal_time_ms: 1730554295560,
+        accepted_stacked_amount: '306370000003000',
+        rejected_stacked_amount: '9690000000000',
+        missing_stacked_amount: '21200000000000',
+        accepted_weight: 46,
+        rejected_weight: 1,
+        missing_weight: 3,
+      },
+    };
+
+    const { body: testBlockHeight } = (await supertest(apiServer.server)
+      .get(`/signer-metrics/v1/blocks/${blockHeight}`)
+      .expect(200)) as { body: BlocksEntry };
+    expect(testBlockHeight).toEqual(expectedBlockData);
+
+    const { body: testBlockHash } = (await supertest(apiServer.server)
+      .get(`/signer-metrics/v1/blocks/${blockHash}`)
+      .expect(200)) as { body: BlocksEntry };
+    expect(testBlockHash).toEqual(expectedBlockData);
+
+    // Test 404 using a non-existent block hash
+    const nonExistentHash = '0x000069b5955a91b110859ee6fc6454cc19814d6434cdde61d5bc91697dee50f0';
+    const notFoundResp = await supertest(apiServer.server)
+      .get(`/signer-metrics/v1/blocks/${nonExistentHash}`)
+      .expect(404);
+    expect(notFoundResp.body).toMatchObject({
+      error: 'Not Found',
+      message: 'Block not found',
+      statusCode: 404,
+    });
+  });
+
+  test('get block by latest', async () => {
+    // Note: the current block payload test data does not have signer data for the latest block
+    const expectedBlockData: BlocksEntry = {
+      block_height: 112291,
+      block_hash: '0x82ac0b52a4dde86ac05d04f59d81081d047125d0c7eaf424683191fc3fd839f2',
+      block_time: 1730554958,
+      index_block_hash: '0x7183de5c4ae700248283fede9264d31a37ab3ca1b54b4fd24adc449fbbd4c2b7',
+      burn_block_height: 65206,
+      tenure_height: 53408,
+    };
+
+    const { body: testBlockLatest } = (await supertest(apiServer.server)
+      .get(`/signer-metrics/v1/blocks/latest`)
+      .expect(200)) as { body: BlocksEntry };
+    expect(testBlockLatest).toEqual(expectedBlockData);
+  });
+
   test('get signers for cycle', async () => {
     const responseTest = await supertest(apiServer.server)
       .get('/signer-metrics/v1/cycles/72/signers')
