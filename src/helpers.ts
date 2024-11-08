@@ -26,7 +26,10 @@ export function normalizeHexString(hexString: string): string {
 
 export function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
-    if (signal?.aborted) return reject(signal.reason);
+    if (signal?.aborted) {
+      reject(signal.reason as Error);
+      return;
+    }
     const disposable = signal ? addAbortListener(signal, onAbort) : undefined;
     const timeout = setTimeout(() => {
       disposable?.[Symbol.dispose ?? (Symbol.for('nodejs.dispose') as typeof Symbol.dispose)]();
@@ -34,7 +37,7 @@ export function sleep(ms: number, signal?: AbortSignal): Promise<void> {
     }, ms);
     function onAbort() {
       clearTimeout(timeout);
-      reject(signal?.reason);
+      reject((signal?.reason as Error) ?? new Error('Aborted'));
     }
   });
 }
@@ -50,7 +53,7 @@ export function parseTime(timeStr: string): Date | null {
   }
 
   if (timeStr.startsWith('now-')) {
-    const relativeMatch = timeStr.match(/now-(\d+)(s|mo|m|h|d|w|y)/i);
+    const relativeMatch = /now-(\d+)(s|mo|m|h|d|w|y)/i.exec(timeStr);
     if (relativeMatch) {
       const [, amount, unit] = relativeMatch;
       const unitsMap: Record<string, keyof Duration> = {

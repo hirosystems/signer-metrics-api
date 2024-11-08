@@ -443,7 +443,7 @@ export class ChainhookPgStore extends BasePgStoreModule {
 
     const dbRewardSetSigners = block.metadata.reward_set?.signers?.map((signer, index) => {
       const dbSigner: DbRewardSetSigner = {
-        cycle_number: block.metadata.cycle_number as number,
+        cycle_number: block.metadata.cycle_number ?? 0,
         signer_key: normalizeHexString(signer.signing_key),
         signer_weight: signer.weight,
         signer_stacked_amount: signer.stacked_amt,
@@ -511,7 +511,7 @@ export class ChainhookPgStore extends BasePgStoreModule {
       return;
     }
     let insertCount = 0;
-    for await (const batch of batchIterate(signerSigs, 500)) {
+    for (const batch of batchIterate(signerSigs, 500)) {
       // TODO: add unique constraint here
       const result = await sql`
         INSERT INTO block_signer_signatures ${sql(batch)}
@@ -531,7 +531,7 @@ export class ChainhookPgStore extends BasePgStoreModule {
 
   async insertRewardSetSigners(sql: PgSqlClient, rewardSetSigners: DbRewardSetSigner[]) {
     let insertCount = 0;
-    for await (const batch of batchIterate(rewardSetSigners, 500)) {
+    for (const batch of batchIterate(rewardSetSigners, 500)) {
       const result = await sql`
         INSERT INTO reward_set_signers ${sql(batch)}
         ON CONFLICT ON CONSTRAINT reward_set_signers_cycle_unique DO NOTHING

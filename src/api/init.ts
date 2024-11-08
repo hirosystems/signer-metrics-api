@@ -12,7 +12,7 @@ import { BlockRoutes } from './routes/blocks';
 
 export const Api: FastifyPluginAsync<Record<never, never>, Server, TypeBoxTypeProvider> = async (
   fastify,
-  options
+  _options
 ) => {
   await fastify.register(StatusRoutes);
   await fastify.register(CycleRoutes);
@@ -55,7 +55,8 @@ export async function buildPromServer(args: { metrics: IFastifyMetrics }) {
     method: 'GET',
     logLevel: 'info',
     handler: async (_, reply) => {
-      await reply.type('text/plain').send(await args.metrics.client.register.metrics());
+      const metrics = await args.metrics.client.register.metrics();
+      await reply.type('text/plain').send(metrics);
     },
   });
 

@@ -22,7 +22,7 @@ function isDockerImagePulled(docker: Docker, imgName: string) {
 async function pullDockerImage(docker: Docker, imgName: string) {
   await new Promise<void>((resolve, reject) => {
     docker.pull(imgName, {}, (err, stream) => {
-      if (err || !stream) return reject(err);
+      if (err || !stream) return reject(err as Error);
       docker.modem.followProgress(stream, err => (err ? reject(err) : resolve()), console.log);
     });
   });

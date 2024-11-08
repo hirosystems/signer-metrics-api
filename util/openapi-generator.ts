@@ -13,7 +13,7 @@ export const ApiGenerator: FastifyPluginAsync<
   Record<never, never>,
   Server,
   TypeBoxTypeProvider
-> = async (fastify, options) => {
+> = async (fastify, _options) => {
   await fastify.register(FastifySwagger, OpenApiSchemaOptions);
   await fastify.register(Api, { prefix: '/signer-metrics' });
   if (!existsSync('./tmp')) {

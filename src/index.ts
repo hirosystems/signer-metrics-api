@@ -111,7 +111,7 @@ initApp()
   .then(() => {
     logger.info('App initialized');
   })
-  .catch(error => {
+  .catch((error: unknown) => {
     logger.error(error, `App failed to start`);
     process.exit(1);
   });
