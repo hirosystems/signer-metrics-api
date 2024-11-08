@@ -1,3 +1,10 @@
+## [0.7.0](https://github.com/hirosystems/signer-metrics-api/compare/v0.6.0...v0.7.0) (2024-11-08)
+
+
+### Features
+
+* implement `/v1/blocks/{hash_or_height}` endpoint ([#42](https://github.com/hirosystems/signer-metrics-api/issues/42)) ([3ec299e](https://github.com/hirosystems/signer-metrics-api/commit/3ec299efe0983769d6ff06881af6fe7a556aac37))
+
 ## [0.6.0](https://github.com/hirosystems/signer-metrics-api/compare/v0.5.0...v0.6.0) (2024-11-05)
 
 
