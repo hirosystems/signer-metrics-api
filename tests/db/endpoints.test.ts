@@ -180,6 +180,7 @@ describe('Endpoint tests', () => {
       index_block_hash: '0x7183de5c4ae700248283fede9264d31a37ab3ca1b54b4fd24adc449fbbd4c2b7',
       burn_block_height: 65206,
       tenure_height: 53408,
+      signer_data: null,
     };
 
     const { body: testBlockLatest } = (await supertest(apiServer.server)

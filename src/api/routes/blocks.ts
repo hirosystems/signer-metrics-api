@@ -56,6 +56,7 @@ export const BlockRoutes: FastifyPluginCallback<
             burn_block_height: result.burn_block_height,
             tenure_height: result.tenure_height,
             block_time: result.block_time,
+            signer_data: null,
           };
 
           if (!result.block_proposal_time_ms || !result.cycle_number) {
@@ -135,6 +136,7 @@ export const BlockRoutes: FastifyPluginCallback<
           burn_block_height: result.burn_block_height,
           tenure_height: result.tenure_height,
           block_time: result.block_time,
+          signer_data: null,
         };
 
         if (!result.block_proposal_time_ms || !result.cycle_number) {
