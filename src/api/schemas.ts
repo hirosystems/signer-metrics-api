@@ -1,6 +1,7 @@
 import { SwaggerOptions } from '@fastify/swagger';
-import { SERVER_VERSION } from '@hirosystems/api-toolkit';
+import { has0xPrefix, SERVER_VERSION } from '@hirosystems/api-toolkit';
 import { Static, TSchema, Type } from '@sinclair/typebox';
+import { BlockIdParam } from '../helpers';
 
 export const OpenApiSchemaOptions: SwaggerOptions = {
   openapi: {
@@ -30,7 +31,6 @@ export const OpenApiSchemaOptions: SwaggerOptions = {
       },
     ],
   },
-  exposeRoute: true,
 };
 
 export const ApiStatusResponse = Type.Object(
@@ -197,3 +197,55 @@ export type CycleSignersResponse = Static<typeof CycleSignersResponseSchema>;
 
 export const CycleSignerResponseSchema = Type.Composite([CycleSignerSchema]);
 export type CycleSignerResponse = Static<typeof CycleSignerResponseSchema>;
+
+const BlockHashParamSchema = Type.String({
+  pattern: '^(0x)?[a-fA-F0-9]{64}$',
+  title: 'Block hash',
+  description: 'Block hash',
+  examples: ['0xdaf79950c5e8bb0c620751333967cdd62297137cdaf79950c5e8bb0c62075133'],
+});
+
+const BlockHeightParamSchema = Type.Integer({
+  title: 'Block height',
+  description: 'Block height',
+  examples: [777678],
+});
+
+export const BlockParamsSchema = Type.Object(
+  {
+    height_or_hash: Type.Union([
+      Type.Literal('latest'),
+      BlockHashParamSchema,
+      BlockHeightParamSchema,
+    ]),
+  },
+  { additionalProperties: false }
+);
+export type BlockParams = Static<typeof BlockParamsSchema>;
+
+/**
+ * If a param can accept a block hash or height, then ensure that the hash is prefixed with '0x' so
+ * that hashes with only digits are not accidentally parsed as a number.
+ */
+export function cleanBlockHeightOrHashParam(params: { height_or_hash: string | number }) {
+  if (
+    typeof params.height_or_hash === 'string' &&
+    /^[a-fA-F0-9]{64}$/i.test(params.height_or_hash)
+  ) {
+    params.height_or_hash = '0x' + params.height_or_hash;
+  }
+}
+
+export function parseBlockParam(value: BlockParams['height_or_hash']): BlockIdParam {
+  if (value === 'latest') {
+    return { type: 'latest', latest: true };
+  }
+  value = typeof value === 'string' ? value : value.toString();
+  if (/^(0x)?[a-fA-F0-9]{64}$/i.test(value)) {
+    return { type: 'hash', hash: has0xPrefix(value) ? value : `0x${value}` };
+  }
+  if (/^[0-9]+$/.test(value)) {
+    return { type: 'height', height: parseInt(value) };
+  }
+  throw new Error('Invalid block height or hash');
+}

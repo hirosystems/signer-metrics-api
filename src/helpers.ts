@@ -76,3 +76,8 @@ export function parseTime(timeStr: string): Date | null {
   // Return null if parsing failed
   return null;
 }
+
+export type BlockIdParam =
+  | { type: 'height'; height: number }
+  | { type: 'hash'; hash: string }
+  | { type: 'latest'; latest: true };
