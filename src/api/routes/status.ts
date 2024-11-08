@@ -23,7 +23,7 @@ export const StatusRoutes: FastifyPluginCallback<
       },
     },
     async (_req, reply) => {
-      const result = await fastify.db.sqlTransaction(async (_sql) => {
+      const result = await fastify.db.sqlTransaction(async _sql => {
         const block_height = await fastify.db.getChainTipBlockHeight();
 
         return {

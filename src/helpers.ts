@@ -3,11 +3,11 @@ import { parseISO, sub, isValid, Duration } from 'date-fns';
 
 export const isDevEnv = process.env.NODE_ENV === 'development';
 export const isTestEnv = process.env.NODE_ENV === 'test';
-export const isProdEnv
-  = process.env.NODE_ENV === 'production'
-  || process.env.NODE_ENV === 'prod'
-  || !process.env.NODE_ENV
-  || (!isTestEnv && !isDevEnv);
+export const isProdEnv =
+  process.env.NODE_ENV === 'production' ||
+  process.env.NODE_ENV === 'prod' ||
+  !process.env.NODE_ENV ||
+  (!isTestEnv && !isDevEnv);
 
 /** Convert a unix timestamp in milliseconds to an ISO string */
 export function unixTimeMillisecondsToISO(timestampMilliseconds: number): string {

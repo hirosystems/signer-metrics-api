@@ -65,7 +65,7 @@ export class StackerSetUpdator {
         stackerSet.response,
         cycleNumber
       );
-      await this.db.chainhook.sqlWriteTransaction(async (sql) => {
+      await this.db.chainhook.sqlWriteTransaction(async sql => {
         await this.db.chainhook.insertRewardSetSigners(sql, dbRewardSetSigners);
       });
       logger.info(

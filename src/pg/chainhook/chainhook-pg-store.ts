@@ -62,7 +62,7 @@ export class ChainhookPgStore extends BasePgStoreModule {
   }
 
   async processPayload(payload: StacksPayload): Promise<void> {
-    await this.sqlWriteTransaction(async (sql) => {
+    await this.sqlWriteTransaction(async sql => {
       for (const block of payload.rollback) {
         this.logger.info(`ChainhookPgStore rollback block ${block.block_identifier.index}`);
         const time = stopwatch();
@@ -213,7 +213,7 @@ export class ChainhookPgStore extends BasePgStoreModule {
 
       let mockBlockSigInsertCount = 0;
       for (const batch of batchIterate(messageData.mock_signatures, 500)) {
-        const sigs = batch.map((sig) => {
+        const sigs = batch.map(sig => {
           const dbSig: DbMockBlockSignerSignature = {
             signer_key: normalizeHexString(sig.pubkey),
             signer_signature: normalizeHexString(sig.signature),

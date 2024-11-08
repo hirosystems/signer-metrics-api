@@ -41,14 +41,14 @@ export const BlockRoutes: FastifyPluginCallback<
       },
     },
     async (request, reply) => {
-      const result = await fastify.db.sqlTransaction(async (sql) => {
+      const result = await fastify.db.sqlTransaction(async sql => {
         const results = await fastify.db.getSignerDataForRecentBlocks({
           sql,
           limit: request.query.limit,
           offset: request.query.offset,
         });
 
-        const formatted: BlocksEntry[] = results.map((result) => {
+        const formatted: BlocksEntry[] = results.map(result => {
           const entry: BlocksEntry = {
             block_height: result.block_height,
             block_hash: result.block_hash,
@@ -78,8 +78,8 @@ export const BlockRoutes: FastifyPluginCallback<
             block_proposal_time_ms: Number.parseInt(result.block_proposal_time_ms),
 
             accepted_stacked_amount: (
-              BigInt(result.accepted_mined_stacked_amount)
-              + BigInt(result.accepted_excluded_stacked_amount)
+              BigInt(result.accepted_mined_stacked_amount) +
+              BigInt(result.accepted_excluded_stacked_amount)
             ).toString(),
             rejected_stacked_amount: result.rejected_stacked_amount,
             missing_stacked_amount: result.missing_stacked_amount,
@@ -123,7 +123,7 @@ export const BlockRoutes: FastifyPluginCallback<
     },
     async (request, reply) => {
       const blockId = parseBlockParam(request.params.height_or_hash);
-      const result = await fastify.db.sqlTransaction(async (sql) => {
+      const result = await fastify.db.sqlTransaction(async sql => {
         const result = await fastify.db.getSignerDataForBlock({ sql, blockId });
         if (!result) {
           throw new NotFoundError(`Block not found`);
@@ -158,8 +158,8 @@ export const BlockRoutes: FastifyPluginCallback<
           block_proposal_time_ms: Number.parseInt(result.block_proposal_time_ms),
 
           accepted_stacked_amount: (
-            BigInt(result.accepted_mined_stacked_amount)
-            + BigInt(result.accepted_excluded_stacked_amount)
+            BigInt(result.accepted_mined_stacked_amount) +
+            BigInt(result.accepted_excluded_stacked_amount)
           ).toString(),
           rejected_stacked_amount: result.rejected_stacked_amount,
           missing_stacked_amount: result.missing_stacked_amount,

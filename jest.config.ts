@@ -4,10 +4,7 @@ const transform = { ...createDefaultPreset().transform };
 const jestConfig: JestConfigWithTsJest = {
   testEnvironment: 'node',
   coverageProvider: 'v8',
-  collectCoverageFrom: [
-    'src/**/*.ts',
-    'migrations/*.ts',
-  ],
+  collectCoverageFrom: ['src/**/*.ts', 'migrations/*.ts'],
   projects: [
     {
       transform,
@@ -22,7 +19,7 @@ const jestConfig: JestConfigWithTsJest = {
       globalTeardown: './tests/db/jest-global-teardown.ts',
       setupFilesAfterEnv: ['./tests/db/jest-setup.ts'],
     },
-  ]
+  ],
 };
 
 export default jestConfig;

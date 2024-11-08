@@ -33,7 +33,7 @@ async function pruneContainers(docker: Docker, label: string) {
   for (const container of containers) {
     const c = docker.getContainer(container.Id);
     if (container.State !== 'exited') {
-      await c.stop().catch((_err) => {});
+      await c.stop().catch(_err => {});
     }
     await c.remove();
   }

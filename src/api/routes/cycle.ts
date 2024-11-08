@@ -62,7 +62,7 @@ export const CycleRoutes: FastifyPluginCallback<
         throw new InvalidRequestError('`from` parameter must be earlier than `to` parameter.');
       }
 
-      const result = await fastify.db.sqlTransaction(async (sql) => {
+      const result = await fastify.db.sqlTransaction(async sql => {
         const results = await fastify.db.getSignersForCycle({
           sql,
           cycleNumber: request.params.cycle_number,
@@ -72,7 +72,7 @@ export const CycleRoutes: FastifyPluginCallback<
           offset,
         });
 
-        const formatted = results.map((result) => {
+        const formatted = results.map(result => {
           const cycleSinger: CycleSigner = {
             signer_key: result.signer_key,
             slot_index: result.slot_index,
@@ -123,7 +123,7 @@ export const CycleRoutes: FastifyPluginCallback<
       },
     },
     async (request, reply) => {
-      const result = await fastify.db.sqlTransaction(async (_sql) => {
+      const result = await fastify.db.sqlTransaction(async _sql => {
         const signer = await fastify.db.getSignerForCycle(
           request.params.cycle_number,
           request.params.signer_id
