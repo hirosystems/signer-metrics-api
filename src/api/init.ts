@@ -1,4 +1,4 @@
-import Fastify, { FastifyPluginAsync } from 'fastify';
+import Fastify, { FastifyPluginAsync, FastifyServerOptions } from 'fastify';
 import { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import { PgStore } from '../pg/pg-store';
 import FastifyCors from '@fastify/cors';
@@ -14,15 +14,35 @@ export const Api: FastifyPluginAsync<Record<never, never>, Server, TypeBoxTypePr
   fastify,
   _options
 ) => {
-  await fastify.register(StatusRoutes);
-  await fastify.register(CycleRoutes);
-  await fastify.register(BlockRoutes);
+  await fastify.register(
+    async fastify => {
+      await fastify.register(StatusRoutes);
+      await fastify.register(CycleRoutes);
+      await fastify.register(BlockRoutes);
+    },
+    { prefix: '/signer-metrics' }
+  );
 };
 
 export async function buildApiServer(args: { db: PgStore }) {
+  const logger: FastifyServerOptions['logger'] = {
+    ...PINO_LOGGER_CONFIG,
+    name: 'fastify-api',
+    serializers: {
+      res: reply => ({
+        statusCode: reply.statusCode,
+        method: reply.request?.method,
+        url: reply.request?.url,
+        requestBodySize:
+          parseInt(reply.request?.headers?.['content-length'] as string) || 'unknown',
+        responseBodySize: parseInt(reply.getHeader?.('content-length') as string) || 'unknown',
+      }),
+    },
+  };
+
   const fastify = Fastify({
     trustProxy: true,
-    logger: PINO_LOGGER_CONFIG,
+    logger: logger,
   }).withTypeProvider<TypeBoxTypeProvider>();
 
   fastify.decorate('db', args.db);
@@ -30,7 +50,7 @@ export async function buildApiServer(args: { db: PgStore }) {
     await fastify.register(FastifyMetrics, { endpoint: null });
   }
   await fastify.register(FastifyCors);
-  await fastify.register(Api, { prefix: '/signer-metrics' });
+  await fastify.register(Api);
 
   fastify.addHook('onSend', async (_req, reply, payload) => {
     if ((reply.getHeader('Content-Type') as string).startsWith('application/json')) {
