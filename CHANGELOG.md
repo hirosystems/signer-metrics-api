@@ -1,3 +1,10 @@
+## [0.8.0](https://github.com/hirosystems/signer-metrics-api/compare/v0.7.0...v0.8.0) (2024-11-08)
+
+
+### Features
+
+* add slot_index property to signers ([#46](https://github.com/hirosystems/signer-metrics-api/issues/46)) ([79e399a](https://github.com/hirosystems/signer-metrics-api/commit/79e399a568e53d8c4d1ec48e30ee13cde3e898d8))
+
 ## [0.7.0](https://github.com/hirosystems/signer-metrics-api/compare/v0.6.0...v0.7.0) (2024-11-08)
 
 
