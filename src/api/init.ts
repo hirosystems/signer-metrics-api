@@ -1,4 +1,5 @@
 import Fastify, { FastifyPluginAsync, FastifyServerOptions } from 'fastify';
+import * as PromClient from 'prom-client';
 import { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import { PgStore } from '../pg/pg-store';
 import FastifyCors from '@fastify/cors';
@@ -12,7 +13,7 @@ import { BlockRoutes } from './routes/blocks';
 
 export const Api: FastifyPluginAsync<Record<never, never>, Server, TypeBoxTypeProvider> = async (
   fastify,
-  options
+  _options
 ) => {
   await fastify.register(
     async fastify => {
@@ -75,7 +76,9 @@ export async function buildPromServer(args: { metrics: IFastifyMetrics }) {
     method: 'GET',
     logLevel: 'info',
     handler: async (_, reply) => {
-      await reply.type('text/plain').send(await args.metrics.client.register.metrics());
+      const promClient = args.metrics.client as typeof PromClient;
+      const metrics = await promClient.register.metrics();
+      await reply.type('text/plain').send(metrics);
     },
   });
 

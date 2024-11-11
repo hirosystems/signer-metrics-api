@@ -17,8 +17,8 @@ describe('Helper tests', () => {
         const sleepPromise = sleep(1000, signal);
         controller.abort(); // Abort immediately
         await sleepPromise;
-      } catch (err: any) {
-        expect(err.toString()).toMatch(/aborted/i);
+      } catch (err) {
+        expect((err as Error).toString()).toMatch(/aborted/i);
       }
 
       // Assert that listener count does not increase

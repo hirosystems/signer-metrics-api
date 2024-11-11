@@ -14,7 +14,7 @@ export const CycleRoutes: FastifyPluginCallback<
   Record<never, never>,
   Server,
   TypeBoxTypeProvider
-> = (fastify, options, done) => {
+> = (fastify, _options, done) => {
   fastify.get(
     '/v1/cycles/:cycle_number/signers',
     {
@@ -123,7 +123,7 @@ export const CycleRoutes: FastifyPluginCallback<
       },
     },
     async (request, reply) => {
-      const result = await fastify.db.sqlTransaction(async sql => {
+      const result = await fastify.db.sqlTransaction(async _sql => {
         const signer = await fastify.db.getSignerForCycle(
           request.params.cycle_number,
           request.params.signer_id

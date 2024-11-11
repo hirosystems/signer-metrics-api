@@ -27,7 +27,7 @@ async function generateOpenApiFiles() {
   mkdirSync(outputDir, { recursive: true });
   writeFileSync(yamlFile, fastify.swagger({ yaml: true }));
   writeFileSync(jsonFile, JSON.stringify(fastify.swagger(), null, 2));
-  
+
   await fastify.close();
 
   console.log(`OpenAPI yaml file written to ${yamlFile}`);

@@ -3,7 +3,6 @@ import * as fs from 'node:fs';
 import * as readline from 'node:readline/promises';
 import * as zlib from 'node:zlib';
 import { StacksPayload } from '@hirosystems/chainhook-client';
-import { logger } from '@hirosystems/api-toolkit';
 
 describe('Postgres ingestion tests', () => {
   let db: PgStore;

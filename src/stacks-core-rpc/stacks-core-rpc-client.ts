@@ -18,9 +18,9 @@ export async function fetchRpcPoxInfo(abortSignal: AbortSignal) {
 
 export interface RpcStackerSetResponse {
   stacker_set: {
-    rewarded_addresses: any[];
+    rewarded_addresses: unknown[];
     start_cycle_state: {
-      missed_reward_slots: any[];
+      missed_reward_slots: unknown[];
     };
     pox_ustx_threshold: number;
     signers: {

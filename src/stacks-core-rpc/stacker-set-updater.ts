@@ -1,6 +1,6 @@
 import { PgStore } from '../pg/pg-store';
 import PQueue from 'p-queue';
-import { fetchStackerSet, getStacksNodeUrl, RpcStackerSetResponse } from './stacks-core-rpc-client';
+import { fetchStackerSet, RpcStackerSetResponse } from './stacks-core-rpc-client';
 import { sleep } from '../helpers';
 import { logger } from '@hirosystems/api-toolkit';
 import { DbRewardSetSigner } from '../pg/types';
@@ -43,7 +43,7 @@ export class StackerSetUpdator {
     this.queuedCycleNumbers.add(cycleNumber);
     void this.queue
       .add(() => this.fetchStackerSet(cycleNumber))
-      .catch(error => {
+      .catch((error: unknown) => {
         if (!this.abortController.signal.aborted) {
           logger.error(error, `Unexpected stacker-set fetch queue error for cycle ${cycleNumber}`);
           this.queuedCycleNumbers.delete(cycleNumber);
