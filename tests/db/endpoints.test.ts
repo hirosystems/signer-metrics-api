@@ -81,6 +81,14 @@ describe('Endpoint tests', () => {
     });
   });
 
+  test('get latest blocks proposals', async () => {
+    const responseTest = await supertest(apiServer.server)
+      .get('/signer-metrics/v1/block_proposals?limit=50')
+      .expect(200);
+    const body = responseTest.body;
+    console.log(body);
+  });
+
   test('get latest blocks', async () => {
     const responseTest = await supertest(apiServer.server)
       .get('/signer-metrics/v1/blocks?limit=20')

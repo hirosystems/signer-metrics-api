@@ -101,6 +101,128 @@ export class PgStore extends BasePgStore {
     return { rowUpdated: updateResult.count > 0 };
   }
 
+  async getRecentBlockProposals({
+    sql,
+    limit,
+    offset,
+  }: {
+    sql: PgSqlClient;
+    limit: number;
+    offset: number;
+  }) {
+    const result = await sql<
+      {
+        // block proposal data (from block_proposals):
+        received_at: Date;
+        block_height: number;
+        block_hash: string;
+        index_block_hash: string;
+        burn_block_height: number;
+        block_time: number;
+        cycle_number: number;
+
+        // cycle data (from reward_set_signers, matched using cycle_number AKA reward_cycle):
+        total_signer_count: number;
+        total_signer_weight: number;
+        total_signer_stacked_amount: string;
+
+        // aggregate signer response data (from block_responses, matched using block_hash AKA signer_sighash, where missing is detected by the absence of a block_response for a given signer_key from the reward_set_signers table):
+        accepted_count: number;
+        rejected_count: number;
+        missing_count: number;
+        accepted_weight: number;
+        rejected_weight: number;
+        missing_weight: number;
+
+        // signer block responses (from block_responses, matched using block_hash AKA signer_sighash, using the signer_key from the reward_set_signers table for some of the fields):
+        // (note: use the ARRAY_AGG with block_proposal_response_type to create this array)
+        responses: {
+          received_at: string;
+          signer_key: string;
+          slot_index: number;
+          version: string; // AKA metadata_server_version
+          weight: number;
+          stacked_amount: string;
+          accepted: boolean;
+          // rejected fields:
+          reason_string: string | null;
+          reason_code: string | null;
+          reject_code: string | null;
+        }[];
+      }[]
+    >`
+      SELECT 
+        bp.received_at,
+        bp.block_height,
+        bp.block_hash,
+        bp.index_block_hash,
+        bp.burn_block_height,
+        EXTRACT(EPOCH FROM bp.block_time)::integer AS block_time,
+        bp.reward_cycle AS cycle_number,
+
+        -- Aggregate cycle data from reward_set_signers
+        COUNT(DISTINCT rss.signer_key)::integer AS total_signer_count,
+        SUM(rss.signer_weight)::integer AS total_signer_weight,
+        SUM(rss.signer_stacked_amount) AS total_signer_stacked_amount,
+
+        -- Aggregate response data for accepted, rejected, and missing counts and weights
+        COUNT(br.accepted) FILTER (WHERE br.accepted = TRUE)::integer AS accepted_count,
+        COUNT(br.accepted) FILTER (WHERE br.accepted = FALSE)::integer AS rejected_count,
+        COUNT(*) FILTER (WHERE br.id IS NULL)::integer AS missing_count,
+        
+        COALESCE(SUM(rss.signer_weight) FILTER (WHERE br.accepted = TRUE), 0)::integer AS accepted_weight,
+        COALESCE(SUM(rss.signer_weight) FILTER (WHERE br.accepted = FALSE), 0)::integer AS rejected_weight,
+        COALESCE(SUM(rss.signer_weight) FILTER (WHERE br.id IS NULL), 0)::integer AS missing_weight,
+
+        -- Array of responses
+        COALESCE(
+          JSON_AGG(
+            json_build_object(
+              'received_at', to_char(br.received_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+              'signer_key', '0x' || encode(br.signer_key, 'hex'),
+              'slot_index', rss.slot_index,
+              'version', br.metadata_server_version,
+              'weight', rss.signer_weight,
+              'stacked_amount', rss.signer_stacked_amount::text,
+              'accepted', br.accepted,
+              'reason_string', br.reason_string,
+              'reason_code', br.reason_code,
+              'reject_code', br.reject_code
+            )
+          ) FILTER (WHERE br.id IS NOT NULL),
+          '[]'::json
+        ) AS responses
+
+      FROM (
+        SELECT * 
+        FROM block_proposals
+        ORDER BY received_at DESC
+        LIMIT ${limit}
+        OFFSET ${offset}
+      ) AS bp
+
+      LEFT JOIN reward_set_signers rss 
+        ON rss.cycle_number = bp.reward_cycle
+
+      LEFT JOIN block_responses br 
+        ON br.signer_sighash = bp.block_hash 
+        AND br.signer_key = rss.signer_key
+
+      GROUP BY 
+        bp.id, 
+        bp.received_at, 
+        bp.block_height, 
+        bp.block_hash, 
+        bp.index_block_hash, 
+        bp.burn_block_height, 
+        bp.block_time, 
+        bp.reward_cycle
+
+      ORDER BY bp.received_at DESC
+    `;
+    return result;
+  }
+
   async getSignerDataForRecentBlocks({
     sql,
     limit,

@@ -10,6 +10,7 @@ import { isProdEnv } from '../helpers';
 import { PINO_LOGGER_CONFIG } from '@hirosystems/api-toolkit';
 import { CycleRoutes } from './routes/cycle';
 import { BlockRoutes } from './routes/blocks';
+import { BlockProposalsRoutes } from './routes/block-proposals';
 
 export const Api: FastifyPluginAsync<Record<never, never>, Server, TypeBoxTypeProvider> = async (
   fastify,
@@ -20,6 +21,7 @@ export const Api: FastifyPluginAsync<Record<never, never>, Server, TypeBoxTypePr
       await fastify.register(StatusRoutes);
       await fastify.register(CycleRoutes);
       await fastify.register(BlockRoutes);
+      await fastify.register(BlockProposalsRoutes);
     },
     { prefix: '/signer-metrics' }
   );
