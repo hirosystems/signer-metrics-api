@@ -84,7 +84,7 @@ describe('Endpoint tests', () => {
     });
   });
 
-  test('get latest blocks proposals', async () => {
+  test('get blocks proposals', async () => {
     const responseTest = await supertest(apiServer.server)
       .get('/signer-metrics/v1/block_proposals?limit=50')
       .expect(200);
@@ -101,6 +101,21 @@ describe('Endpoint tests', () => {
 
     const rejectedBlockHash = '0x91b01811fdfddb38886412509fc1e6d48c91b3f4406b32b887ec261e6312ee6b';
     const rejectedBlock = body.results.find(r => r.block_hash === rejectedBlockHash);
+    const expectedRejectedSignerData: BlockProposalSignerData = {
+      signer_key: '0x02e8620935d58ebffa23c260f6917cbd0915ea17d7a46df17e131540237d335504',
+      slot_index: 3,
+      response: 'rejected',
+      weight: 38,
+      weight_percentage: 76,
+      stacked_amount: '250000000000000',
+      version:
+        'stacks-signer signer-3.0.0.0.0.1 (release/signer-3.0.0.0.0.1:b26f406, release build, linux [x86_64])',
+      received_at: '2024-11-02T13:27:31.613Z',
+      response_time_ms: 10874,
+      reason_string: 'The block was rejected due to a mismatch with expected sortition view.',
+      reason_code: 'SORTITION_VIEW_MISMATCH',
+      reject_code: null,
+    };
     const expectedRejectedBlockData: BlockProposalsEntry = {
       received_at: '2024-11-02T13:27:20.739Z',
       block_height: 112267,
@@ -119,34 +134,26 @@ describe('Endpoint tests', () => {
       accepted_weight: 1,
       rejected_weight: 46,
       missing_weight: 3,
-      signer_data: expect.any(Array),
+      signer_data: expect.arrayContaining([expectedRejectedSignerData]),
     };
     expect(rejectedBlock).toEqual(expectedRejectedBlockData);
 
-    const rejectedBlockSignerKey =
-      '0x02e8620935d58ebffa23c260f6917cbd0915ea17d7a46df17e131540237d335504';
-    const rejectedSigner = rejectedBlock!.signer_data.find(
-      s => s.signer_key === rejectedBlockSignerKey
-    );
-    const expectedRejectedSignerData: BlockProposalSignerData = {
-      signer_key: '0x02e8620935d58ebffa23c260f6917cbd0915ea17d7a46df17e131540237d335504',
-      slot_index: 3,
-      response: 'rejected',
-      weight: 38,
-      weight_percentage: 76,
-      stacked_amount: '250000000000000',
-      version:
-        'stacks-signer signer-3.0.0.0.0.1 (release/signer-3.0.0.0.0.1:b26f406, release build, linux [x86_64])',
-      received_at: '2024-11-02T13:27:31.613Z',
-      response_time_ms: 10874,
-      reason_string: 'The block was rejected due to a mismatch with expected sortition view.',
-      reason_code: 'SORTITION_VIEW_MISMATCH',
-      reject_code: null,
-    };
-    expect(rejectedSigner).toEqual(expectedRejectedSignerData);
-
     const acceptedBlockHash = '0x2f1c4e83fda403682b1ab5dd41383e47d2cb3dfec0fd26f0886883462d7802fb';
     const acceptedBlock = body.results.find(r => r.block_hash === acceptedBlockHash);
+    const expectedAcceptedSignerData: BlockProposalSignerData = {
+      signer_key: '0x02567b1f5056f6c3e59e759f66216d21239904d1cc2d847c5dcc3c2b6534d7bead',
+      slot_index: 0,
+      response: 'accepted',
+      weight: 1,
+      weight_percentage: 2,
+      stacked_amount: '6490000003000',
+      version: 'stacks-signer 0.0.1 (:, release build, linux [x86_64])',
+      received_at: '2024-11-02T13:32:58.090Z',
+      response_time_ms: 4774,
+      reason_string: null,
+      reason_code: null,
+      reject_code: null,
+    };
     const expectedAcceptedBlockData: BlockProposalsEntry = {
       received_at: '2024-11-02T13:32:53.316Z',
       block_height: 112276,
@@ -165,9 +172,27 @@ describe('Endpoint tests', () => {
       accepted_weight: 47,
       rejected_weight: 0,
       missing_weight: 3,
-      signer_data: expect.any(Array),
+      signer_data: expect.arrayContaining([expectedAcceptedSignerData]),
     };
     expect(acceptedBlock).toEqual(expectedAcceptedBlockData);
+
+    const getProposal1 = await supertest(apiServer.server)
+      .get(`/signer-metrics/v1/block_proposals/${rejectedBlockHash}`)
+      .expect(200);
+    const body1: BlockProposalsEntry = getProposal1.body;
+    expect(body1).toEqual(expectedRejectedBlockData);
+
+    const getProposal2 = await supertest(apiServer.server)
+      .get(`/signer-metrics/v1/block_proposals/${acceptedBlockHash}`)
+      .expect(200);
+    const body2: BlockProposalsEntry = getProposal2.body;
+    expect(body2).toEqual(expectedAcceptedBlockData);
+
+    await supertest(apiServer.server)
+      .get(
+        `/signer-metrics/v1/block_proposals/0x00000083fda403682b1ab5dd41383e47d2cb3dfec0fd26f0886883462d000000`
+      )
+      .expect(404);
   });
 
   test('get latest blocks', async () => {

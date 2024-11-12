@@ -198,7 +198,7 @@ export type CycleSignersResponse = Static<typeof CycleSignersResponseSchema>;
 export const CycleSignerResponseSchema = Type.Composite([CycleSignerSchema]);
 export type CycleSignerResponse = Static<typeof CycleSignerResponseSchema>;
 
-const BlockHashParamSchema = Type.String({
+export const BlockHashParamSchema = Type.String({
   pattern: '^(0x)?[a-fA-F0-9]{64}$',
   title: 'Block hash',
   description: 'Block hash',
