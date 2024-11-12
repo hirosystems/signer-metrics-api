@@ -11,6 +11,7 @@ import * as path from 'path';
 import { ChainhookPgStore } from './chainhook/chainhook-pg-store';
 import { BlockIdParam, normalizeHexString, sleep } from '../helpers';
 import { Fragment } from 'postgres';
+import { DbBlockProposalQueryResponse } from './types';
 
 export const MIGRATIONS_DIR = path.join(__dirname, '../../migrations');
 
@@ -99,6 +100,196 @@ export class PgStore extends BasePgStore {
         OR reward_cycle_length IS DISTINCT FROM ${poxInfo.reward_cycle_length}
     `;
     return { rowUpdated: updateResult.count > 0 };
+  }
+
+  async getRecentBlockProposals({
+    sql,
+    limit,
+    offset,
+  }: {
+    sql: PgSqlClient;
+    limit: number;
+    offset: number;
+  }) {
+    const result = await sql<DbBlockProposalQueryResponse[]>`
+      SELECT 
+        bp.received_at,
+        bp.block_height,
+        bp.block_hash,
+        bp.index_block_hash,
+        bp.burn_block_height,
+        EXTRACT(EPOCH FROM bp.block_time)::integer AS block_time,
+        bp.reward_cycle AS cycle_number,
+
+        -- Proposal status
+        CASE
+          WHEN bp.block_height > ct.block_height THEN 'pending'
+          WHEN b.block_hash IS NULL THEN 'rejected'
+          WHEN b.block_hash = bp.block_hash THEN 'accepted'
+          ELSE 'rejected'
+        END AS status,
+
+        -- Aggregate cycle data from reward_set_signers
+        COUNT(DISTINCT rss.signer_key)::integer AS total_signer_count,
+        SUM(rss.signer_weight)::integer AS total_signer_weight,
+        SUM(rss.signer_stacked_amount) AS total_signer_stacked_amount,
+
+        -- Aggregate response data for accepted, rejected, and missing counts and weights
+        COUNT(br.accepted) FILTER (WHERE br.accepted = TRUE)::integer AS accepted_count,
+        COUNT(br.accepted) FILTER (WHERE br.accepted = FALSE)::integer AS rejected_count,
+        COUNT(*) FILTER (WHERE br.id IS NULL)::integer AS missing_count,
+        
+        COALESCE(SUM(rss.signer_weight) FILTER (WHERE br.accepted = TRUE), 0)::integer AS accepted_weight,
+        COALESCE(SUM(rss.signer_weight) FILTER (WHERE br.accepted = FALSE), 0)::integer AS rejected_weight,
+        COALESCE(SUM(rss.signer_weight) FILTER (WHERE br.id IS NULL), 0)::integer AS missing_weight,
+
+        -- Array of signer response details
+        COALESCE(
+          JSON_AGG(
+            json_build_object(
+              'signer_key', '0x' || encode(rss.signer_key, 'hex'),
+              'slot_index', rss.slot_index,
+              'response', 
+                CASE 
+                  WHEN br.id IS NULL THEN 'missing'
+                  WHEN br.accepted = TRUE THEN 'accepted'
+                  ELSE 'rejected'
+                END,
+              'version', br.metadata_server_version,
+              'weight', rss.signer_weight,
+              'stacked_amount', rss.signer_stacked_amount::text,
+              'received_at', to_char(br.received_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+              'reason_string', br.reason_string,
+              'reason_code', br.reason_code,
+              'reject_code', br.reject_code
+            ) ORDER BY rss.slot_index
+          ),
+          '[]'::json
+        ) AS signer_data
+
+      FROM (
+        SELECT * 
+        FROM block_proposals
+        ORDER BY received_at DESC
+        LIMIT ${limit}
+        OFFSET ${offset}
+      ) AS bp
+
+      -- Join with chain_tip to get the current block height
+      CROSS JOIN chain_tip ct
+
+      -- Join with blocks to check if there's a matching block for the same block_height and block_hash
+      LEFT JOIN blocks b 
+        ON b.block_height = bp.block_height
+
+      LEFT JOIN reward_set_signers rss 
+        ON rss.cycle_number = bp.reward_cycle
+
+      LEFT JOIN block_responses br 
+        ON br.signer_sighash = bp.block_hash 
+        AND br.signer_key = rss.signer_key
+
+      GROUP BY 
+        bp.id, 
+        bp.received_at, 
+        bp.block_height, 
+        bp.block_hash, 
+        bp.index_block_hash, 
+        bp.burn_block_height, 
+        bp.block_time, 
+        bp.reward_cycle, 
+        ct.block_height,
+        b.block_hash
+
+      ORDER BY bp.received_at DESC
+    `;
+    return result;
+  }
+
+  async getBlockProposal({ sql, blockHash }: { sql: PgSqlClient; blockHash: string }) {
+    const result = await sql<DbBlockProposalQueryResponse[]>`
+      SELECT 
+        bp.received_at,
+        bp.block_height,
+        bp.block_hash,
+        bp.index_block_hash,
+        bp.burn_block_height,
+        EXTRACT(EPOCH FROM bp.block_time)::integer AS block_time,
+        bp.reward_cycle AS cycle_number,
+
+        -- Proposal status
+        CASE
+          WHEN bp.block_height > ct.block_height THEN 'pending'
+          WHEN b.block_hash IS NULL THEN 'rejected'
+          WHEN b.block_hash = bp.block_hash THEN 'accepted'
+          ELSE 'rejected'
+        END AS status,
+
+        -- Aggregate cycle data from reward_set_signers
+        COUNT(DISTINCT rss.signer_key)::integer AS total_signer_count,
+        SUM(rss.signer_weight)::integer AS total_signer_weight,
+        SUM(rss.signer_stacked_amount) AS total_signer_stacked_amount,
+
+        -- Aggregate response data for accepted, rejected, and missing counts and weights
+        COUNT(br.accepted) FILTER (WHERE br.accepted = TRUE)::integer AS accepted_count,
+        COUNT(br.accepted) FILTER (WHERE br.accepted = FALSE)::integer AS rejected_count,
+        COUNT(*) FILTER (WHERE br.id IS NULL)::integer AS missing_count,
+        
+        COALESCE(SUM(rss.signer_weight) FILTER (WHERE br.accepted = TRUE), 0)::integer AS accepted_weight,
+        COALESCE(SUM(rss.signer_weight) FILTER (WHERE br.accepted = FALSE), 0)::integer AS rejected_weight,
+        COALESCE(SUM(rss.signer_weight) FILTER (WHERE br.id IS NULL), 0)::integer AS missing_weight,
+
+        -- Array of signer response details
+        COALESCE(
+          JSON_AGG(
+            json_build_object(
+              'signer_key', '0x' || encode(rss.signer_key, 'hex'),
+              'slot_index', rss.slot_index,
+              'response', 
+                CASE 
+                  WHEN br.id IS NULL THEN 'missing'
+                  WHEN br.accepted = TRUE THEN 'accepted'
+                  ELSE 'rejected'
+                END,
+              'version', br.metadata_server_version,
+              'weight', rss.signer_weight,
+              'stacked_amount', rss.signer_stacked_amount::text,
+              'received_at', to_char(br.received_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+              'reason_string', br.reason_string,
+              'reason_code', br.reason_code,
+              'reject_code', br.reject_code
+            ) ORDER BY rss.slot_index
+          ),
+          '[]'::json
+        ) AS signer_data
+
+      FROM block_proposals bp
+
+      -- Join with chain_tip to get the current block height
+      CROSS JOIN chain_tip ct
+
+      -- Join with blocks to check if there's a matching block for the same block_height and block_hash
+      LEFT JOIN blocks b 
+        ON b.block_height = bp.block_height
+
+      LEFT JOIN reward_set_signers rss 
+        ON rss.cycle_number = bp.reward_cycle
+
+      LEFT JOIN block_responses br 
+        ON br.signer_sighash = bp.block_hash 
+        AND br.signer_key = rss.signer_key
+
+      -- Filter for a specific block proposal based on block_hash
+      WHERE bp.block_hash = ${blockHash}
+
+      GROUP BY 
+        bp.id, 
+        ct.block_height,
+        b.block_hash
+
+      LIMIT 1
+    `;
+    return result;
   }
 
   async getSignerDataForRecentBlocks({

@@ -198,7 +198,7 @@ export type CycleSignersResponse = Static<typeof CycleSignersResponseSchema>;
 export const CycleSignerResponseSchema = Type.Composite([CycleSignerSchema]);
 export type CycleSignerResponse = Static<typeof CycleSignerResponseSchema>;
 
-const BlockHashParamSchema = Type.String({
+export const BlockHashParamSchema = Type.String({
   pattern: '^(0x)?[a-fA-F0-9]{64}$',
   title: 'Block hash',
   description: 'Block hash',
@@ -249,3 +249,111 @@ export function parseBlockParam(value: BlockParams['height_or_hash']): BlockIdPa
   }
   throw new Error('Invalid block height or hash');
 }
+
+export const BlockProposalSignerDataSchema = Type.Object({
+  signer_key: Type.String(),
+  slot_index: Type.Integer({ description: 'Index of the signer in the stacker set' }),
+  response: Type.Union([
+    Type.Literal('accepted'),
+    Type.Literal('rejected'),
+    Type.Literal('missing'),
+  ]),
+  weight: Type.Integer({
+    description:
+      'Voting weight of this signer (based on slots allocated which is proportional to stacked amount)',
+  }),
+  weight_percentage: Type.Number({
+    description: 'Voting weight percent (weight / total_weight)',
+  }),
+  stacked_amount: Type.String({
+    description: 'Total STX stacked associated with this signer (string quoted integer)',
+  }),
+  version: Type.Union([Type.String(), Type.Null()], {
+    description:
+      'The signer binary version reported by this signer for this proposal response (null if response missing)',
+  }),
+  received_at: Type.Union([Type.String(), Type.Null()], {
+    description: 'ISO timestamp of when this response was received (null if response missing',
+  }),
+  response_time_ms: Type.Union([Type.Integer(), Type.Null()], {
+    description:
+      'Time duration (in milliseconds) taken to submit this response (tracked best effort, null if response missing)',
+  }),
+  reason_string: Type.Union([Type.String(), Type.Null()], {
+    description: '(For rejection responses) reason string for rejection',
+  }),
+  reason_code: Type.Union([Type.String(), Type.Null()], {
+    description: '(For rejection responses) reason code for rejection',
+  }),
+  reject_code: Type.Union([Type.String(), Type.Null()], {
+    description: '(For rejection responses) reject code for rejection',
+  }),
+});
+export type BlockProposalSignerData = Static<typeof BlockProposalSignerDataSchema>;
+
+export const BlockProposalsEntrySchema = Type.Object({
+  received_at: Type.String({
+    description: 'ISO timestamp of when this block proposal was received',
+  }),
+  block_height: Type.Integer(),
+  block_hash: Type.String(),
+  index_block_hash: Type.String(),
+  burn_block_height: Type.Integer(),
+  block_time: Type.Integer({
+    description: 'Unix timestamp in seconds of when the block was mined',
+  }),
+  cycle_number: Type.Integer(),
+
+  status: Type.Union(
+    [Type.Literal('pending'), Type.Literal('accepted'), Type.Literal('rejected')],
+    {
+      description: 'Status of the block proposal',
+    }
+  ),
+
+  // cycle data
+  total_signer_count: Type.Integer({
+    description: 'Total number of signers expected for this proposal',
+  }),
+  total_signer_weight: Type.Integer({
+    description: 'Total voting weight of signers expected for this proposal',
+  }),
+  total_signer_stacked_amount: Type.String({
+    description: 'Total STX stacked of signers expected for this proposal',
+  }),
+
+  accepted_count: Type.Integer({
+    description: 'Number of signers that submitted an approval for this proposal',
+  }),
+  rejected_count: Type.Integer({
+    description: 'Number of signers that submitted a rejection for this proposal',
+  }),
+  missing_count: Type.Integer({
+    description: 'Number of signers that failed to submit any response/vote for this proposal',
+  }),
+
+  accepted_weight: Type.Integer({
+    description: 'Sum of voting weight of signers who approved the proposal',
+  }),
+  rejected_weight: Type.Integer({
+    description: 'Sum of voting weight of signers who rejected the proposal',
+  }),
+  missing_weight: Type.Integer({
+    description: 'Sum of voting weight of missing signers',
+  }),
+
+  // signer responses
+  signer_data: Type.Array(BlockProposalSignerDataSchema),
+});
+export type BlockProposalsEntry = Static<typeof BlockProposalsEntrySchema>;
+
+export const BlockProposalsResponseSchema = Type.Object({
+  // TODO: implement cursor pagination
+  // next_cursor: Type.String(),
+  // prev_cursor: Type.String(),
+  // cursor: Type.String(),
+  limit: Type.Integer(),
+  offset: Type.Integer(),
+  results: Type.Array(BlockProposalsEntrySchema),
+});
+export type BlockProposalsResponse = Static<typeof BlockProposalsResponseSchema>;
