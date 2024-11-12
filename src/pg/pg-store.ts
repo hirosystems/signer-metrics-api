@@ -135,16 +135,16 @@ export class PgStore extends BasePgStore {
         missing_weight: number;
 
         // signer block responses (from block_responses, matched using block_hash AKA signer_sighash, using the signer_key from the reward_set_signers table for some of the fields):
-        // (note: use the ARRAY_AGG with block_proposal_response_type to create this array)
-        responses: {
-          received_at: string;
+        signer_data: {
           signer_key: string;
           slot_index: number;
+          response: 'accepted' | 'rejected' | 'missing';
           version: string; // AKA metadata_server_version
           weight: number;
           stacked_amount: string;
-          accepted: boolean;
-          // rejected fields:
+          received_at: string | null; // null for missing responses
+
+          // rejected fields (null for accepted and missing responses):
           reason_string: string | null;
           reason_code: string | null;
           reject_code: string | null;
@@ -178,20 +178,25 @@ export class PgStore extends BasePgStore {
         COALESCE(
           JSON_AGG(
             json_build_object(
-              'received_at', to_char(br.received_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
-              'signer_key', '0x' || encode(br.signer_key, 'hex'),
+              'signer_key', '0x' || encode(rss.signer_key, 'hex'),
               'slot_index', rss.slot_index,
+              'response', 
+                CASE 
+                  WHEN br.id IS NULL THEN 'missing'
+                  WHEN br.accepted = TRUE THEN 'accepted'
+                  ELSE 'rejected'
+                END,
               'version', br.metadata_server_version,
               'weight', rss.signer_weight,
               'stacked_amount', rss.signer_stacked_amount::text,
-              'accepted', br.accepted,
+              'received_at', to_char(br.received_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
               'reason_string', br.reason_string,
               'reason_code', br.reason_code,
               'reject_code', br.reject_code
-            )
-          ) FILTER (WHERE br.id IS NOT NULL),
+            ) ORDER BY rss.slot_index
+          ),
           '[]'::json
-        ) AS responses
+        ) AS signer_data
 
       FROM (
         SELECT * 
