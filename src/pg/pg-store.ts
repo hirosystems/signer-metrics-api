@@ -11,6 +11,7 @@ import * as path from 'path';
 import { ChainhookPgStore } from './chainhook/chainhook-pg-store';
 import { BlockIdParam, normalizeHexString, sleep } from '../helpers';
 import { Fragment } from 'postgres';
+import { DbBlockProposalQueryResponse } from './types';
 
 export const MIGRATIONS_DIR = path.join(__dirname, '../../migrations');
 
@@ -110,51 +111,7 @@ export class PgStore extends BasePgStore {
     limit: number;
     offset: number;
   }) {
-    const result = await sql<
-      {
-        // block proposal data (from block_proposals):
-        received_at: Date;
-        block_height: number;
-        block_hash: string;
-        index_block_hash: string;
-        burn_block_height: number;
-        block_time: number;
-        cycle_number: number;
-
-        // proposal status (from blocks table, matched using block_hash and block_height):
-        status: 'pending' | 'rejected' | 'accepted';
-
-        // cycle data (from reward_set_signers, matched using cycle_number AKA reward_cycle):
-        total_signer_count: number;
-        total_signer_weight: number;
-        total_signer_stacked_amount: string;
-
-        // aggregate signer response data (from block_responses, matched using block_hash AKA signer_sighash, where missing is detected by the absence of a block_response for a given signer_key from the reward_set_signers table):
-        accepted_count: number;
-        rejected_count: number;
-        missing_count: number;
-        accepted_weight: number;
-        rejected_weight: number;
-        missing_weight: number;
-
-        // signer responses (from block_responses, matched using block_hash AKA signer_sighash, using the signer_key from the reward_set_signers table for some of the fields):
-        signer_data: {
-          signer_key: string;
-          slot_index: number;
-          response: 'accepted' | 'rejected' | 'missing';
-          weight: number;
-          stacked_amount: string;
-
-          version: string | null; // null for missing responses
-          received_at: string | null; // null for missing responses
-
-          // rejected fields (null for accepted and missing responses):
-          reason_string: string | null;
-          reason_code: string | null;
-          reject_code: string | null;
-        }[];
-      }[]
-    >`
+    const result = await sql<DbBlockProposalQueryResponse[]>`
       SELECT 
         bp.received_at,
         bp.block_height,
@@ -250,51 +207,7 @@ export class PgStore extends BasePgStore {
   }
 
   async getBlockProposal({ sql, blockHash }: { sql: PgSqlClient; blockHash: string }) {
-    const result = await sql<
-      {
-        // block proposal data (from block_proposals):
-        received_at: Date;
-        block_height: number;
-        block_hash: string;
-        index_block_hash: string;
-        burn_block_height: number;
-        block_time: number;
-        cycle_number: number;
-
-        // proposal status (from blocks table, matched using block_hash and block_height):
-        status: 'pending' | 'rejected' | 'accepted';
-
-        // cycle data (from reward_set_signers, matched using cycle_number AKA reward_cycle):
-        total_signer_count: number;
-        total_signer_weight: number;
-        total_signer_stacked_amount: string;
-
-        // aggregate signer response data (from block_responses, matched using block_hash AKA signer_sighash, where missing is detected by the absence of a block_response for a given signer_key from the reward_set_signers table):
-        accepted_count: number;
-        rejected_count: number;
-        missing_count: number;
-        accepted_weight: number;
-        rejected_weight: number;
-        missing_weight: number;
-
-        // signer responses (from block_responses, matched using block_hash AKA signer_sighash, using the signer_key from the reward_set_signers table for some of the fields):
-        signer_data: {
-          signer_key: string;
-          slot_index: number;
-          response: 'accepted' | 'rejected' | 'missing';
-          weight: number;
-          stacked_amount: string;
-
-          version: string | null; // null for missing responses
-          received_at: string | null; // null for missing responses
-
-          // rejected fields (null for accepted and missing responses):
-          reason_string: string | null;
-          reason_code: string | null;
-          reject_code: string | null;
-        }[];
-      }[]
-    >`
+    const result = await sql<DbBlockProposalQueryResponse[]>`
       SELECT 
         bp.received_at,
         bp.block_height,
