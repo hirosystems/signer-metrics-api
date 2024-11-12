@@ -1,3 +1,10 @@
+## [0.9.0](https://github.com/hirosystems/signer-metrics-api/compare/v0.8.2...v0.9.0) (2024-11-12)
+
+
+### Features
+
+* implement `/v1/block_proposals` endpoint ([#56](https://github.com/hirosystems/signer-metrics-api/issues/56)) ([49fc6e8](https://github.com/hirosystems/signer-metrics-api/commit/49fc6e88fcafa50895e5efc5b3e4811f2861d4a5))
+
 ## [0.8.2](https://github.com/hirosystems/signer-metrics-api/compare/v0.8.1...v0.8.2) (2024-11-08)
 
 
