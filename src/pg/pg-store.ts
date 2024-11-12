@@ -121,6 +121,9 @@ export class PgStore extends BasePgStore {
         block_time: number;
         cycle_number: number;
 
+        // proposal status (from blocks table, matched using block_hash and block_height):
+        status: 'pending' | 'rejected' | 'accepted';
+
         // cycle data (from reward_set_signers, matched using cycle_number AKA reward_cycle):
         total_signer_count: number;
         total_signer_weight: number;
@@ -160,6 +163,14 @@ export class PgStore extends BasePgStore {
         EXTRACT(EPOCH FROM bp.block_time)::integer AS block_time,
         bp.reward_cycle AS cycle_number,
 
+        -- Proposal status
+        CASE
+          WHEN bp.block_height > ct.block_height THEN 'pending'
+          WHEN b.block_hash IS NULL THEN 'rejected'
+          WHEN b.block_hash = bp.block_hash THEN 'accepted'
+          ELSE 'rejected'
+        END AS status,
+
         -- Aggregate cycle data from reward_set_signers
         COUNT(DISTINCT rss.signer_key)::integer AS total_signer_count,
         SUM(rss.signer_weight)::integer AS total_signer_weight,
@@ -174,7 +185,7 @@ export class PgStore extends BasePgStore {
         COALESCE(SUM(rss.signer_weight) FILTER (WHERE br.accepted = FALSE), 0)::integer AS rejected_weight,
         COALESCE(SUM(rss.signer_weight) FILTER (WHERE br.id IS NULL), 0)::integer AS missing_weight,
 
-        -- Array of responses
+        -- Array of signer response details
         COALESCE(
           JSON_AGG(
             json_build_object(
@@ -206,6 +217,13 @@ export class PgStore extends BasePgStore {
         OFFSET ${offset}
       ) AS bp
 
+      -- Join with chain_tip to get the current block height
+      CROSS JOIN chain_tip ct
+
+      -- Join with blocks to check if there's a matching block for the same block_height and block_hash
+      LEFT JOIN blocks b 
+        ON b.block_height = bp.block_height
+
       LEFT JOIN reward_set_signers rss 
         ON rss.cycle_number = bp.reward_cycle
 
@@ -221,7 +239,9 @@ export class PgStore extends BasePgStore {
         bp.index_block_hash, 
         bp.burn_block_height, 
         bp.block_time, 
-        bp.reward_cycle
+        bp.reward_cycle, 
+        ct.block_height,
+        b.block_hash
 
       ORDER BY bp.received_at DESC
     `;
