@@ -10,6 +10,9 @@ import { StacksPayload } from '@hirosystems/chainhook-client';
 import { buildApiServer } from '../../src/api/init';
 import { PgStore } from '../../src/pg/pg-store';
 import {
+  BlockProposalsEntry,
+  BlockProposalSignerData,
+  BlockProposalsResponse,
   BlocksEntry,
   BlocksResponse,
   CycleSigner,
@@ -85,8 +88,86 @@ describe('Endpoint tests', () => {
     const responseTest = await supertest(apiServer.server)
       .get('/signer-metrics/v1/block_proposals?limit=50')
       .expect(200);
-    const body = responseTest.body;
-    console.log(body);
+    const body: BlockProposalsResponse = responseTest.body;
+    for (const proposal of body.results) {
+      expect(proposal.total_signer_count).toBe(proposal.signer_data.length);
+      const totalWeight = proposal.signer_data.reduce((acc, s) => acc + s.weight, 0);
+      expect(proposal.total_signer_weight).toBe(totalWeight);
+      const totalMissing = proposal.signer_data.filter(s => s.response === 'missing').length;
+      expect(proposal.missing_count).toBe(totalMissing);
+      const totalAccepted = proposal.signer_data.filter(s => s.response === 'accepted').length;
+      expect(proposal.accepted_count).toBe(totalAccepted);
+    }
+
+    const rejectedBlockHash = '0x91b01811fdfddb38886412509fc1e6d48c91b3f4406b32b887ec261e6312ee6b';
+    const rejectedBlock = body.results.find(r => r.block_hash === rejectedBlockHash);
+    const expectedRejectedBlockData: BlockProposalsEntry = {
+      received_at: '2024-11-02T13:27:20.739Z',
+      block_height: 112267,
+      block_hash: '0x91b01811fdfddb38886412509fc1e6d48c91b3f4406b32b887ec261e6312ee6b',
+      index_block_hash: '0xd19204301daa0831a145918a75cc6224a3d7260532de772a36854f30dccbe701',
+      burn_block_height: 65203,
+      block_time: 1730554011,
+      cycle_number: 72,
+      status: 'rejected',
+      total_signer_count: 11,
+      total_signer_weight: 50,
+      total_signer_stacked_amount: '337260000003000',
+      accepted_count: 1,
+      rejected_count: 7,
+      missing_count: 3,
+      accepted_weight: 1,
+      rejected_weight: 46,
+      missing_weight: 3,
+      signer_data: expect.any(Array),
+    };
+    expect(rejectedBlock).toEqual(expectedRejectedBlockData);
+
+    const rejectedBlockSignerKey =
+      '0x02e8620935d58ebffa23c260f6917cbd0915ea17d7a46df17e131540237d335504';
+    const rejectedSigner = rejectedBlock!.signer_data.find(
+      s => s.signer_key === rejectedBlockSignerKey
+    );
+    const expectedRejectedSignerData: BlockProposalSignerData = {
+      signer_key: '0x02e8620935d58ebffa23c260f6917cbd0915ea17d7a46df17e131540237d335504',
+      slot_index: 3,
+      response: 'rejected',
+      weight: 38,
+      weight_percentage: 76,
+      stacked_amount: '250000000000000',
+      version:
+        'stacks-signer signer-3.0.0.0.0.1 (release/signer-3.0.0.0.0.1:b26f406, release build, linux [x86_64])',
+      received_at: '2024-11-02T13:27:31.613Z',
+      response_time_ms: 10874,
+      reason_string: 'The block was rejected due to a mismatch with expected sortition view.',
+      reason_code: 'SORTITION_VIEW_MISMATCH',
+      reject_code: null,
+    };
+    expect(rejectedSigner).toEqual(expectedRejectedSignerData);
+
+    const acceptedBlockHash = '0x2f1c4e83fda403682b1ab5dd41383e47d2cb3dfec0fd26f0886883462d7802fb';
+    const acceptedBlock = body.results.find(r => r.block_hash === acceptedBlockHash);
+    const expectedAcceptedBlockData: BlockProposalsEntry = {
+      received_at: '2024-11-02T13:32:53.316Z',
+      block_height: 112276,
+      block_hash: '0x2f1c4e83fda403682b1ab5dd41383e47d2cb3dfec0fd26f0886883462d7802fb',
+      index_block_hash: '0x26f19d44de4ca2b13dbeb8e684cd50125294869a43fba4b8598118876dbba57a',
+      burn_block_height: 65204,
+      block_time: 1730554358,
+      cycle_number: 72,
+      status: 'accepted',
+      total_signer_count: 11,
+      total_signer_weight: 50,
+      total_signer_stacked_amount: '337260000003000',
+      accepted_count: 8,
+      rejected_count: 0,
+      missing_count: 3,
+      accepted_weight: 47,
+      rejected_weight: 0,
+      missing_weight: 3,
+      signer_data: expect.any(Array),
+    };
+    expect(acceptedBlock).toEqual(expectedAcceptedBlockData);
   });
 
   test('get latest blocks', async () => {

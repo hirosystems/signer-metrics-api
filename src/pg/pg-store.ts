@@ -137,14 +137,15 @@ export class PgStore extends BasePgStore {
         rejected_weight: number;
         missing_weight: number;
 
-        // signer block responses (from block_responses, matched using block_hash AKA signer_sighash, using the signer_key from the reward_set_signers table for some of the fields):
+        // signer responses (from block_responses, matched using block_hash AKA signer_sighash, using the signer_key from the reward_set_signers table for some of the fields):
         signer_data: {
           signer_key: string;
           slot_index: number;
           response: 'accepted' | 'rejected' | 'missing';
-          version: string; // AKA metadata_server_version
           weight: number;
           stacked_amount: string;
+
+          version: string | null; // null for missing responses
           received_at: string | null; // null for missing responses
 
           // rejected fields (null for accepted and missing responses):
