@@ -4,18 +4,10 @@ import { Server } from 'http';
 import BigNumber from 'bignumber.js';
 import { differenceInMilliseconds } from 'date-fns';
 import {
-  BlockEntrySchema,
-  BlockParamsSchema,
   BlockProposalsEntry,
   BlockProposalSignerData,
   BlockProposalsResponseSchema,
-  BlocksEntry,
-  BlocksEntrySignerData,
-  BlocksResponseSchema,
-  cleanBlockHeightOrHashParam,
-  parseBlockParam,
 } from '../schemas';
-import { NotFoundError } from '../errors';
 
 export const BlockProposalsRoutes: FastifyPluginCallback<
   Record<never, never>,
