@@ -1,31 +1,24 @@
 import * as fs from 'node:fs';
 import * as readline from 'node:readline/promises';
-import * as assert from 'node:assert';
 import * as zlib from 'node:zlib';
 import { once } from 'node:events';
-import * as supertest from 'supertest';
 import { FastifyInstance } from 'fastify';
-import * as dateFns from 'date-fns';
 import { StacksPayload } from '@hirosystems/chainhook-client';
 import { buildApiServer } from '../../src/api/init';
 import { PgStore } from '../../src/pg/pg-store';
-import {
-  BlockProposalsEntry,
-  BlockProposalSignerData,
-  BlockProposalsResponse,
-  BlocksEntry,
-  BlocksResponse,
-  CycleSigner,
-  CycleSignerResponse,
-  CycleSignersResponse,
-} from '../../src/api/schemas';
+import { BlockProposalsEntry } from '../../src/api/schemas';
 import { PoxInfo, RpcStackerSetResponse } from '../../src/stacks-core-rpc/stacks-core-rpc-client';
 import { rpcStackerSetToDbRewardSetSigners } from '../../src/stacks-core-rpc/stacker-set-updater';
-import { BlockProposalEventArgs } from '../../src/pg/types';
+import { SignerMessagesEventPayload } from '../../src/pg/types';
+import { sleep } from '../../src/helpers';
+import { io, Socket } from 'socket.io-client';
+import { ClientToServerEvents, ServerToClientEvents } from '../../src/api/routes/socket-io';
 
 describe('Db notifications tests', () => {
   let db: PgStore;
   let apiServer: FastifyInstance;
+
+  let socketClient: Socket<ServerToClientEvents, ClientToServerEvents>;
 
   const testingBlockHash = '0x2f1c4e83fda403682b1ab5dd41383e47d2cb3dfec0fd26f0886883462d7802fb';
   let proposalTestPayload: StacksPayload;
@@ -74,29 +67,41 @@ describe('Db notifications tests', () => {
     }
     rl.close();
     spyInfoLog.mockRestore();
+
+    socketClient = io(`ws://127.0.0.1:${apiServer.addresses()[0].port}/block-proposals`, {
+      path: '/signer-metrics/socket.io/',
+    });
+    await new Promise<void>((resolve, reject) => {
+      socketClient.on('connect', resolve);
+      socketClient.io.on('error', reject);
+    });
   });
 
   afterAll(async () => {
+    socketClient.disconnect();
     await apiServer.close();
     await db.close();
   });
 
   test('test block proposal write events', async () => {
-    // await new Promise(resolve => {
-    //   setTimeout(() => {
-    //     void db.notifications.subscribeToDbListenEvents().then(resolve);
-    //   }, 0);
-    // });
-    await db.notifications.subscribeToDbListenEvents();
+    await sleep(1);
 
-    const pgNotifyEvent: Promise<BlockProposalEventArgs[]> = once(
+    const pgNotifyEvent: Promise<SignerMessagesEventPayload[]> = once(
       db.notifications.events,
-      'blockProposal'
+      'signerMessages'
     );
-    const initialWriteEvent: Promise<BlockProposalEventArgs[]> = once(
+
+    const initialWriteEvent: Promise<SignerMessagesEventPayload[]> = once(
       db.chainhook.events,
-      'blockProposal'
+      'signerMessages'
     );
+
+    const clientSocketEvent = new Promise<BlockProposalsEntry>(resolve => {
+      socketClient.on('blockProposal', data => {
+        resolve(data);
+      });
+    });
+
     // delete block proposal from db, returning the data so we can re-write it
     const blockProposal = await db.chainhook.deleteBlockProposal(db.sql, testingBlockHash);
     expect(blockProposal.block_hash).toBe(testingBlockHash);
@@ -107,7 +112,13 @@ describe('Db notifications tests', () => {
 
     await db.chainhook.processPayload(proposalTestPayload);
 
-    const promiseResults = await Promise.allSettled([pgNotifyEvent, initialWriteEvent]);
-    console.log(promiseResults);
+    const promiseResults = await Promise.all([pgNotifyEvent, initialWriteEvent, clientSocketEvent]);
+    expect(
+      promiseResults[0][0].find(r => 'proposal' in r && r.proposal.blockHash === testingBlockHash)
+    ).toBeTruthy();
+    expect(
+      promiseResults[1][0].find(r => 'proposal' in r && r.proposal.blockHash === testingBlockHash)
+    ).toBeTruthy();
+    expect(promiseResults[2].block_hash).toBe(testingBlockHash);
   });
 });

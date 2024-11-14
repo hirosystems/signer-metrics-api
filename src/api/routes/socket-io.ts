@@ -1,46 +1,77 @@
 import { Server as HttpServer } from 'http';
-import { Namespace, Server, Socket } from 'socket.io';
-import { FastifyPluginCallback } from 'fastify';
+import { Namespace, Server } from 'socket.io';
+import { FastifyPluginAsync } from 'fastify';
 import { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
+import { SignerMessagesEventPayload } from '../../pg/types';
+import { logger } from '@hirosystems/api-toolkit';
+import { parseDbBlockProposalData } from './block-proposals';
+import { BlockProposalsEntry } from '../schemas';
 
-interface NamespaceSpecificClientToServerEvents {
-  foo: (arg: string) => void;
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface ClientToServerEvents {}
+
+export interface ServerToClientEvents {
+  blockProposal: (arg: BlockProposalsEntry) => void;
 }
 
-interface NamespaceSpecificServerToClientEvents {
-  bar: (arg: string) => void;
-}
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+interface InterServerEvents {}
 
-interface NamespaceSpecificInterServerEvents {
-  baz: (arg: string) => void;
-}
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+interface SocketData {}
 
-interface NamespaceSpecificSocketData {
-  thing: string;
-}
+type BlockProposalSocketNamespace = Namespace<
+  ClientToServerEvents,
+  ServerToClientEvents,
+  InterServerEvents,
+  SocketData
+>;
 
-export const SocketIORoutes: FastifyPluginCallback<
+export const SocketIORoutes: FastifyPluginAsync<
   Record<never, never>,
   HttpServer,
   TypeBoxTypeProvider
-> = (fastify, _options, done) => {
+> = async (fastify, _options) => {
+  const db = fastify.db;
   const io = new Server(fastify.server, {
     path: fastify.prefix + '/socket.io/',
     transports: ['websocket', 'polling'],
   });
 
-  const blockProposalNs = io.of('/block-proposals') as Namespace<
-    NamespaceSpecificClientToServerEvents,
-    NamespaceSpecificServerToClientEvents,
-    NamespaceSpecificInterServerEvents,
-    NamespaceSpecificSocketData
-  >;
+  const blockProposalNs = io.of('/block-proposals') as BlockProposalSocketNamespace;
 
-  blockProposalNs.on('connection', socket => {
-    // socket.emit('bar',)
-  });
+  const signerMessageListener = (msg: SignerMessagesEventPayload) => {
+    if (blockProposalNs.sockets.size === 0) {
+      return;
+    }
+    // Use Set to get a unique list of block hashes
+    const blockHashes = new Set<string>(
+      msg.map(m => ('proposal' in m ? m.proposal.blockHash : m.response.blockHash))
+    );
+    const proposalBroadcasts = Array.from(blockHashes).map(blockHash => {
+      return db
+        .sqlTransaction(async sql => {
+          const results = await db.getBlockProposal({
+            sql,
+            blockHash,
+          });
+          if (results.length > 0) {
+            const blockProposal = parseDbBlockProposalData(results[0]);
+            blockProposalNs.emit('blockProposal', blockProposal);
+          }
+        })
+        .catch((error: unknown) => {
+          logger.error(error, `Failed to broadcast block proposal for block hash ${blockHash}`);
+        });
+    });
+    void Promise.allSettled(proposalBroadcasts);
+  };
+
+  // TODO: this can listen directly to the chainhookDbWriteEvents instead of using pg pub/sub
+  fastify.db.notifications.events.on('signerMessages', signerMessageListener);
 
   fastify.addHook('preClose', done => {
+    fastify.db.notifications.events.off('signerMessages', signerMessageListener);
     io.local.disconnectSockets(true);
     done();
   });
@@ -48,5 +79,5 @@ export const SocketIORoutes: FastifyPluginCallback<
     await io.close();
   });
 
-  done();
+  await Promise.resolve();
 };

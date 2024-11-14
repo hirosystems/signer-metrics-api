@@ -1,20 +1,19 @@
 import {
   BasePgStore,
   BasePgStoreModule,
+  batchIterate,
   logger as defaultLogger,
   PgSqlClient,
 } from '@hirosystems/api-toolkit';
 import { EventEmitter } from 'node:events';
 import { DbWriteEvents } from '../chainhook/chainhook-pg-store';
-import { BlockProposalEventArgs, BlockResponseEventArgs } from '../types';
+import { SignerMessagesEventPayload } from '../types';
 
 export type DbListenEvents = EventEmitter<{
-  blockProposal: [BlockProposalEventArgs];
-  blockResponse: [BlockResponseEventArgs];
+  signerMessages: [SignerMessagesEventPayload];
 }>;
 
 const SQL_NOTIFIY_BLOCK_PROPOSAL_CHANNEL = 'block_proposal';
-const SQL_NOTIFIY_BLOCK_RESPONSE_CHANNEL = 'block_response';
 
 export class NotificationPgStore extends BasePgStoreModule {
   readonly events: DbListenEvents = new EventEmitter();
@@ -27,59 +26,36 @@ export class NotificationPgStore extends BasePgStoreModule {
     this.rawSqlClient = rawSqlClient;
     this.dbWriteEvents = dbWriteEvents;
     this.subscribeToDbWriteEvents();
-  }
-
-  public async subscribeToDbListenEvents() {
-    await this.rawSqlClient.listen(
-      SQL_NOTIFIY_BLOCK_PROPOSAL_CHANNEL,
-      payload => {
-        const json = JSON.parse(payload) as BlockProposalEventArgs;
-        setTimeout(() => this.events.emit('blockProposal', json));
-      },
-      () => {
-        this.logger.info('Subscribed to sql.listen block proposal notifications');
-      }
-    );
-    await this.rawSqlClient.listen(
-      SQL_NOTIFIY_BLOCK_RESPONSE_CHANNEL,
-      payload => {
-        const json = JSON.parse(payload) as BlockResponseEventArgs;
-        setTimeout(() => this.events.emit('blockResponse', json));
-      },
-      () => {
-        this.logger.info('Subscribed to sql.listen block response notifications');
-      }
-    );
+    this.subscribeToDbListenEvents();
   }
 
   private subscribeToDbWriteEvents() {
-    this.dbWriteEvents.on('blockProposal', blockProposal => {
-      void this.sqlNotifyBlockProposal(blockProposal);
-    });
-    this.dbWriteEvents.on('blockResponse', blockResponse => {
-      void this.sqlNotifyBlockResponse(blockResponse);
+    this.dbWriteEvents.on('signerMessages', msg => {
+      // Split the messages into batches to avoid exceeding the maximum pg notify payload size
+      for (const batch of batchIterate(msg, 25, false)) {
+        this.rawSqlClient
+          .notify(SQL_NOTIFIY_BLOCK_PROPOSAL_CHANNEL, JSON.stringify(batch))
+          .catch((error: unknown) => {
+            this.logger.error(error, 'Failed to sql.notify signerMessages');
+          });
+      }
     });
   }
 
-  private async sqlNotifyBlockProposal(blockProposal: BlockProposalEventArgs) {
-    try {
-      await this.rawSqlClient.notify(
+  private subscribeToDbListenEvents() {
+    this.rawSqlClient
+      .listen(
         SQL_NOTIFIY_BLOCK_PROPOSAL_CHANNEL,
-        JSON.stringify(blockProposal)
-      );
-    } catch (error) {
-      this.logger.error(error, 'Failed to sql.notify block proposal');
-    }
-  }
-
-  private async sqlNotifyBlockResponse(blockResponse: BlockProposalEventArgs) {
-    try {
-      await this.rawSqlClient.notify(
-        SQL_NOTIFIY_BLOCK_RESPONSE_CHANNEL,
-        JSON.stringify(blockResponse)
-      );
-    } catch (error) {
-      this.logger.error(error, 'Failed to sql.notify block response');
-    }
+        payload => {
+          const signerMessages = JSON.parse(payload) as SignerMessagesEventPayload;
+          setTimeout(() => this.events.emit('signerMessages', signerMessages));
+        },
+        () => {
+          this.logger.info('Subscribed to sql.listen block proposal notifications');
+        }
+      )
+      .catch((error: unknown) => {
+        this.logger.error(error, 'Failed to sql.listen block proposal notifications');
+      });
   }
 }

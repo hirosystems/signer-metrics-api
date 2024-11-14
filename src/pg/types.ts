@@ -158,3 +158,12 @@ export type BlockResponseEventArgs = {
   blockHash: string;
   signerKey: string;
 };
+
+export type SignerMessagesEventPayload = (
+  | {
+      proposal: BlockProposalEventArgs;
+    }
+  | {
+      response: BlockResponseEventArgs;
+    }
+)[];

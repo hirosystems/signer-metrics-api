@@ -19,6 +19,7 @@ import {
   DbMockProposal,
   DbMockSignature,
   DbRewardSetSigner,
+  SignerMessagesEventPayload,
 } from '../types';
 import { normalizeHexString, unixTimeMillisecondsToISO, unixTimeSecondsToISO } from '../../helpers';
 import { EventEmitter } from 'node:events';
@@ -57,14 +58,8 @@ type MockBlockData = Extract<
 
 export type DbWriteEvents = EventEmitter<{
   missingStackerSet: [{ cycleNumber: number }];
-  blockProposal: [BlockProposalEventArgs];
-  blockResponse: [BlockResponseEventArgs];
+  signerMessages: [SignerMessagesEventPayload];
 }>;
-
-interface AppliedSignerMessageResults {
-  blockProposals: BlockProposalEventArgs[];
-  blockResponses: BlockResponseEventArgs[];
-}
 
 export class ChainhookPgStore extends BasePgStoreModule {
   readonly events: DbWriteEvents = new EventEmitter();
@@ -75,10 +70,7 @@ export class ChainhookPgStore extends BasePgStoreModule {
   }
 
   async processPayload(payload: StacksPayload): Promise<void> {
-    const appliedSignerMessageResults: AppliedSignerMessageResults = {
-      blockProposals: [],
-      blockResponses: [],
-    };
+    const appliedSignerMessageResults: SignerMessagesEventPayload = [];
 
     await this.sqlWriteTransaction(async sql => {
       for (const block of payload.rollback) {
@@ -116,8 +108,7 @@ export class ChainhookPgStore extends BasePgStoreModule {
       for (const event of payload.events) {
         if (event.payload.type === 'SignerMessage') {
           const applyResults = await this.applySignerMessageEvent(sql, event);
-          appliedSignerMessageResults.blockProposals.push(...applyResults.blockProposals);
-          appliedSignerMessageResults.blockResponses.push(...applyResults.blockResponses);
+          appliedSignerMessageResults.push(...applyResults);
         } else {
           this.logger.error(`Unknown chainhook payload event type: ${event.payload.type}`);
         }
@@ -126,14 +117,11 @@ export class ChainhookPgStore extends BasePgStoreModule {
 
     // After the sql transaction is complete, emit events for the applied signer messages.
     // Use setTimeout to break out of the call stack so caller is not blocked by event listeners.
-    setTimeout(() => {
-      for (const blockProposal of appliedSignerMessageResults.blockProposals) {
-        this.events.emit('blockProposal', blockProposal);
-      }
-      for (const blockResponse of appliedSignerMessageResults.blockResponses) {
-        this.events.emit('blockResponse', blockResponse);
-      }
-    });
+    if (appliedSignerMessageResults.length > 0) {
+      setTimeout(() => {
+        this.events.emit('signerMessages', appliedSignerMessageResults);
+      });
+    }
   }
 
   async updateChainTipBlockHeight(blockHeight: number): Promise<void> {
@@ -148,11 +136,8 @@ export class ChainhookPgStore extends BasePgStoreModule {
   private async applySignerMessageEvent(
     sql: PgSqlClient,
     event: SignerMessage
-  ): Promise<AppliedSignerMessageResults> {
-    const appliedResults: AppliedSignerMessageResults = {
-      blockProposals: [],
-      blockResponses: [],
-    };
+  ): Promise<SignerMessagesEventPayload> {
+    const appliedResults: SignerMessagesEventPayload = [];
     switch (event.payload.data.message.type) {
       case 'BlockProposal': {
         const res = await this.applyBlockProposal(
@@ -162,9 +147,11 @@ export class ChainhookPgStore extends BasePgStoreModule {
           event.payload.data.message.data
         );
         if (res.applied) {
-          appliedResults.blockProposals.push({
-            receiptTimestamp: event.received_at_ms,
-            blockHash: res.blockHash,
+          appliedResults.push({
+            proposal: {
+              receiptTimestamp: event.received_at_ms,
+              blockHash: res.blockHash,
+            },
           });
         }
         break;
@@ -177,10 +164,12 @@ export class ChainhookPgStore extends BasePgStoreModule {
           event.payload.data.message.data
         );
         if (res.applied) {
-          appliedResults.blockResponses.push({
-            receiptTimestamp: event.received_at_ms,
-            blockHash: res.blockHash,
-            signerKey: res.signerKey,
+          appliedResults.push({
+            response: {
+              receiptTimestamp: event.received_at_ms,
+              blockHash: res.blockHash,
+              signerKey: res.signerKey,
+            },
           });
         }
         break;
