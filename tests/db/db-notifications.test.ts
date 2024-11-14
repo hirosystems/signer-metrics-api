@@ -25,6 +25,7 @@ describe('Db notifications tests', () => {
 
   beforeAll(async () => {
     db = await PgStore.connect();
+    db.notifications._sqlNotifyDisabled = true;
     apiServer = await buildApiServer({ db });
     await apiServer.listen({ port: 0, host: '127.0.0.1' });
 
@@ -75,6 +76,7 @@ describe('Db notifications tests', () => {
       socketClient.on('connect', resolve);
       socketClient.io.on('error', reject);
     });
+    db.notifications._sqlNotifyDisabled = false;
   });
 
   afterAll(async () => {
@@ -84,8 +86,6 @@ describe('Db notifications tests', () => {
   });
 
   test('test block proposal write events', async () => {
-    await sleep(1);
-
     const pgNotifyEvent: Promise<SignerMessagesEventPayload[]> = once(
       db.notifications.events,
       'signerMessages'

@@ -9,7 +9,7 @@ export default async function teardown(): Promise<void> {
     const docker = new Docker();
     const container = docker.getContainer(containerId);
     await container.stop();
-    await container.remove();
+    await container.remove({ v: true });
     console.log(`PostgreSQL container stopped and removed`);
   }
 }

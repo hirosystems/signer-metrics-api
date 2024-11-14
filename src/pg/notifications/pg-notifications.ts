@@ -21,6 +21,8 @@ export class NotificationPgStore extends BasePgStoreModule {
   readonly dbWriteEvents: DbWriteEvents;
   readonly rawSqlClient: PgSqlClient;
 
+  _sqlNotifyDisabled = false;
+
   constructor(db: BasePgStore, rawSqlClient: PgSqlClient, dbWriteEvents: DbWriteEvents) {
     super(db);
     this.rawSqlClient = rawSqlClient;
@@ -31,6 +33,9 @@ export class NotificationPgStore extends BasePgStoreModule {
 
   private subscribeToDbWriteEvents() {
     this.dbWriteEvents.on('signerMessages', msg => {
+      if (this._sqlNotifyDisabled) {
+        return;
+      }
       // Split the messages into batches to avoid exceeding the maximum pg notify payload size
       for (const batch of batchIterate(msg, 25, false)) {
         this.rawSqlClient
