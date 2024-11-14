@@ -81,7 +81,7 @@ export class StackerSetUpdator {
         `Failed to fetch stacker set for cycle ${cycleNumber}, retrying in ${FETCH_STACKER_SET_RETRY_INTERVAL_MS}ms ...`
       );
       await sleep(FETCH_STACKER_SET_RETRY_INTERVAL_MS, this.abortController.signal);
-      setImmediate(() => {
+      setTimeout(() => {
         this.queuedCycleNumbers.delete(cycleNumber);
         this.add({ cycleNumber });
       });

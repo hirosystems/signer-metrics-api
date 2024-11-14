@@ -12,6 +12,7 @@ import { ChainhookPgStore } from './chainhook/chainhook-pg-store';
 import { BlockIdParam, normalizeHexString, sleep } from '../helpers';
 import { Fragment } from 'postgres';
 import { DbBlockProposalQueryResponse } from './types';
+import { NotificationPgStore } from './notifications/pg-notifications';
 
 export const MIGRATIONS_DIR = path.join(__dirname, '../../migrations');
 
@@ -20,6 +21,7 @@ export const MIGRATIONS_DIR = path.join(__dirname, '../../migrations');
  */
 export class PgStore extends BasePgStore {
   readonly chainhook: ChainhookPgStore;
+  readonly notifications: NotificationPgStore;
 
   static async connect(opts?: {
     skipMigrations?: boolean;
@@ -43,6 +45,7 @@ export class PgStore extends BasePgStore {
         maxLifetime: ENV.PG_MAX_LIFETIME,
       },
     });
+
     if (pgConfig.schema && opts?.createSchema !== false) {
       await sql`CREATE SCHEMA IF NOT EXISTS ${sql(pgConfig.schema)}`;
     }
@@ -67,6 +70,7 @@ export class PgStore extends BasePgStore {
   constructor(sql: PgSqlClient) {
     super(sql);
     this.chainhook = new ChainhookPgStore(this);
+    this.notifications = new NotificationPgStore(this, sql, this.chainhook.events);
   }
 
   async getChainTipBlockHeight(): Promise<number> {

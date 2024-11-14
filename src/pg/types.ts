@@ -26,7 +26,7 @@ export type DbRewardSetSigner = {
 };
 
 export type DbBlockResponse = {
-  received_at: string;
+  received_at: string | Date;
   signer_key: PgBytea;
   accepted: boolean;
   signer_sighash: PgBytea;
@@ -39,10 +39,10 @@ export type DbBlockResponse = {
 };
 
 export type DbBlockProposal = {
-  received_at: string;
+  received_at: string | Date;
   miner_key: PgBytea;
   block_height: number;
-  block_time: string;
+  block_time: string | Date;
   block_hash: PgBytea;
   index_block_hash: PgBytea;
   burn_block_height: number;
@@ -147,4 +147,14 @@ export type DbBlockProposalQueryResponse = {
     reason_code: string | null;
     reject_code: string | null;
   }[];
+};
+
+export type BlockProposalEventArgs = {
+  receiptTimestamp: number;
+  blockHash: string;
+};
+export type BlockResponseEventArgs = {
+  receiptTimestamp: number;
+  blockHash: string;
+  signerKey: string;
 };
