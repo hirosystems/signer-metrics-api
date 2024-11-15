@@ -34,6 +34,7 @@ export const SocketIORoutes: FastifyPluginAsync<
 > = async (fastify, _options) => {
   const db = fastify.db;
   const io = new Server(fastify.server, {
+    cors: { origin: '*' },
     path: fastify.prefix + '/socket.io/',
     transports: ['websocket', 'polling'],
   });
