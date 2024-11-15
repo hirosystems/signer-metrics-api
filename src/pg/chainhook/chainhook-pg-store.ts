@@ -8,6 +8,8 @@ import {
 } from '@hirosystems/api-toolkit';
 import { StacksEvent, StacksPayload } from '@hirosystems/chainhook-client';
 import {
+  BlockProposalEventArgs,
+  BlockResponseEventArgs,
   DbBlock,
   DbBlockProposal,
   DbBlockResponse,
@@ -17,6 +19,7 @@ import {
   DbMockProposal,
   DbMockSignature,
   DbRewardSetSigner,
+  SignerMessagesEventPayload,
 } from '../types';
 import { normalizeHexString, unixTimeMillisecondsToISO, unixTimeSecondsToISO } from '../../helpers';
 import { EventEmitter } from 'node:events';
@@ -53,8 +56,13 @@ type MockBlockData = Extract<
   { type: 'MockBlock' }
 >['data'];
 
+export type DbWriteEvents = EventEmitter<{
+  missingStackerSet: [{ cycleNumber: number }];
+  signerMessages: [SignerMessagesEventPayload];
+}>;
+
 export class ChainhookPgStore extends BasePgStoreModule {
-  readonly events = new EventEmitter<{ missingStackerSet: [{ cycleNumber: number }] }>();
+  readonly events: DbWriteEvents = new EventEmitter();
   readonly logger = defaultLogger.child({ module: 'ChainhookPgStore' });
 
   constructor(db: BasePgStore) {
@@ -62,6 +70,8 @@ export class ChainhookPgStore extends BasePgStoreModule {
   }
 
   async processPayload(payload: StacksPayload): Promise<void> {
+    const appliedSignerMessageResults: SignerMessagesEventPayload = [];
+
     await this.sqlWriteTransaction(async sql => {
       for (const block of payload.rollback) {
         this.logger.info(`ChainhookPgStore rollback block ${block.block_identifier.index}`);
@@ -97,12 +107,21 @@ export class ChainhookPgStore extends BasePgStoreModule {
 
       for (const event of payload.events) {
         if (event.payload.type === 'SignerMessage') {
-          await this.applySignerMessageEvent(sql, event);
+          const applyResults = await this.applySignerMessageEvent(sql, event);
+          appliedSignerMessageResults.push(...applyResults);
         } else {
           this.logger.error(`Unknown chainhook payload event type: ${event.payload.type}`);
         }
       }
     });
+
+    // After the sql transaction is complete, emit events for the applied signer messages.
+    // Use setTimeout to break out of the call stack so caller is not blocked by event listeners.
+    if (appliedSignerMessageResults.length > 0) {
+      setTimeout(() => {
+        this.events.emit('signerMessages', appliedSignerMessageResults);
+      });
+    }
   }
 
   async updateChainTipBlockHeight(blockHeight: number): Promise<void> {
@@ -114,24 +133,45 @@ export class ChainhookPgStore extends BasePgStoreModule {
     return result[0].block_height;
   }
 
-  private async applySignerMessageEvent(sql: PgSqlClient, event: SignerMessage) {
+  private async applySignerMessageEvent(
+    sql: PgSqlClient,
+    event: SignerMessage
+  ): Promise<SignerMessagesEventPayload> {
+    const appliedResults: SignerMessagesEventPayload = [];
     switch (event.payload.data.message.type) {
       case 'BlockProposal': {
-        await this.applyBlockProposal(
+        const res = await this.applyBlockProposal(
           sql,
           event.received_at_ms,
           event.payload.data.pubkey,
           event.payload.data.message.data
         );
+        if (res.applied) {
+          appliedResults.push({
+            proposal: {
+              receiptTimestamp: event.received_at_ms,
+              blockHash: res.blockHash,
+            },
+          });
+        }
         break;
       }
       case 'BlockResponse': {
-        await this.applyBlockResponse(
+        const res = await this.applyBlockResponse(
           sql,
           event.received_at_ms,
           event.payload.data.pubkey,
           event.payload.data.message.data
         );
+        if (res.applied) {
+          appliedResults.push({
+            response: {
+              receiptTimestamp: event.received_at_ms,
+              blockHash: res.blockHash,
+              signerKey: res.signerKey,
+            },
+          });
+        }
         break;
       }
       case 'BlockPushed': {
@@ -171,6 +211,7 @@ export class ChainhookPgStore extends BasePgStoreModule {
         break;
       }
     }
+    return appliedResults;
   }
 
   private async applyMockBlock(
@@ -320,13 +361,14 @@ export class ChainhookPgStore extends BasePgStoreModule {
     receivedAt: number,
     minerPubkey: string,
     messageData: BlockProposalData
-  ) {
+  ): Promise<{ applied: false } | { applied: true; blockHash: string }> {
+    const blockHash = normalizeHexString(messageData.block.block_hash);
     const dbBlockProposal: DbBlockProposal = {
       received_at: unixTimeMillisecondsToISO(receivedAt),
       miner_key: normalizeHexString(minerPubkey),
       block_height: messageData.block.header.chain_length,
       block_time: unixTimeSecondsToISO(messageData.block.header.timestamp),
-      block_hash: normalizeHexString(messageData.block.block_hash),
+      block_hash: blockHash,
       index_block_hash: normalizeHexString(messageData.block.index_block_hash),
       reward_cycle: messageData.reward_cycle,
       burn_block_height: messageData.burn_height,
@@ -339,11 +381,37 @@ export class ChainhookPgStore extends BasePgStoreModule {
       this.logger.info(
         `Skipped inserting duplicate block proposal height=${dbBlockProposal.block_height}, hash=${dbBlockProposal.block_hash}`
       );
-    } else {
-      this.logger.info(
-        `ChainhookPgStore apply block_proposal height=${dbBlockProposal.block_height}, hash=${dbBlockProposal.block_hash}`
-      );
+      return { applied: false };
     }
+    this.logger.info(
+      `ChainhookPgStore apply block_proposal height=${dbBlockProposal.block_height}, hash=${dbBlockProposal.block_hash}`
+    );
+    return { applied: true, blockHash };
+  }
+
+  async deleteBlockProposal(sql: PgSqlClient, blockHash: string): Promise<DbBlockProposal> {
+    const result = await sql<DbBlockProposal[]>`
+      DELETE FROM block_proposals WHERE block_hash = ${blockHash} RETURNING *
+    `;
+    if (result.length === 0) {
+      throw new Error(`Block proposal not found for hash ${blockHash}`);
+    }
+    // copy the result to a new object to remove the id field
+    const proposal = { ...result[0], id: undefined };
+    delete proposal.id;
+    return proposal;
+  }
+
+  async deleteBlockResponses(sql: PgSqlClient, blockHash: string): Promise<DbBlockResponse[]> {
+    const result = await sql<DbBlockResponse[]>`
+      DELETE FROM block_responses WHERE signer_sighash = ${blockHash} RETURNING *
+    `;
+    // copy the results to a new object to remove the id field
+    return result.map(r => {
+      const response = { ...r, id: undefined };
+      delete response.id;
+      return response;
+    });
   }
 
   private async applyBlockResponse(
@@ -351,7 +419,7 @@ export class ChainhookPgStore extends BasePgStoreModule {
     receivedAt: number,
     signerPubkey: string,
     messageData: BlockResponseData
-  ) {
+  ): Promise<{ applied: false } | { applied: true; blockHash: string; signerKey: string }> {
     if (messageData.type !== 'Accepted' && messageData.type !== 'Rejected') {
       this.logger.error(messageData, `Unexpected BlockResponse type`);
     }
@@ -368,12 +436,13 @@ export class ChainhookPgStore extends BasePgStoreModule {
         rejectCode = rejectReason[RejectReasonValidationFailed];
       }
     }
-
+    const blockHash = normalizeHexString(messageData.data.signer_signature_hash);
+    const signerKey = normalizeHexString(signerPubkey);
     const dbBlockResponse: DbBlockResponse = {
       received_at: unixTimeMillisecondsToISO(receivedAt),
-      signer_key: normalizeHexString(signerPubkey),
+      signer_key: signerKey,
       accepted: accepted,
-      signer_sighash: normalizeHexString(messageData.data.signer_signature_hash),
+      signer_sighash: blockHash,
       metadata_server_version: messageData.data.metadata.server_version,
       signature: messageData.data.signature,
       reason_string: accepted ? null : messageData.data.reason,
@@ -390,11 +459,12 @@ export class ChainhookPgStore extends BasePgStoreModule {
       this.logger.info(
         `Skipped inserting duplicate block response signer=${dbBlockResponse.signer_key}, hash=${dbBlockResponse.signer_sighash}`
       );
-    } else {
-      this.logger.info(
-        `ChainhookPgStore apply block_response signer=${dbBlockResponse.signer_key}, hash=${dbBlockResponse.signer_sighash}`
-      );
+      return { applied: false };
     }
+    this.logger.info(
+      `ChainhookPgStore apply block_response signer=${dbBlockResponse.signer_key}, hash=${dbBlockResponse.signer_sighash}`
+    );
+    return { applied: true, blockHash, signerKey };
   }
 
   private async updateStacksBlock(
@@ -493,8 +563,8 @@ export class ChainhookPgStore extends BasePgStoreModule {
         this.logger.warn(
           `Missing reward set signers for cycle ${cycle_number} in block ${dbBlock.block_height}`
         );
-        // Use setImmediate to ensure we break out of the current sql transaction within the async context
-        setImmediate(() => this.events.emit('missingStackerSet', { cycleNumber: cycle_number }));
+        // Use setTimeout to ensure we break out of the current sql transaction within the async context
+        setTimeout(() => this.events.emit('missingStackerSet', { cycleNumber: cycle_number }));
       }
       this.logger.info(
         `ChainhookPgStore apply block ${dbBlock.block_height} ${dbBlock.block_hash}`

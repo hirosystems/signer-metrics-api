@@ -8,6 +8,7 @@ describe('Postgres ingestion tests', () => {
   let db: PgStore;
   beforeAll(async () => {
     db = await PgStore.connect();
+    db.notifications._sqlNotifyDisabled = true;
   });
 
   afterAll(async () => {

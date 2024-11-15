@@ -28,6 +28,7 @@ describe('Endpoint tests', () => {
 
   beforeAll(async () => {
     db = await PgStore.connect();
+    db.notifications._sqlNotifyDisabled = true;
     apiServer = await buildApiServer({ db });
     await apiServer.listen({ port: 0, host: '127.0.0.1' });
 
