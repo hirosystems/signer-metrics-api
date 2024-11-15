@@ -1,3 +1,10 @@
+## [0.10.1](https://github.com/hirosystems/signer-metrics-api/compare/v0.10.0...v0.10.1) (2024-11-15)
+
+
+### Bug Fixes
+
+* socket-io cors ([#59](https://github.com/hirosystems/signer-metrics-api/issues/59)) ([da5164e](https://github.com/hirosystems/signer-metrics-api/commit/da5164e7f52c1843809fce2352d6f0c50dd269c8))
+
 ## [0.10.0](https://github.com/hirosystems/signer-metrics-api/compare/v0.9.0...v0.10.0) (2024-11-15)
 
 
