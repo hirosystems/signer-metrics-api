@@ -1,3 +1,10 @@
+## [0.10.0](https://github.com/hirosystems/signer-metrics-api/compare/v0.9.0...v0.10.0) (2024-11-15)
+
+
+### Features
+
+* socket-io blockProposal notifications ([#58](https://github.com/hirosystems/signer-metrics-api/issues/58)) ([79334e2](https://github.com/hirosystems/signer-metrics-api/commit/79334e23d1ab0d5b27b3df90c1160b487f498026))
+
 ## [0.9.0](https://github.com/hirosystems/signer-metrics-api/compare/v0.8.2...v0.9.0) (2024-11-12)
 
 
