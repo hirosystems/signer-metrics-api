@@ -10,9 +10,9 @@ import { BlockProposalsEntry } from '../../src/api/schemas';
 import { PoxInfo, RpcStackerSetResponse } from '../../src/stacks-core-rpc/stacks-core-rpc-client';
 import { rpcStackerSetToDbRewardSetSigners } from '../../src/stacks-core-rpc/stacker-set-updater';
 import { SignerMessagesEventPayload } from '../../src/pg/types';
-import { sleep } from '../../src/helpers';
 import { io, Socket } from 'socket.io-client';
 import { ClientToServerEvents, ServerToClientEvents } from '../../src/api/routes/socket-io';
+import { waitForEvent } from '../../src/helpers';
 
 describe('Db notifications tests', () => {
   let db: PgStore;
@@ -22,6 +22,7 @@ describe('Db notifications tests', () => {
 
   const testingBlockHash = '0x2f1c4e83fda403682b1ab5dd41383e47d2cb3dfec0fd26f0886883462d7802fb';
   let proposalTestPayload: StacksPayload;
+  let blockPushTestPayload: StacksPayload;
 
   beforeAll(async () => {
     db = await PgStore.connect();
@@ -54,15 +55,25 @@ describe('Db notifications tests', () => {
     for await (const line of rl) {
       const payload = JSON.parse(line) as StacksPayload;
       // find and store the test block proposal payload for later testing
-      if (
-        !proposalTestPayload &&
-        payload.events.find(
+      if (!proposalTestPayload) {
+        const proposal = payload.events.find(
           event =>
             event.payload.data.message.type === 'BlockProposal' &&
             event.payload.data.message.data.block.block_hash === testingBlockHash
-        )
-      ) {
-        proposalTestPayload = payload;
+        );
+        if (proposal) {
+          proposalTestPayload = { ...payload, events: [proposal] };
+        }
+      }
+      if (!blockPushTestPayload) {
+        const blockPush = payload.events.find(
+          event =>
+            event.payload.data.message.type === 'BlockPushed' &&
+            event.payload.data.message.data.block.block_hash === testingBlockHash
+        );
+        if (blockPush) {
+          blockPushTestPayload = { ...payload, events: [blockPush] };
+        }
       }
       await db.chainhook.processPayload(payload);
     }
@@ -86,14 +97,22 @@ describe('Db notifications tests', () => {
   });
 
   test('test block proposal write events', async () => {
-    const pgNotifyEvent: Promise<SignerMessagesEventPayload[]> = once(
+    const pgNotifyEvent = waitForEvent(
       db.notifications.events,
-      'signerMessages'
+      'signerMessages',
+      msg => {
+        return 'proposal' in msg[0] && msg[0].proposal.blockHash === testingBlockHash;
+      },
+      AbortSignal.timeout(10000)
     );
 
-    const initialWriteEvent: Promise<SignerMessagesEventPayload[]> = once(
+    const initialWriteEvent = waitForEvent(
       db.chainhook.events,
-      'signerMessages'
+      'signerMessages',
+      msg => {
+        return 'proposal' in msg[0] && msg[0].proposal.blockHash === testingBlockHash;
+      },
+      AbortSignal.timeout(10000)
     );
 
     const clientSocketEvent = new Promise<BlockProposalsEntry>(resolve => {
@@ -118,6 +137,47 @@ describe('Db notifications tests', () => {
     ).toBeTruthy();
     expect(
       promiseResults[1][0].find(r => 'proposal' in r && r.proposal.blockHash === testingBlockHash)
+    ).toBeTruthy();
+    expect(promiseResults[2].block_hash).toBe(testingBlockHash);
+  });
+
+  test('test block push write events', async () => {
+    const pgNotifyEvent = waitForEvent(
+      db.notifications.events,
+      'signerMessages',
+      msg => {
+        return 'push' in msg[0] && msg[0].push.blockHash === testingBlockHash;
+      },
+      AbortSignal.timeout(10000)
+    );
+
+    const initialWriteEvent = waitForEvent(
+      db.chainhook.events,
+      'signerMessages',
+      msg => {
+        return 'push' in msg[0] && msg[0].push.blockHash === testingBlockHash;
+      },
+      AbortSignal.timeout(10000)
+    );
+
+    const clientSocketEvent = new Promise<BlockProposalsEntry>(resolve => {
+      socketClient.on('blockProposal', data => {
+        resolve(data);
+      });
+    });
+
+    // delete block proposal from db, returning the data so we can re-write it
+    const blockPush = await db.chainhook.deleteBlockPush(db.sql, testingBlockHash);
+    expect(blockPush.block_hash).toBe(testingBlockHash);
+
+    await db.chainhook.processPayload(blockPushTestPayload);
+
+    const promiseResults = await Promise.all([pgNotifyEvent, initialWriteEvent, clientSocketEvent]);
+    expect(
+      promiseResults[0][0].find(r => 'push' in r && r.push.blockHash === testingBlockHash)
+    ).toBeTruthy();
+    expect(
+      promiseResults[1][0].find(r => 'push' in r && r.push.blockHash === testingBlockHash)
     ).toBeTruthy();
     expect(promiseResults[2].block_hash).toBe(testingBlockHash);
   });

@@ -1,4 +1,4 @@
-import { addAbortListener } from 'node:events';
+import { addAbortListener, EventEmitter } from 'node:events';
 import { parseISO, sub, isValid, Duration } from 'date-fns';
 
 export const isDevEnv = process.env.NODE_ENV === 'development';
@@ -24,6 +24,8 @@ export function normalizeHexString(hexString: string): string {
   return hexString.startsWith('0x') ? hexString : '0x' + hexString;
 }
 
+const DisposeSymbol: typeof Symbol.dispose = Symbol.dispose ?? Symbol.for('nodejs.dispose');
+
 export function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) {
@@ -32,7 +34,7 @@ export function sleep(ms: number, signal?: AbortSignal): Promise<void> {
     }
     const disposable = signal ? addAbortListener(signal, onAbort) : undefined;
     const timeout = setTimeout(() => {
-      disposable?.[Symbol.dispose ?? (Symbol.for('nodejs.dispose') as typeof Symbol.dispose)]();
+      disposable?.[DisposeSymbol]();
       resolve();
     }, ms);
     function onAbort() {
@@ -84,3 +86,33 @@ export type BlockIdParam =
   | { type: 'height'; height: number }
   | { type: 'hash'; hash: string }
   | { type: 'latest'; latest: true };
+
+/**
+ * Similar to `node:events.once` but with a predicate to filter events and supports typed EventEmitters
+ */
+export function waitForEvent<T extends Record<string, any[]>, K extends keyof T>(
+  emitter: EventEmitter<T>,
+  event: K,
+  predicate: (...args: T[K]) => boolean,
+  signal?: AbortSignal
+): Promise<T[K]> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(signal.reason as Error);
+      return;
+    }
+    const disposable = signal ? addAbortListener(signal, onAbort) : undefined;
+    const handler = (...args: T[K]) => {
+      if (predicate(...args)) {
+        disposable?.[DisposeSymbol]();
+        (emitter as EventEmitter).off(event as string, handler);
+        resolve(args);
+      }
+    };
+    (emitter as EventEmitter).on(event as string, handler);
+    function onAbort() {
+      (emitter as EventEmitter).off(event as string, handler);
+      reject((signal?.reason as Error) ?? new Error('Aborted'));
+    }
+  });
+}

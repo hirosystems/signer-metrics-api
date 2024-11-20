@@ -38,6 +38,15 @@ export type DbBlockResponse = {
   chain_id: number | null;
 };
 
+export type DbBlockPush = {
+  received_at: string | Date;
+  miner_key: PgBytea;
+  block_height: number;
+  block_time: string | Date;
+  block_hash: PgBytea;
+  index_block_hash: PgBytea;
+};
+
 export type DbBlockProposal = {
   received_at: string | Date;
   miner_key: PgBytea;
@@ -158,6 +167,10 @@ export type BlockResponseEventArgs = {
   blockHash: string;
   signerKey: string;
 };
+export type BlockPushEventArgs = {
+  receiptTimestamp: number;
+  blockHash: string;
+};
 
 export type SignerMessagesEventPayload = (
   | {
@@ -165,5 +178,8 @@ export type SignerMessagesEventPayload = (
     }
   | {
       response: BlockResponseEventArgs;
+    }
+  | {
+      push: BlockPushEventArgs;
     }
 )[];

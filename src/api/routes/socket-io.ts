@@ -42,30 +42,39 @@ export const SocketIORoutes: FastifyPluginAsync<
   const blockProposalNs = io.of('/block-proposals') as BlockProposalSocketNamespace;
 
   const signerMessageListener = (msg: SignerMessagesEventPayload) => {
-    if (blockProposalNs.sockets.size === 0) {
-      return;
-    }
-    // Use Set to get a unique list of block hashes
-    const blockHashes = new Set<string>(
-      msg.map(m => ('proposal' in m ? m.proposal.blockHash : m.response.blockHash))
-    );
-    const proposalBroadcasts = Array.from(blockHashes).map(blockHash => {
-      return db
-        .sqlTransaction(async sql => {
-          const results = await db.getBlockProposal({
-            sql,
-            blockHash,
-          });
-          if (results.length > 0) {
-            const blockProposal = parseDbBlockProposalData(results[0]);
-            blockProposalNs.emit('blockProposal', blockProposal);
-          }
+    try {
+      if (blockProposalNs.sockets.size === 0) {
+        return;
+      }
+      // Use Set to get a unique list of block hashes
+      const blockHashes = new Set<string>(
+        msg.map(m => {
+          if ('proposal' in m) return m.proposal.blockHash;
+          else if ('response' in m) return m.response.blockHash;
+          else if ('push' in m) return m.push.blockHash;
+          else throw new Error(`Invalid signer message type: ${JSON.stringify(m)}`);
         })
-        .catch((error: unknown) => {
-          logger.error(error, `Failed to broadcast block proposal for block hash ${blockHash}`);
-        });
-    });
-    void Promise.allSettled(proposalBroadcasts);
+      );
+      const proposalBroadcasts = Array.from(blockHashes).map(blockHash => {
+        return db
+          .sqlTransaction(async sql => {
+            const results = await db.getBlockProposal({
+              sql,
+              blockHash,
+            });
+            if (results.length > 0) {
+              const blockProposal = parseDbBlockProposalData(results[0]);
+              blockProposalNs.emit('blockProposal', blockProposal);
+            }
+          })
+          .catch((error: unknown) => {
+            logger.error(error, `Failed to broadcast block proposal for block hash ${blockHash}`);
+          });
+      });
+      void Promise.allSettled(proposalBroadcasts);
+    } catch (error) {
+      logger.error(error, 'Failed to broadcast block proposal');
+    }
   };
 
   fastify.addHook('onListen', () => {
