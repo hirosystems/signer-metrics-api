@@ -706,7 +706,7 @@ export class ChainhookPgStore extends BasePgStoreModule {
     await this.rollBackBlockSignerSignatures(sql, blockHeight);
   }
 
-  private async rollBackBlock(sql: PgSqlClient, blockHeight: number) {
+  async rollBackBlock(sql: PgSqlClient, blockHeight: number) {
     const res = await sql`
       DELETE FROM blocks WHERE block_height = ${blockHeight}
     `;
@@ -718,7 +718,7 @@ export class ChainhookPgStore extends BasePgStoreModule {
     }
   }
 
-  private async rollBackBlockSignerSignatures(sql: PgSqlClient, blockHeight: number) {
+  async rollBackBlockSignerSignatures(sql: PgSqlClient, blockHeight: number) {
     const res = await sql`
       DELETE FROM block_signer_signatures WHERE block_height = ${blockHeight}
     `;

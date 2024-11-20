@@ -127,6 +127,7 @@ export class PgStore extends BasePgStore {
 
         -- Proposal status
         CASE
+          WHEN block_pushes.block_hash IS NOT NULL THEN 'accepted'
           WHEN bp.block_height > ct.block_height THEN 'pending'
           WHEN b.block_hash IS NULL THEN 'rejected'
           WHEN b.block_hash = bp.block_hash THEN 'accepted'
@@ -186,6 +187,9 @@ export class PgStore extends BasePgStore {
       LEFT JOIN blocks b 
         ON b.block_height = bp.block_height
 
+      LEFT JOIN block_pushes
+        ON block_pushes.block_hash = bp.block_hash
+
       LEFT JOIN reward_set_signers rss 
         ON rss.cycle_number = bp.reward_cycle
 
@@ -203,7 +207,8 @@ export class PgStore extends BasePgStore {
         bp.block_time, 
         bp.reward_cycle, 
         ct.block_height,
-        b.block_hash
+        b.block_hash,
+        block_pushes.block_hash
 
       ORDER BY bp.received_at DESC
     `;
@@ -223,6 +228,7 @@ export class PgStore extends BasePgStore {
 
         -- Proposal status
         CASE
+          WHEN block_pushes.block_hash IS NOT NULL THEN 'accepted'
           WHEN bp.block_height > ct.block_height THEN 'pending'
           WHEN b.block_hash IS NULL THEN 'rejected'
           WHEN b.block_hash = bp.block_hash THEN 'accepted'
@@ -276,6 +282,9 @@ export class PgStore extends BasePgStore {
       LEFT JOIN blocks b 
         ON b.block_height = bp.block_height
 
+      LEFT JOIN block_pushes
+        ON block_pushes.block_hash = bp.block_hash
+
       LEFT JOIN reward_set_signers rss 
         ON rss.cycle_number = bp.reward_cycle
 
@@ -289,7 +298,8 @@ export class PgStore extends BasePgStore {
       GROUP BY 
         bp.id, 
         ct.block_height,
-        b.block_hash
+        b.block_hash,
+        block_pushes.block_hash
 
       LIMIT 1
     `;
