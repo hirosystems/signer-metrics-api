@@ -127,6 +127,9 @@ export type DbBlockProposalQueryResponse = {
   // proposal status (from blocks table, matched using block_hash and block_height):
   status: 'pending' | 'rejected' | 'accepted';
 
+  // milliseconds taken between proposal and block_push (from block_pushes, matched using block_hash):
+  push_time_ms: number | null;
+
   // cycle data (from reward_set_signers, matched using cycle_number AKA reward_cycle):
   total_signer_count: number;
   total_signer_weight: number;

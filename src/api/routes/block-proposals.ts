@@ -138,6 +138,7 @@ export function parseDbBlockProposalData(r: DbBlockProposalQueryResponse): Block
     block_time: r.block_time,
     cycle_number: r.cycle_number,
     status: r.status,
+    push_time_ms: r.push_time_ms,
 
     // cycle data
     total_signer_count: r.total_signer_count,

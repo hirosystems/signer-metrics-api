@@ -134,6 +134,8 @@ export class PgStore extends BasePgStore {
           ELSE 'rejected'
         END AS status,
 
+        (EXTRACT(EPOCH FROM (block_pushes.received_at - bp.received_at)) * 1000)::integer AS push_time_ms,
+
         -- Aggregate cycle data from reward_set_signers
         COUNT(DISTINCT rss.signer_key)::integer AS total_signer_count,
         SUM(rss.signer_weight)::integer AS total_signer_weight,
@@ -208,7 +210,8 @@ export class PgStore extends BasePgStore {
         bp.reward_cycle, 
         ct.block_height,
         b.block_hash,
-        block_pushes.block_hash
+        block_pushes.block_hash,
+        block_pushes.received_at
 
       ORDER BY bp.received_at DESC
     `;
@@ -234,6 +237,8 @@ export class PgStore extends BasePgStore {
           WHEN b.block_hash = bp.block_hash THEN 'accepted'
           ELSE 'rejected'
         END AS status,
+
+        (EXTRACT(EPOCH FROM (block_pushes.received_at - bp.received_at)) * 1000)::integer AS push_time_ms,
 
         -- Aggregate cycle data from reward_set_signers
         COUNT(DISTINCT rss.signer_key)::integer AS total_signer_count,
@@ -299,7 +304,8 @@ export class PgStore extends BasePgStore {
         bp.id, 
         ct.block_height,
         b.block_hash,
-        block_pushes.block_hash
+        block_pushes.block_hash,
+        block_pushes.received_at
 
       LIMIT 1
     `;

@@ -311,6 +311,11 @@ export const BlockProposalsEntrySchema = Type.Object({
     }
   ),
 
+  push_time_ms: Type.Union([Type.Null(), Type.Integer()], {
+    description:
+      'Time duration (in milliseconds) taken between when the block was proposed and when it was pushed',
+  }),
+
   // cycle data
   total_signer_count: Type.Integer({
     description: 'Total number of signers expected for this proposal',
