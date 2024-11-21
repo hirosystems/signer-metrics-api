@@ -875,4 +875,98 @@ export class PgStore extends BasePgStore {
     `;
     return dbRewardSetSigner[0];
   }
+
+  async getRecentSignerMetrics(args: { sql: PgSqlClient; blockRanges: number[] }) {
+    const result = await args.sql<
+      {
+        signer_key: string;
+        block_ranges: {
+          [blocks: string]: {
+            missing: number;
+            accepted: number;
+            rejected: number;
+          };
+        };
+      }[]
+    >`
+      WITH block_ranges AS (
+        SELECT unnest(${args.blockRanges}::integer[]) AS range_value
+      ),
+      latest_block_proposal AS (
+        SELECT *
+        FROM block_proposals
+        ORDER BY received_at DESC
+        LIMIT 1
+      ),
+      signer_keys AS (
+        SELECT rs.signer_key
+        FROM reward_set_signers rs
+        JOIN latest_block_proposal lbp ON rs.cycle_number = lbp.reward_cycle
+      ),
+      recent_blocks AS (
+        SELECT
+          bp.block_hash,
+          ROW_NUMBER() OVER (ORDER BY bp.received_at DESC) AS row_num
+        FROM block_proposals bp
+        ORDER BY bp.received_at DESC
+        LIMIT (SELECT MAX(range_value) FROM block_ranges)
+      ),
+      filtered_blocks AS (
+        SELECT
+          rb.block_hash,
+          sk.signer_key,
+          br.range_value AS block_range
+        FROM block_ranges br
+        CROSS JOIN signer_keys sk
+        JOIN recent_blocks rb
+          ON rb.row_num <= br.range_value
+      ),
+      relevant_responses AS (
+        -- Pre-filter block_responses to only those relevant to recent_blocks and signer_keys
+        SELECT
+          br.signer_key,
+          br.signer_sighash,
+          br.accepted
+        FROM block_responses br
+        WHERE br.signer_sighash IN (SELECT block_hash FROM recent_blocks)
+          AND br.signer_key IN (SELECT signer_key FROM signer_keys)
+      ),
+      responses_with_states AS (
+        SELECT
+          fb.signer_key,
+          fb.block_range,
+          COALESCE(
+            CASE
+              WHEN rr.accepted IS TRUE THEN 'accepted'
+              WHEN rr.accepted IS FALSE THEN 'rejected'
+            END, 'missing'
+          ) AS response_state,
+          COUNT(*) AS state_count
+        FROM filtered_blocks fb
+        LEFT JOIN relevant_responses rr
+          ON fb.block_hash = rr.signer_sighash AND fb.signer_key = rr.signer_key
+        GROUP BY fb.signer_key, fb.block_range, response_state
+      ),
+      aggregated_counts AS (
+        SELECT
+          signer_key,
+          block_range,
+          MAX(CASE WHEN response_state = 'accepted' THEN state_count ELSE 0 END) AS accepted,
+          MAX(CASE WHEN response_state = 'rejected' THEN state_count ELSE 0 END) AS rejected,
+          MAX(CASE WHEN response_state = 'missing' THEN state_count ELSE 0 END) AS missing
+        FROM responses_with_states
+        GROUP BY signer_key, block_range
+      )
+      SELECT
+        signer_key,
+        jsonb_object_agg(block_range::text, jsonb_build_object(
+          'accepted', accepted,
+          'rejected', rejected,
+          'missing', missing
+        )) AS block_ranges
+      FROM aggregated_counts
+      GROUP BY signer_key
+    `;
+    return result;
+  }
 }

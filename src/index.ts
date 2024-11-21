@@ -6,6 +6,7 @@ import { buildProfilerServer, logger, registerShutdownConfig } from '@hirosystem
 import { closeChainhookServer, startChainhookServer } from './chainhook/server';
 import { startPoxInfoUpdater } from './stacks-core-rpc/pox-info-updater';
 import { StackerSetUpdator } from './stacks-core-rpc/stacker-set-updater';
+import { PromMetricsService } from './prom-metrics/prom-metrics-service';
 
 /**
  * Initializes background services. Only for `default` and `writeonly` run modes.
@@ -30,6 +31,13 @@ async function initBackgroundServices(db: PgStore) {
     handler: async () => {
       await stackerSetUpdater.stop();
     },
+  });
+
+  const signerPromMetrics = new PromMetricsService({ db });
+  registerShutdownConfig({
+    name: 'Signer prom metrics service',
+    forceKillable: false,
+    handler: () => signerPromMetrics.stop(),
   });
 
   const server = await startChainhookServer({ db });
