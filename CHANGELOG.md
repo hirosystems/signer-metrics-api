@@ -1,3 +1,10 @@
+## [0.12.0](https://github.com/hirosystems/signer-metrics-api/compare/v0.11.0...v0.12.0) (2024-11-22)
+
+
+### Features
+
+* signer prometheus metrics ([#61](https://github.com/hirosystems/signer-metrics-api/issues/61)) ([d7a84f4](https://github.com/hirosystems/signer-metrics-api/commit/d7a84f47df419c4f6cfe271379a0442b083c35da))
+
 ## [0.11.0](https://github.com/hirosystems/signer-metrics-api/compare/v0.10.1...v0.11.0) (2024-11-22)
 
 
