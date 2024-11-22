@@ -106,6 +106,20 @@ describe('Endpoint tests', () => {
       { block_range: 1000, avg_push_time_ms: 29451.831 },
     ]);
 
+    const dbAcceptanceMetricsResult = await db.getRecentBlockAcceptanceMetrics({
+      sql: db.sql,
+      blockRanges,
+    });
+    expect(dbAcceptanceMetricsResult).toEqual([
+      { acceptance_rate: 0, block_range: 1 },
+      { acceptance_rate: 0.5, block_range: 2 },
+      { acceptance_rate: 0.6667, block_range: 3 },
+      { acceptance_rate: 0.6, block_range: 5 },
+      { acceptance_rate: 0.8, block_range: 10 },
+      { acceptance_rate: 0.7778, block_range: 100 },
+      { acceptance_rate: 0.7778, block_range: 1000 },
+    ]);
+
     const dbMetricsResult = await db.getRecentSignerMetrics({ sql: db.sql, blockRanges });
     expect(dbMetricsResult).toEqual(
       expect.arrayContaining([
@@ -134,6 +148,16 @@ avg_block_push_time_ms{period="1"} 27262
 avg_block_push_time_ms{period="2"} 30435.5
 avg_block_push_time_ms{period="3"} 28167.333`;
     expect(receivedLines).toEqual(expect.arrayContaining(expectedPushTimeLines.split('\n')));
+
+    const expectedAcceptanceRateLines = `# TYPE proposal_acceptance_rate gauge
+proposal_acceptance_rate{period="1"} 0
+proposal_acceptance_rate{period="2"} 0.5
+proposal_acceptance_rate{period="3"} 0.6667
+proposal_acceptance_rate{period="5"} 0.6
+proposal_acceptance_rate{period="10"} 0.8
+proposal_acceptance_rate{period="100"} 0.7778
+proposal_acceptance_rate{period="1000"} 0.7778`;
+    expect(receivedLines).toEqual(expect.arrayContaining(expectedAcceptanceRateLines.split('\n')));
 
     const expectedSignerStateLines = `# TYPE signer_state_count gauge
 signer_state_count{signer="0x03fc7cb917698b6137060f434988f7688520972dfb944f9b03c0fbf1c75303e79a",period="1",state="missing"} 0

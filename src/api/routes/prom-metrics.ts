@@ -33,6 +33,22 @@ export const SignerPromMetricsRoutes: FastifyPluginAsync<
   });
 
   new Gauge({
+    name: 'proposal_acceptance_rate',
+    help: 'The acceptance rate of block proposals for different block ranges (as a float between 0 and 1).',
+    labelNames: ['period'],
+    registers: [signerRegistry],
+    async collect() {
+      const dbResults = await db.sqlTransaction(async sql => {
+        return await db.getRecentBlockAcceptanceMetrics({ sql, blockRanges: getBlockPeriods() });
+      });
+      this.reset();
+      for (const row of dbResults) {
+        this.set({ period: row.block_range }, row.acceptance_rate);
+      }
+    },
+  });
+
+  new Gauge({
     name: 'signer_state_count',
     help: 'Count of signer states over different block periods',
     labelNames: ['signer', 'period', 'state'] as const,

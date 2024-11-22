@@ -1009,4 +1009,53 @@ export class PgStore extends BasePgStore {
     `;
     return result;
   }
+
+  async getRecentBlockAcceptanceMetrics(args: { sql: PgSqlClient; blockRanges: number[] }) {
+    const result = await args.sql<
+      {
+        block_range: number;
+        acceptance_rate: number;
+      }[]
+    >`
+      WITH block_ranges AS (
+        SELECT unnest(${args.blockRanges}::integer[]) AS range_value
+      ),
+      recent_block_proposals AS (
+        SELECT
+          bp.block_hash,
+          ROW_NUMBER() OVER (ORDER BY bp.received_at DESC) AS row_num
+        FROM block_proposals bp
+        ORDER BY bp.received_at DESC
+        LIMIT (SELECT MAX(range_value) FROM block_ranges)
+      ),
+      filtered_proposals AS (
+        SELECT
+          rbp.block_hash,
+          br.range_value AS block_range
+        FROM block_ranges br
+        JOIN recent_block_proposals rbp
+          ON rbp.row_num <= br.range_value
+      ),
+      proposal_push_matches AS (
+        SELECT
+          fp.block_range,
+          COUNT(fp.block_hash) AS total_proposals,
+          COUNT(bp.block_hash) AS accepted_proposals
+        FROM filtered_proposals fp
+        LEFT JOIN block_pushes bp
+          ON fp.block_hash = bp.block_hash
+        GROUP BY fp.block_range
+      ),
+      acceptance_rates AS (
+        SELECT
+          block_range,
+          ROUND(COALESCE(accepted_proposals::float8 / total_proposals::float8, 0)::numeric, 4)::float8 AS acceptance_rate
+        FROM proposal_push_matches
+      )
+      SELECT *
+      FROM acceptance_rates
+      ORDER BY block_range
+    `;
+    return result;
+  }
 }
