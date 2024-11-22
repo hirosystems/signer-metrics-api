@@ -11,7 +11,6 @@ import { rpcStackerSetToDbRewardSetSigners } from '../../src/stacks-core-rpc/sta
 import { io, Socket } from 'socket.io-client';
 import { ClientToServerEvents, ServerToClientEvents } from '../../src/api/routes/socket-io';
 import { waitForEvent } from '../../src/helpers';
-import { ENV } from '../../src/env';
 
 describe('Db notifications tests', () => {
   let db: PgStore;
