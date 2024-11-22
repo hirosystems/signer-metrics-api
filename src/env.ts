@@ -30,6 +30,11 @@ const schema = Type.Object({
   /** Port in which to serve the profiler */
   PROFILER_PORT: Type.Number({ default: 9119 }),
 
+  SIGNER_PROMETHEUS_METRICS_BLOCK_PERIODS: Type.String({
+    pattern: '^\\d+(,\\d+)*$',
+    default: '5,10,25,100,1000',
+  }),
+
   STACKS_NODE_RPC_HOST: Type.String(),
   STACKS_NODE_RPC_PORT: Type.Number({ minimum: 0, maximum: 65535 }),
 

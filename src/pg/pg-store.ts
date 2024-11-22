@@ -414,7 +414,7 @@ export class PgStore extends BasePgStore {
             WHEN bss.id IS NULL AND fbr.accepted = FALSE THEN 'rejected'
             WHEN bss.id IS NULL AND fbr.id IS NULL THEN 'missing'
           END AS signer_status,
-          EXTRACT(MILLISECOND FROM (fbr.received_at - bp.received_at)) AS response_time_ms
+          EXTRACT(EPOCH FROM (fbr.received_at - bp.received_at)) * 1000 AS response_time_ms
         FROM latest_blocks lb
         LEFT JOIN block_proposals bp ON lb.block_hash = bp.block_hash
         LEFT JOIN reward_set_signers rs ON bp.reward_cycle = rs.cycle_number
@@ -542,7 +542,7 @@ export class PgStore extends BasePgStore {
             WHEN bss.id IS NULL AND fbr.accepted = FALSE THEN 'rejected'
             WHEN bss.id IS NULL AND fbr.id IS NULL THEN 'missing'
           END AS signer_status,
-          EXTRACT(MILLISECOND FROM (fbr.received_at - bp.received_at)) AS response_time_ms
+          EXTRACT(EPOCH FROM (fbr.received_at - bp.received_at)) * 1000 AS response_time_ms
         FROM latest_blocks lb
         LEFT JOIN block_proposals bp ON lb.block_hash = bp.block_hash
         LEFT JOIN reward_set_signers rs ON bp.reward_cycle = rs.cycle_number
@@ -704,7 +704,7 @@ export class PgStore extends BasePgStore {
           pd.proposal_received_at,
           rd.accepted,
           rd.received_at AS response_received_at,
-          EXTRACT(MILLISECOND FROM (rd.received_at - pd.proposal_received_at)) AS response_time_ms
+          EXTRACT(EPOCH FROM (rd.received_at - pd.proposal_received_at)) * 1000 AS response_time_ms
         FROM signer_data sd
         CROSS JOIN proposal_data pd -- Cross join to associate all signers with all proposals
         LEFT JOIN response_data rd
@@ -825,7 +825,7 @@ export class PgStore extends BasePgStore {
           rd.accepted,
           rd.received_at AS response_received_at,
           rd.metadata_server_version,
-          EXTRACT(MILLISECOND FROM (rd.received_at - pd.proposal_received_at)) AS response_time_ms
+          EXTRACT(EPOCH FROM (rd.received_at - pd.proposal_received_at)) * 1000 AS response_time_ms
         FROM signer_data sd
         CROSS JOIN proposal_data pd
         LEFT JOIN response_data rd
@@ -874,5 +874,218 @@ export class PgStore extends BasePgStore {
         ON sd.signer_key = lrd.signer_key
     `;
     return dbRewardSetSigner[0];
+  }
+
+  async getRecentSignerMetrics(args: { sql: PgSqlClient; blockRanges: number[] }) {
+    const result = await args.sql<
+      {
+        signer_key: string;
+        block_ranges: {
+          [blocks: string]: {
+            missing: number;
+            accepted: number;
+            rejected: number;
+          };
+        };
+      }[]
+    >`
+      WITH block_ranges AS (
+        SELECT unnest(${args.blockRanges}::integer[]) AS range_value
+      ),
+      latest_block_proposal AS (
+        SELECT *
+        FROM block_proposals
+        ORDER BY received_at DESC
+        LIMIT 1
+      ),
+      signer_keys AS (
+        SELECT rs.signer_key
+        FROM reward_set_signers rs
+        JOIN latest_block_proposal lbp ON rs.cycle_number = lbp.reward_cycle
+      ),
+      recent_blocks AS (
+        SELECT
+          bp.block_hash,
+          ROW_NUMBER() OVER (ORDER BY bp.received_at DESC) AS row_num
+        FROM block_proposals bp
+        ORDER BY bp.received_at DESC
+        LIMIT (SELECT MAX(range_value) FROM block_ranges)
+      ),
+      filtered_blocks AS (
+        SELECT
+          rb.block_hash,
+          sk.signer_key,
+          br.range_value AS block_range
+        FROM block_ranges br
+        CROSS JOIN signer_keys sk
+        JOIN recent_blocks rb
+          ON rb.row_num <= br.range_value
+      ),
+      relevant_responses AS (
+        -- Pre-filter block_responses to only those relevant to recent_blocks and signer_keys
+        SELECT
+          br.signer_key,
+          br.signer_sighash,
+          br.accepted
+        FROM block_responses br
+        WHERE br.signer_sighash IN (SELECT block_hash FROM recent_blocks)
+          AND br.signer_key IN (SELECT signer_key FROM signer_keys)
+      ),
+      responses_with_states AS (
+        SELECT
+          fb.signer_key,
+          fb.block_range,
+          COALESCE(
+            CASE
+              WHEN rr.accepted IS TRUE THEN 'accepted'
+              WHEN rr.accepted IS FALSE THEN 'rejected'
+            END, 'missing'
+          ) AS response_state,
+          COUNT(*) AS state_count
+        FROM filtered_blocks fb
+        LEFT JOIN relevant_responses rr
+          ON fb.block_hash = rr.signer_sighash AND fb.signer_key = rr.signer_key
+        GROUP BY fb.signer_key, fb.block_range, response_state
+      ),
+      aggregated_counts AS (
+        SELECT
+          signer_key,
+          block_range,
+          MAX(CASE WHEN response_state = 'accepted' THEN state_count ELSE 0 END) AS accepted,
+          MAX(CASE WHEN response_state = 'rejected' THEN state_count ELSE 0 END) AS rejected,
+          MAX(CASE WHEN response_state = 'missing' THEN state_count ELSE 0 END) AS missing
+        FROM responses_with_states
+        GROUP BY signer_key, block_range
+      )
+      SELECT
+        signer_key,
+        jsonb_object_agg(block_range::text, jsonb_build_object(
+          'accepted', accepted,
+          'rejected', rejected,
+          'missing', missing
+        )) AS block_ranges
+      FROM aggregated_counts
+      GROUP BY signer_key
+      ORDER BY signer_key, block_ranges
+    `;
+    return result;
+  }
+
+  async getRecentBlockPushMetrics(args: { sql: PgSqlClient; blockRanges: number[] }) {
+    const result = await args.sql<
+      {
+        block_range: number;
+        avg_push_time_ms: number;
+      }[]
+    >`
+      WITH block_ranges AS (
+        SELECT unnest(${args.blockRanges}::integer[]) AS range_value
+      ),
+      recent_block_pushes AS (
+        SELECT
+          bp.block_hash,
+          bp.received_at AS push_received_at,
+          ROW_NUMBER() OVER (ORDER BY bp.received_at DESC) AS row_num
+        FROM block_pushes bp
+        ORDER BY bp.received_at DESC
+        LIMIT (SELECT MAX(range_value) FROM block_ranges)
+      ),
+      joined_blocks AS (
+        SELECT
+          rbp.row_num,
+          br.range_value AS block_range,
+          EXTRACT(EPOCH FROM (rbp.push_received_at - bp.received_at)) * 1000 AS push_time_ms
+        FROM block_ranges br
+        JOIN recent_block_pushes rbp
+          ON rbp.row_num <= br.range_value
+        JOIN block_proposals bp
+          ON rbp.block_hash = bp.block_hash
+      )
+      SELECT
+        block_range,
+        ROUND(AVG(push_time_ms), 3)::float8 AS avg_push_time_ms
+      FROM joined_blocks
+      GROUP BY block_range
+      ORDER BY block_range
+    `;
+    return result;
+  }
+
+  async getRecentBlockAcceptanceMetrics(args: { sql: PgSqlClient; blockRanges: number[] }) {
+    const result = await args.sql<
+      {
+        block_range: number;
+        acceptance_rate: number;
+      }[]
+    >`
+      WITH block_ranges AS (
+        SELECT unnest(${args.blockRanges}::integer[]) AS range_value
+      ),
+      recent_block_proposals AS (
+        SELECT
+          bp.block_hash,
+          ROW_NUMBER() OVER (ORDER BY bp.received_at DESC) AS row_num
+        FROM block_proposals bp
+        ORDER BY bp.received_at DESC
+        LIMIT (SELECT MAX(range_value) FROM block_ranges)
+      ),
+      filtered_proposals AS (
+        SELECT
+          rbp.block_hash,
+          br.range_value AS block_range
+        FROM block_ranges br
+        JOIN recent_block_proposals rbp
+          ON rbp.row_num <= br.range_value
+      ),
+      proposal_push_matches AS (
+        SELECT
+          fp.block_range,
+          COUNT(fp.block_hash) AS total_proposals,
+          COUNT(bp.block_hash) AS accepted_proposals
+        FROM filtered_proposals fp
+        LEFT JOIN block_pushes bp
+          ON fp.block_hash = bp.block_hash
+        GROUP BY fp.block_range
+      ),
+      acceptance_rates AS (
+        SELECT
+          block_range,
+          ROUND(COALESCE(accepted_proposals::float8 / total_proposals::float8, 0)::numeric, 4)::float8 AS acceptance_rate
+        FROM proposal_push_matches
+      )
+      SELECT *
+      FROM acceptance_rates
+      ORDER BY block_range
+    `;
+    return result;
+  }
+
+  async getLastPendingProposalDate(args: { sql: PgSqlClient }) {
+    const result = await args.sql<
+      {
+        received_at: Date | null;
+      }[]
+    >`
+      WITH last_confirmed_height AS (
+        SELECT GREATEST(
+          COALESCE(MAX(b.block_height), 0),
+          COALESCE(MAX(bp.block_height), 0)
+        ) AS height
+        FROM blocks b
+        LEFT JOIN block_pushes bp ON true
+      ),
+      oldest_pending_proposal AS (
+        SELECT received_at
+        FROM block_proposals bp
+        WHERE bp.block_height > (SELECT height FROM last_confirmed_height)
+        ORDER BY received_at ASC
+        LIMIT 1
+      )
+      SELECT received_at
+      FROM oldest_pending_proposal
+    `;
+
+    // Return the computed value or null if no pending proposals exist
+    return result.length > 0 ? result[0].received_at : null;
   }
 }

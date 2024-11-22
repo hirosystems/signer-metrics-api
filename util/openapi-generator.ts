@@ -1,3 +1,9 @@
+import * as dotenv from 'dotenv';
+
+// First load default.env to prevent envSchema from throwing errors
+const defaultParsed = dotenv.config({ path: `${__dirname}/default.env` }).parsed;
+dotenv.populate(process.env as Record<string, string>, defaultParsed as Record<string, string>);
+
 import Fastify from 'fastify';
 import { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import { Api } from '../src/api/init';

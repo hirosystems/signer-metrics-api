@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as fs from 'node:fs';
 import * as readline from 'node:readline/promises';
 import * as assert from 'node:assert';
