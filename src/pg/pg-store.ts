@@ -127,11 +127,14 @@ export class PgStore extends BasePgStore {
 
         -- Proposal status
         CASE
+          WHEN block_pushes.block_hash IS NOT NULL THEN 'accepted'
           WHEN bp.block_height > ct.block_height THEN 'pending'
           WHEN b.block_hash IS NULL THEN 'rejected'
           WHEN b.block_hash = bp.block_hash THEN 'accepted'
           ELSE 'rejected'
         END AS status,
+
+        (EXTRACT(EPOCH FROM (block_pushes.received_at - bp.received_at)) * 1000)::integer AS push_time_ms,
 
         -- Aggregate cycle data from reward_set_signers
         COUNT(DISTINCT rss.signer_key)::integer AS total_signer_count,
@@ -186,6 +189,9 @@ export class PgStore extends BasePgStore {
       LEFT JOIN blocks b 
         ON b.block_height = bp.block_height
 
+      LEFT JOIN block_pushes
+        ON block_pushes.block_hash = bp.block_hash
+
       LEFT JOIN reward_set_signers rss 
         ON rss.cycle_number = bp.reward_cycle
 
@@ -203,7 +209,9 @@ export class PgStore extends BasePgStore {
         bp.block_time, 
         bp.reward_cycle, 
         ct.block_height,
-        b.block_hash
+        b.block_hash,
+        block_pushes.block_hash,
+        block_pushes.received_at
 
       ORDER BY bp.received_at DESC
     `;
@@ -223,11 +231,14 @@ export class PgStore extends BasePgStore {
 
         -- Proposal status
         CASE
+          WHEN block_pushes.block_hash IS NOT NULL THEN 'accepted'
           WHEN bp.block_height > ct.block_height THEN 'pending'
           WHEN b.block_hash IS NULL THEN 'rejected'
           WHEN b.block_hash = bp.block_hash THEN 'accepted'
           ELSE 'rejected'
         END AS status,
+
+        (EXTRACT(EPOCH FROM (block_pushes.received_at - bp.received_at)) * 1000)::integer AS push_time_ms,
 
         -- Aggregate cycle data from reward_set_signers
         COUNT(DISTINCT rss.signer_key)::integer AS total_signer_count,
@@ -276,6 +287,9 @@ export class PgStore extends BasePgStore {
       LEFT JOIN blocks b 
         ON b.block_height = bp.block_height
 
+      LEFT JOIN block_pushes
+        ON block_pushes.block_hash = bp.block_hash
+
       LEFT JOIN reward_set_signers rss 
         ON rss.cycle_number = bp.reward_cycle
 
@@ -289,7 +303,9 @@ export class PgStore extends BasePgStore {
       GROUP BY 
         bp.id, 
         ct.block_height,
-        b.block_hash
+        b.block_hash,
+        block_pushes.block_hash,
+        block_pushes.received_at
 
       LIMIT 1
     `;

@@ -38,6 +38,15 @@ export type DbBlockResponse = {
   chain_id: number | null;
 };
 
+export type DbBlockPush = {
+  received_at: string | Date;
+  miner_key: PgBytea;
+  block_height: number;
+  block_time: string | Date;
+  block_hash: PgBytea;
+  index_block_hash: PgBytea;
+};
+
 export type DbBlockProposal = {
   received_at: string | Date;
   miner_key: PgBytea;
@@ -118,6 +127,9 @@ export type DbBlockProposalQueryResponse = {
   // proposal status (from blocks table, matched using block_hash and block_height):
   status: 'pending' | 'rejected' | 'accepted';
 
+  // milliseconds taken between proposal and block_push (from block_pushes, matched using block_hash):
+  push_time_ms: number | null;
+
   // cycle data (from reward_set_signers, matched using cycle_number AKA reward_cycle):
   total_signer_count: number;
   total_signer_weight: number;
@@ -158,6 +170,10 @@ export type BlockResponseEventArgs = {
   blockHash: string;
   signerKey: string;
 };
+export type BlockPushEventArgs = {
+  receiptTimestamp: number;
+  blockHash: string;
+};
 
 export type SignerMessagesEventPayload = (
   | {
@@ -165,5 +181,8 @@ export type SignerMessagesEventPayload = (
     }
   | {
       response: BlockResponseEventArgs;
+    }
+  | {
+      push: BlockPushEventArgs;
     }
 )[];

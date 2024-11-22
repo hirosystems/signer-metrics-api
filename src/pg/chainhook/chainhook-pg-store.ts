@@ -8,10 +8,9 @@ import {
 } from '@hirosystems/api-toolkit';
 import { StacksEvent, StacksPayload } from '@hirosystems/chainhook-client';
 import {
-  BlockProposalEventArgs,
-  BlockResponseEventArgs,
   DbBlock,
   DbBlockProposal,
+  DbBlockPush,
   DbBlockResponse,
   DbBlockSignerSignature,
   DbMockBlock,
@@ -39,6 +38,11 @@ type BlockProposalData = Extract<
 type BlockResponseData = Extract<
   SignerMessage['payload']['data']['message'],
   { type: 'BlockResponse' }
+>['data'];
+
+type BlockPushedData = Extract<
+  SignerMessage['payload']['data']['message'],
+  { type: 'BlockPushed' }
 >['data'];
 
 type MockProposalData = Extract<
@@ -175,7 +179,20 @@ export class ChainhookPgStore extends BasePgStoreModule {
         break;
       }
       case 'BlockPushed': {
-        this.logger.info(`Ignoring BlockPushed StackerDB event`);
+        const res = await this.applyBlockPush(
+          sql,
+          event.received_at_ms,
+          event.payload.data.pubkey,
+          event.payload.data.message.data
+        );
+        if (res.applied) {
+          appliedResults.push({
+            push: {
+              receiptTimestamp: event.received_at_ms,
+              blockHash: res.blockHash,
+            },
+          });
+        }
         break;
       }
       case 'MockProposal': {
@@ -402,6 +419,19 @@ export class ChainhookPgStore extends BasePgStoreModule {
     return proposal;
   }
 
+  async deleteBlockPush(sql: PgSqlClient, blockHash: string): Promise<DbBlockPush> {
+    const result = await sql<DbBlockProposal[]>`
+      DELETE FROM block_pushes WHERE block_hash = ${blockHash} RETURNING *
+    `;
+    if (result.length === 0) {
+      throw new Error(`Block push not found for hash ${blockHash}`);
+    }
+    // copy the result to a new object to remove the id field
+    const blockPush = { ...result[0], id: undefined };
+    delete blockPush.id;
+    return blockPush;
+  }
+
   async deleteBlockResponses(sql: PgSqlClient, blockHash: string): Promise<DbBlockResponse[]> {
     const result = await sql<DbBlockResponse[]>`
       DELETE FROM block_responses WHERE signer_sighash = ${blockHash} RETURNING *
@@ -412,6 +442,38 @@ export class ChainhookPgStore extends BasePgStoreModule {
       delete response.id;
       return response;
     });
+  }
+
+  private async applyBlockPush(
+    sql: PgSqlClient,
+    receivedAt: number,
+    minerPubkey: string,
+    messageData: BlockPushedData
+  ): Promise<{ applied: false } | { applied: true; blockHash: string }> {
+    const blockHash = normalizeHexString(messageData.block.block_hash);
+    const dbBlockPush: DbBlockPush = {
+      received_at: unixTimeMillisecondsToISO(receivedAt),
+      miner_key: normalizeHexString(minerPubkey),
+      block_height: messageData.block.header.chain_length,
+      block_time: unixTimeSecondsToISO(messageData.block.header.timestamp),
+      block_hash: blockHash,
+      index_block_hash: normalizeHexString(messageData.block.index_block_hash),
+    };
+    const result = await sql`
+      INSERT INTO block_pushes ${sql(dbBlockPush)}
+      ON CONFLICT ON CONSTRAINT block_pushes_block_hash_unique DO NOTHING
+    `;
+
+    if (result.count === 0) {
+      this.logger.info(
+        `Skipped inserting duplicate block push hash=${dbBlockPush.block_hash}, miner=${dbBlockPush.miner_key}`
+      );
+      return { applied: false };
+    }
+    this.logger.info(
+      `ChainhookPgStore apply block_push hash=${dbBlockPush.block_hash}, miner=${dbBlockPush.miner_key}`
+    );
+    return { applied: true, blockHash };
   }
 
   private async applyBlockResponse(
@@ -644,7 +706,7 @@ export class ChainhookPgStore extends BasePgStoreModule {
     await this.rollBackBlockSignerSignatures(sql, blockHeight);
   }
 
-  private async rollBackBlock(sql: PgSqlClient, blockHeight: number) {
+  async rollBackBlock(sql: PgSqlClient, blockHeight: number) {
     const res = await sql`
       DELETE FROM blocks WHERE block_height = ${blockHeight}
     `;
@@ -656,7 +718,7 @@ export class ChainhookPgStore extends BasePgStoreModule {
     }
   }
 
-  private async rollBackBlockSignerSignatures(sql: PgSqlClient, blockHeight: number) {
+  async rollBackBlockSignerSignatures(sql: PgSqlClient, blockHeight: number) {
     const res = await sql`
       DELETE FROM block_signer_signatures WHERE block_height = ${blockHeight}
     `;
