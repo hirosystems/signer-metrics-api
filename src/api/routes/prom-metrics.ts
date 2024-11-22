@@ -81,15 +81,31 @@ export const SignerPromMetricsRoutes: FastifyPluginAsync<
     },
   });
 
-  fastify.route({
-    url: '/metrics',
-    method: 'GET',
-    logLevel: 'info',
-    handler: async (_, reply) => {
+  fastify.get(
+    '/metrics',
+    {
+      schema: {
+        operationId: 'getPrometheusMetrics',
+        summary: 'API Signer Prometheus Metrics',
+        description: 'Retreives the Prometheus metrics signer and block proposal related data',
+        tags: ['Prometheus Metrics'],
+        response: {
+          200: {
+            description: 'Prometheus metrics in plain text format',
+            content: {
+              'text/plain': {
+                schema: { type: 'string' },
+              },
+            },
+          },
+        },
+      },
+    },
+    async (_, reply) => {
       const metrics = await signerRegistry.metrics();
       await reply.type(signerRegistry.contentType).send(metrics);
-    },
-  });
+    }
+  );
 
   await Promise.resolve();
 };
