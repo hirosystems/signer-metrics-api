@@ -1,3 +1,10 @@
+## [0.11.0](https://github.com/hirosystems/signer-metrics-api/compare/v0.10.1...v0.11.0) (2024-11-22)
+
+
+### Features
+
+* ingest block-push events ([#60](https://github.com/hirosystems/signer-metrics-api/issues/60)) ([47f524d](https://github.com/hirosystems/signer-metrics-api/commit/47f524d7bd5c63b23d052848873e1b3789764f55))
+
 ## [0.10.1](https://github.com/hirosystems/signer-metrics-api/compare/v0.10.0...v0.10.1) (2024-11-15)
 
 
