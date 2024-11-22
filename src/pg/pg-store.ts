@@ -966,6 +966,7 @@ export class PgStore extends BasePgStore {
         )) AS block_ranges
       FROM aggregated_counts
       GROUP BY signer_key
+      ORDER BY signer_key, block_ranges
     `;
     return result;
   }

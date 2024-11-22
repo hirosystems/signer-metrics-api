@@ -86,7 +86,7 @@ describe('Endpoint tests', () => {
     });
   });
 
-  test('get metrics', async () => {
+  test('prometheus signer metrics', async () => {
     const bucketsEnvName = 'SIGNER_PROMETHEUS_METRICS_BLOCK_PERIODS';
     const orig = ENV[bucketsEnvName];
 
