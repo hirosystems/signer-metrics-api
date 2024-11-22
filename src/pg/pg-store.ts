@@ -414,7 +414,7 @@ export class PgStore extends BasePgStore {
             WHEN bss.id IS NULL AND fbr.accepted = FALSE THEN 'rejected'
             WHEN bss.id IS NULL AND fbr.id IS NULL THEN 'missing'
           END AS signer_status,
-          EXTRACT(MILLISECOND FROM (fbr.received_at - bp.received_at)) AS response_time_ms
+          EXTRACT(EPOCH FROM (fbr.received_at - bp.received_at)) * 1000 AS response_time_ms
         FROM latest_blocks lb
         LEFT JOIN block_proposals bp ON lb.block_hash = bp.block_hash
         LEFT JOIN reward_set_signers rs ON bp.reward_cycle = rs.cycle_number
@@ -542,7 +542,7 @@ export class PgStore extends BasePgStore {
             WHEN bss.id IS NULL AND fbr.accepted = FALSE THEN 'rejected'
             WHEN bss.id IS NULL AND fbr.id IS NULL THEN 'missing'
           END AS signer_status,
-          EXTRACT(MILLISECOND FROM (fbr.received_at - bp.received_at)) AS response_time_ms
+          EXTRACT(EPOCH FROM (fbr.received_at - bp.received_at)) * 1000 AS response_time_ms
         FROM latest_blocks lb
         LEFT JOIN block_proposals bp ON lb.block_hash = bp.block_hash
         LEFT JOIN reward_set_signers rs ON bp.reward_cycle = rs.cycle_number
@@ -704,7 +704,7 @@ export class PgStore extends BasePgStore {
           pd.proposal_received_at,
           rd.accepted,
           rd.received_at AS response_received_at,
-          EXTRACT(MILLISECOND FROM (rd.received_at - pd.proposal_received_at)) AS response_time_ms
+          EXTRACT(EPOCH FROM (rd.received_at - pd.proposal_received_at)) * 1000 AS response_time_ms
         FROM signer_data sd
         CROSS JOIN proposal_data pd -- Cross join to associate all signers with all proposals
         LEFT JOIN response_data rd
@@ -825,7 +825,7 @@ export class PgStore extends BasePgStore {
           rd.accepted,
           rd.received_at AS response_received_at,
           rd.metadata_server_version,
-          EXTRACT(MILLISECOND FROM (rd.received_at - pd.proposal_received_at)) AS response_time_ms
+          EXTRACT(EPOCH FROM (rd.received_at - pd.proposal_received_at)) * 1000 AS response_time_ms
         FROM signer_data sd
         CROSS JOIN proposal_data pd
         LEFT JOIN response_data rd
