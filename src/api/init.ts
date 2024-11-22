@@ -12,6 +12,7 @@ import { CycleRoutes } from './routes/cycle';
 import { BlockRoutes } from './routes/blocks';
 import { BlockProposalsRoutes } from './routes/block-proposals';
 import { SocketIORoutes } from './routes/socket-io';
+import { SignerPromMetricsRoutes } from '../prom-metrics/prom-metrics-service';
 
 export const Api: FastifyPluginAsync<Record<never, never>, Server, TypeBoxTypeProvider> = async (
   fastify,
@@ -24,6 +25,7 @@ export const Api: FastifyPluginAsync<Record<never, never>, Server, TypeBoxTypePr
       await fastify.register(BlockRoutes);
       await fastify.register(BlockProposalsRoutes);
       await fastify.register(SocketIORoutes);
+      await fastify.register(SignerPromMetricsRoutes);
     },
     { prefix: '/signer-metrics' }
   );
@@ -81,8 +83,9 @@ export async function buildPromServer(args: { metrics: IFastifyMetrics }) {
     logLevel: 'info',
     handler: async (_, reply) => {
       const promClient = args.metrics.client as typeof PromClient;
-      const metrics = await promClient.register.metrics();
-      await reply.type('text/plain').send(metrics);
+      const registry = promClient.register;
+      const metrics = await registry.metrics();
+      await reply.type(registry.contentType).send(metrics);
     },
   });
 

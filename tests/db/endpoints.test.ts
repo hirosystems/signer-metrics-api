@@ -21,6 +21,7 @@ import {
 } from '../../src/api/schemas';
 import { PoxInfo, RpcStackerSetResponse } from '../../src/stacks-core-rpc/stacks-core-rpc-client';
 import { rpcStackerSetToDbRewardSetSigners } from '../../src/stacks-core-rpc/stacker-set-updater';
+import { ENV } from '../../src/env';
 
 describe('Endpoint tests', () => {
   let db: PgStore;
@@ -83,6 +84,52 @@ describe('Endpoint tests', () => {
       server_version: expect.any(String),
       status: 'ready',
     });
+  });
+
+  test('get metrics', async () => {
+    const bucketsEnvName = 'SIGNER_PROMETHEUS_METRICS_BLOCK_PERIODS';
+    const orig = ENV[bucketsEnvName];
+
+    const buckets = [1, 2, 3, 5, 10, 100, 1000];
+    process.env[bucketsEnvName] = buckets.join(',');
+    ENV.reload();
+
+    const dbMetricsResult = await db.getRecentSignerMetrics({
+      sql: db.sql,
+      blockRanges: ENV[bucketsEnvName],
+    });
+    expect(dbMetricsResult).toEqual(
+      expect.arrayContaining([
+        {
+          signer_key: '0x03fc7cb917698b6137060f434988f7688520972dfb944f9b03c0fbf1c75303e79a',
+          block_ranges: {
+            '1': { missing: 0, accepted: 1, rejected: 0 },
+            '2': { missing: 0, accepted: 2, rejected: 0 },
+            '3': { missing: 0, accepted: 3, rejected: 0 },
+            '5': { missing: 0, accepted: 5, rejected: 0 },
+            '10': { missing: 0, accepted: 10, rejected: 0 },
+            '100': { missing: 1, accepted: 86, rejected: 12 },
+            '1000': { missing: 1, accepted: 86, rejected: 12 },
+          },
+        },
+      ])
+    );
+
+    const responseTest = await supertest(apiServer.server)
+      .get('/signer-metrics/metrics')
+      .expect(200);
+    const expectedLines = `# TYPE signer_state_count gauge
+signer_state_count{signer="0x03fc7cb917698b6137060f434988f7688520972dfb944f9b03c0fbf1c75303e79a",period="1",state="missing"} 0
+signer_state_count{signer="0x03fc7cb917698b6137060f434988f7688520972dfb944f9b03c0fbf1c75303e79a",period="1",state="accepted"} 1
+signer_state_count{signer="0x03fc7cb917698b6137060f434988f7688520972dfb944f9b03c0fbf1c75303e79a",period="1",state="rejected"} 0
+signer_state_count{signer="0x03fc7cb917698b6137060f434988f7688520972dfb944f9b03c0fbf1c75303e79a",period="2",state="missing"} 0
+signer_state_count{signer="0x03fc7cb917698b6137060f434988f7688520972dfb944f9b03c0fbf1c75303e79a",period="2",state="accepted"} 2
+signer_state_count{signer="0x03fc7cb917698b6137060f434988f7688520972dfb944f9b03c0fbf1c75303e79a",period="2",state="rejected"} 0`;
+    const receivedLines = responseTest.text.split('\n');
+    expect(receivedLines).toEqual(expect.arrayContaining(expectedLines.split('\n')));
+
+    process.env[bucketsEnvName] = orig.join(',');
+    ENV.reload();
   });
 
   test('get block proposals', async () => {

@@ -3,16 +3,14 @@ import { PgStore } from '../pg/pg-store';
 import { sleep } from '../helpers';
 import { ENV } from '../env';
 import { logger as defaultLogger } from '@hirosystems/api-toolkit';
+import { FastifyPluginAsync } from 'fastify';
+import { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
+import { Server } from 'node:http';
 
 export class PromMetricsService {
   private readonly signerRegistry = new Registry();
 
-  private readonly signerStateCount = new Gauge({
-    name: 'signer_state_count',
-    help: 'Count of signer states over different block periods',
-    labelNames: ['signer', 'period', 'state'] as const,
-    registers: [this.signerRegistry],
-  });
+  private readonly signerStateCount: Gauge<'signer' | 'period' | 'state'>;
 
   private readonly db: PgStore;
   private readonly abortController: AbortController = new AbortController();
@@ -20,7 +18,23 @@ export class PromMetricsService {
 
   constructor(args: { db: PgStore }) {
     this.db = args.db;
-    void this.startGatherMetricsJob();
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const instance = this;
+    const gauge = new Gauge({
+      name: 'signer_state_count',
+      help: 'Count of signer states over different block periods',
+      labelNames: ['signer', 'period', 'state'] as const,
+      registers: [this.signerRegistry],
+      async collect() {
+        const areEqual = Object.is(this, gauge);
+        console.log(areEqual);
+        await instance.gatherMetrics(this);
+      },
+    });
+    this.signerStateCount = gauge;
+
+    // TODO: decide if this should be a background job vs on-demand collection
+    // void this.startGatherMetricsJob();
   }
 
   public stop() {
@@ -30,7 +44,7 @@ export class PromMetricsService {
   private async startGatherMetricsJob() {
     while (!this.abortController.signal.aborted) {
       try {
-        await this.gatherMetrics();
+        await this.gatherMetrics(this.signerStateCount);
       } catch (error) {
         if (this.abortController.signal.aborted) {
           return;
@@ -40,7 +54,7 @@ export class PromMetricsService {
 
       try {
         await sleep(
-          ENV.SIGNER_PROMETHEUS_METRICS_UPDATE_INTERVAL * 1000,
+          ENV.SIGNER_PROMETHEUS_METRICS_UPDATE_INTERVAL_SECONDS * 1000,
           this.abortController.signal
         );
       } catch (_err) {
@@ -51,19 +65,16 @@ export class PromMetricsService {
     }
   }
 
-  private async gatherMetrics() {
+  private async gatherMetrics(gauge: typeof this.signerStateCount) {
     const dbResults = await this.db.sqlTransaction(async sql => {
       const blockRanges = ENV.SIGNER_PROMETHEUS_METRICS_BLOCK_PERIODS;
       return await this.db.getRecentSignerMetrics({ sql, blockRanges });
     });
-    this.signerStateCount.reset();
+    gauge.reset();
     for (const row of dbResults) {
       for (const [blockRange, states] of Object.entries(row.block_ranges)) {
         for (const [state, count] of Object.entries(states)) {
-          this.signerStateCount.set(
-            { signer: row.signer_key, period: blockRange, state: state },
-            count
-          );
+          gauge.set({ signer: row.signer_key, period: blockRange, state: state }, count);
         }
       }
     }
@@ -74,5 +85,29 @@ export class PromMetricsService {
   }
 }
 
-// res.set('Content-Type', customRegistry.contentType);
-// res.end(await customRegistry.metrics());
+export const SignerPromMetricsRoutes: FastifyPluginAsync<
+  Record<never, never>,
+  Server,
+  TypeBoxTypeProvider
+> = async (fastify, _options) => {
+  const db = fastify.db;
+  const promMetricsService = new PromMetricsService({ db });
+
+  fastify.addHook('onClose', (_instance, done) => {
+    promMetricsService.stop();
+    done();
+  });
+
+  fastify.route({
+    url: '/metrics',
+    method: 'GET',
+    logLevel: 'info',
+    handler: async (_, reply) => {
+      const registry = promMetricsService.getRegistry();
+      const metrics = await registry.metrics();
+      await reply.type(registry.contentType).send(metrics);
+    },
+  });
+
+  await Promise.resolve();
+};

@@ -31,7 +31,7 @@ const schema = Type.Object({
   PROFILER_PORT: Type.Number({ default: 9119 }),
 
   /** Interval in seconds to update signer prometheus metrics */
-  SIGNER_PROMETHEUS_METRICS_UPDATE_INTERVAL: Type.Number({ default: 5, minimum: 1 }),
+  SIGNER_PROMETHEUS_METRICS_UPDATE_INTERVAL_SECONDS: Type.Number({ default: 30, minimum: 1 }),
   SIGNER_PROMETHEUS_METRICS_BLOCK_PERIODS: Type.Array(Type.Integer(), {
     default: [5, 10, 25, 100, 1000],
     separator: ',',
