@@ -18,8 +18,8 @@ export const SignerPromMetricsRoutes: FastifyPluginAsync<
     labelNames: ['signer', 'period', 'state'] as const,
     registers: [signerRegistry],
     async collect() {
+      const blockRanges = ENV.SIGNER_PROMETHEUS_METRICS_BLOCK_PERIODS.split(',').map(Number);
       const dbResults = await db.sqlTransaction(async sql => {
-        const blockRanges = ENV.SIGNER_PROMETHEUS_METRICS_BLOCK_PERIODS;
         return await db.getRecentSignerMetrics({ sql, blockRanges });
       });
       this.reset();

@@ -94,10 +94,8 @@ describe('Endpoint tests', () => {
     process.env[bucketsEnvName] = buckets.join(',');
     ENV.reload();
 
-    const dbMetricsResult = await db.getRecentSignerMetrics({
-      sql: db.sql,
-      blockRanges: ENV[bucketsEnvName],
-    });
+    const blockRanges = ENV[bucketsEnvName].split(',').map(Number);
+    const dbMetricsResult = await db.getRecentSignerMetrics({ sql: db.sql, blockRanges });
     expect(dbMetricsResult).toEqual(
       expect.arrayContaining([
         {
@@ -128,7 +126,7 @@ signer_state_count{signer="0x03fc7cb917698b6137060f434988f7688520972dfb944f9b03c
     const receivedLines = responseTest.text.split('\n');
     expect(receivedLines).toEqual(expect.arrayContaining(expectedLines.split('\n')));
 
-    process.env[bucketsEnvName] = orig.join(',');
+    process.env[bucketsEnvName] = orig;
     ENV.reload();
   });
 
