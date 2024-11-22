@@ -93,8 +93,19 @@ describe('Endpoint tests', () => {
     const buckets = [1, 2, 3, 5, 10, 100, 1000];
     process.env[bucketsEnvName] = buckets.join(',');
     ENV.reload();
-
     const blockRanges = ENV[bucketsEnvName].split(',').map(Number);
+
+    const dbPushMetricsResult = await db.getRecentBlockPushMetrics({ sql: db.sql, blockRanges });
+    expect(dbPushMetricsResult).toEqual([
+      { block_range: 1, avg_push_time_ms: 27262 },
+      { block_range: 2, avg_push_time_ms: 30435.5 },
+      { block_range: 3, avg_push_time_ms: 28167.333 },
+      { block_range: 5, avg_push_time_ms: 28553.8 },
+      { block_range: 10, avg_push_time_ms: 31264.4 },
+      { block_range: 100, avg_push_time_ms: 29451.831 },
+      { block_range: 1000, avg_push_time_ms: 29451.831 },
+    ]);
+
     const dbMetricsResult = await db.getRecentSignerMetrics({ sql: db.sql, blockRanges });
     expect(dbMetricsResult).toEqual(
       expect.arrayContaining([
@@ -116,15 +127,22 @@ describe('Endpoint tests', () => {
     const responseTest = await supertest(apiServer.server)
       .get('/signer-metrics/metrics')
       .expect(200);
-    const expectedLines = `# TYPE signer_state_count gauge
+    const receivedLines = responseTest.text.split('\n');
+
+    const expectedPushTimeLines = `# TYPE avg_block_push_time_ms gauge
+avg_block_push_time_ms{period="1"} 27262
+avg_block_push_time_ms{period="2"} 30435.5
+avg_block_push_time_ms{period="3"} 28167.333`;
+    expect(receivedLines).toEqual(expect.arrayContaining(expectedPushTimeLines.split('\n')));
+
+    const expectedSignerStateLines = `# TYPE signer_state_count gauge
 signer_state_count{signer="0x03fc7cb917698b6137060f434988f7688520972dfb944f9b03c0fbf1c75303e79a",period="1",state="missing"} 0
 signer_state_count{signer="0x03fc7cb917698b6137060f434988f7688520972dfb944f9b03c0fbf1c75303e79a",period="1",state="accepted"} 1
 signer_state_count{signer="0x03fc7cb917698b6137060f434988f7688520972dfb944f9b03c0fbf1c75303e79a",period="1",state="rejected"} 0
 signer_state_count{signer="0x03fc7cb917698b6137060f434988f7688520972dfb944f9b03c0fbf1c75303e79a",period="2",state="missing"} 0
 signer_state_count{signer="0x03fc7cb917698b6137060f434988f7688520972dfb944f9b03c0fbf1c75303e79a",period="2",state="accepted"} 2
 signer_state_count{signer="0x03fc7cb917698b6137060f434988f7688520972dfb944f9b03c0fbf1c75303e79a",period="2",state="rejected"} 0`;
-    const receivedLines = responseTest.text.split('\n');
-    expect(receivedLines).toEqual(expect.arrayContaining(expectedLines.split('\n')));
+    expect(receivedLines).toEqual(expect.arrayContaining(expectedSignerStateLines.split('\n')));
 
     process.env[bucketsEnvName] = orig;
     ENV.reload();

@@ -11,16 +11,35 @@ export const SignerPromMetricsRoutes: FastifyPluginAsync<
 > = async (fastify, _options) => {
   const db = fastify.db;
 
+  // Getter for block periods so that the env var can be updated
+  const getBlockPeriods = () => ENV.SIGNER_PROMETHEUS_METRICS_BLOCK_PERIODS.split(',').map(Number);
+
   const signerRegistry = new Registry();
+
+  new Gauge({
+    name: 'avg_block_push_time_ms',
+    help: 'Average time (in milliseconds) taken for block proposals to be accepted and pushed over different block periods',
+    labelNames: ['period'] as const,
+    registers: [signerRegistry],
+    async collect() {
+      const dbResults = await db.sqlTransaction(async sql => {
+        return await db.getRecentBlockPushMetrics({ sql, blockRanges: getBlockPeriods() });
+      });
+      this.reset();
+      for (const row of dbResults) {
+        this.set({ period: row.block_range }, row.avg_push_time_ms);
+      }
+    },
+  });
+
   new Gauge({
     name: 'signer_state_count',
     help: 'Count of signer states over different block periods',
     labelNames: ['signer', 'period', 'state'] as const,
     registers: [signerRegistry],
     async collect() {
-      const blockRanges = ENV.SIGNER_PROMETHEUS_METRICS_BLOCK_PERIODS.split(',').map(Number);
       const dbResults = await db.sqlTransaction(async sql => {
-        return await db.getRecentSignerMetrics({ sql, blockRanges });
+        return await db.getRecentSignerMetrics({ sql, blockRanges: getBlockPeriods() });
       });
       this.reset();
       for (const row of dbResults) {

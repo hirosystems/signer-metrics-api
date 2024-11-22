@@ -969,4 +969,44 @@ export class PgStore extends BasePgStore {
     `;
     return result;
   }
+
+  async getRecentBlockPushMetrics(args: { sql: PgSqlClient; blockRanges: number[] }) {
+    const result = await args.sql<
+      {
+        block_range: number;
+        avg_push_time_ms: number;
+      }[]
+    >`
+      WITH block_ranges AS (
+        SELECT unnest(${args.blockRanges}::integer[]) AS range_value
+      ),
+      recent_block_pushes AS (
+        SELECT
+          bp.block_hash,
+          bp.received_at AS push_received_at,
+          ROW_NUMBER() OVER (ORDER BY bp.received_at DESC) AS row_num
+        FROM block_pushes bp
+        ORDER BY bp.received_at DESC
+        LIMIT (SELECT MAX(range_value) FROM block_ranges)
+      ),
+      joined_blocks AS (
+        SELECT
+          rbp.row_num,
+          br.range_value AS block_range,
+          EXTRACT(EPOCH FROM (rbp.push_received_at - bp.received_at)) * 1000 AS push_time_ms
+        FROM block_ranges br
+        JOIN recent_block_pushes rbp
+          ON rbp.row_num <= br.range_value
+        JOIN block_proposals bp
+          ON rbp.block_hash = bp.block_hash
+      )
+      SELECT
+        block_range,
+        ROUND(AVG(push_time_ms), 3)::float8 AS avg_push_time_ms
+      FROM joined_blocks
+      GROUP BY block_range
+      ORDER BY block_range
+    `;
+    return result;
+  }
 }
