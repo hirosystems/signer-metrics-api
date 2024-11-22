@@ -17,6 +17,19 @@ export const SignerPromMetricsRoutes: FastifyPluginAsync<
   const signerRegistry = new Registry();
 
   new Gauge({
+    name: 'time_since_last_pending_block_proposal_ms',
+    help: 'Time in milliseconds since the oldest pending block proposal',
+    registers: [signerRegistry],
+    async collect() {
+      const dbResult = await db.sqlTransaction(async sql => {
+        return await db.getLastPendingProposalDate({ sql });
+      });
+      this.reset();
+      this.set(dbResult ? Date.now() - dbResult.getTime() : 0);
+    },
+  });
+
+  new Gauge({
     name: 'avg_block_push_time_ms',
     help: 'Average time (in milliseconds) taken for block proposals to be accepted and pushed over different block periods',
     labelNames: ['period'] as const,

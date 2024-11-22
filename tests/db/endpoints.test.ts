@@ -95,6 +95,17 @@ describe('Endpoint tests', () => {
     ENV.reload();
     const blockRanges = ENV[bucketsEnvName].split(',').map(Number);
 
+    // Delete from confirmed blocks tables to ensure there is a pending block_proposal
+    const [{ block_height }] = await db.sql<
+      { block_height: number }[]
+    >`SELECT block_height FROM block_proposals ORDER BY block_height DESC LIMIT 1`;
+    await db.sql`DELETE FROM blocks WHERE block_height >= ${block_height}`;
+    await db.sql`DELETE FROM block_pushes WHERE block_height >= ${block_height}`;
+
+    const pendingProposalDate = await db.getLastPendingProposalDate({ sql: db.sql });
+    expect(pendingProposalDate).toBeInstanceOf(Date);
+    expect(new Date().getTime() - pendingProposalDate!.getTime()).toBeGreaterThan(0);
+
     const dbPushMetricsResult = await db.getRecentBlockPushMetrics({ sql: db.sql, blockRanges });
     expect(dbPushMetricsResult).toEqual([
       { block_range: 1, avg_push_time_ms: 27262 },
@@ -142,6 +153,10 @@ describe('Endpoint tests', () => {
       .get('/signer-metrics/metrics')
       .expect(200);
     const receivedLines = responseTest.text.split('\n');
+
+    const expectedPendingProposalLineRegex =
+      /# TYPE time_since_last_pending_block_proposal_ms gauge\ntime_since_last_pending_block_proposal_ms [1-9]\d*/;
+    expect(responseTest.text).toMatch(expectedPendingProposalLineRegex);
 
     const expectedPushTimeLines = `# TYPE avg_block_push_time_ms gauge
 avg_block_push_time_ms{period="1"} 27262
