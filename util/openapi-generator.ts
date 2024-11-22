@@ -5,6 +5,10 @@ import FastifySwagger from '@fastify/swagger';
 import { mkdirSync, writeFileSync } from 'fs';
 import { OpenApiSchemaOptions } from '../src/api/schemas';
 import * as path from 'node:path';
+import * as dotenv from 'dotenv';
+
+const defaultParsed = dotenv.config({ path: `${__dirname}/default.env` }).parsed;
+dotenv.populate(process.env as Record<string, string>, defaultParsed as Record<string, string>);
 
 /**
  * Generates `openapi.yaml` based on current Swagger definitions.
