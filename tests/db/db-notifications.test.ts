@@ -1,7 +1,6 @@
 import * as fs from 'node:fs';
 import * as readline from 'node:readline/promises';
 import * as zlib from 'node:zlib';
-import { once } from 'node:events';
 import { FastifyInstance } from 'fastify';
 import { StacksPayload } from '@hirosystems/chainhook-client';
 import { buildApiServer } from '../../src/api/init';
@@ -9,10 +8,10 @@ import { PgStore } from '../../src/pg/pg-store';
 import { BlockProposalsEntry } from '../../src/api/schemas';
 import { PoxInfo, RpcStackerSetResponse } from '../../src/stacks-core-rpc/stacks-core-rpc-client';
 import { rpcStackerSetToDbRewardSetSigners } from '../../src/stacks-core-rpc/stacker-set-updater';
-import { SignerMessagesEventPayload } from '../../src/pg/types';
 import { io, Socket } from 'socket.io-client';
 import { ClientToServerEvents, ServerToClientEvents } from '../../src/api/routes/socket-io';
 import { waitForEvent } from '../../src/helpers';
+import { ENV } from '../../src/env';
 
 describe('Db notifications tests', () => {
   let db: PgStore;

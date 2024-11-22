@@ -12,7 +12,7 @@ import { CycleRoutes } from './routes/cycle';
 import { BlockRoutes } from './routes/blocks';
 import { BlockProposalsRoutes } from './routes/block-proposals';
 import { SocketIORoutes } from './routes/socket-io';
-import { SignerPromMetricsRoutes } from '../prom-metrics/prom-metrics-service';
+import { SignerPromMetricsRoutes } from './routes/prom-metrics';
 
 export const Api: FastifyPluginAsync<Record<never, never>, Server, TypeBoxTypeProvider> = async (
   fastify,
