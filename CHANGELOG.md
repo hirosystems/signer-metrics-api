@@ -1,3 +1,10 @@
+## [0.12.1](https://github.com/hirosystems/signer-metrics-api/compare/v0.12.0...v0.12.1) (2024-11-25)
+
+
+### Bug Fixes
+
+* remove accidental cartesian product of `blocks_pushes` * `blocks` in pending proposal date query ([#62](https://github.com/hirosystems/signer-metrics-api/issues/62)) ([1bcc4c1](https://github.com/hirosystems/signer-metrics-api/commit/1bcc4c14a66a133c28a9d57ff2f58487774cff91))
+
 ## [0.12.0](https://github.com/hirosystems/signer-metrics-api/compare/v0.11.0...v0.12.0) (2024-11-22)
 
 
