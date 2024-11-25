@@ -1066,18 +1066,17 @@ export class PgStore extends BasePgStore {
         received_at: Date | null;
       }[]
     >`
-      WITH last_confirmed_height AS (
-        SELECT GREATEST(
-          COALESCE(MAX(b.block_height), 0),
-          COALESCE(MAX(bp.block_height), 0)
-        ) AS height
-        FROM blocks b
-        LEFT JOIN block_pushes bp ON true
+      WITH max_heights AS (
+        SELECT 
+          GREATEST(
+            (SELECT COALESCE(MAX(block_height), 0) FROM blocks),
+            (SELECT COALESCE(MAX(block_height), 0) FROM block_pushes)
+          ) AS height
       ),
       oldest_pending_proposal AS (
         SELECT received_at
         FROM block_proposals bp
-        WHERE bp.block_height > (SELECT height FROM last_confirmed_height)
+        WHERE bp.block_height > (SELECT height FROM max_heights)
         ORDER BY received_at ASC
         LIMIT 1
       )
