@@ -1,3 +1,10 @@
+## [0.12.2](https://github.com/hirosystems/signer-metrics-api/compare/v0.12.1...v0.12.2) (2024-12-17)
+
+
+### Bug Fixes
+
+* remove unused vercel url ([#64](https://github.com/hirosystems/signer-metrics-api/issues/64)) ([e05712d](https://github.com/hirosystems/signer-metrics-api/commit/e05712d913992e96707272d22635ee4a795f34a2))
+
 ## [0.12.1](https://github.com/hirosystems/signer-metrics-api/compare/v0.12.0...v0.12.1) (2024-11-25)
 
 
