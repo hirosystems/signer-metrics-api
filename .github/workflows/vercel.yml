@@ -17,7 +17,7 @@ jobs:
 
     environment:
       name: ${{ github.ref_name == 'main' && 'Production' || 'Preview' }}
-      url: ${{ github.ref_name == 'main' && 'https://signer-metrics-api.vercel.app/' || 'https://signer-metrics-api-pbcblockstack-blockstack.vercel.app/' }}
+      url: 'https://signer-metrics-api.vercel.app/'
 
     env:
       PROD: ${{ github.ref_name == 'main' }}
