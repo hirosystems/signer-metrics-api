@@ -30,7 +30,7 @@ export type DbWriteEvents = EventEmitter<{
   signerMessages: [SignerMessagesEventPayload];
 }>;
 
-export class ChainhookPgStore extends BasePgStoreModule {
+export class PgWriteStore extends BasePgStoreModule {
   readonly events: DbWriteEvents = new EventEmitter();
   readonly logger = defaultLogger.child({ module: 'PgWriteStore' });
 
@@ -139,7 +139,7 @@ export class ChainhookPgStore extends BasePgStoreModule {
       return { applied: false };
     }
     this.logger.info(
-      `ChainhookPgStore apply block_proposal height=${dbBlockProposal.block_height}, hash=${dbBlockProposal.block_hash}`
+      `Apply block_proposal height=${dbBlockProposal.block_height}, hash=${dbBlockProposal.block_hash}`
     );
     return { applied: true, blockHash };
   }
@@ -209,7 +209,7 @@ export class ChainhookPgStore extends BasePgStoreModule {
       return { applied: false };
     }
     this.logger.info(
-      `ChainhookPgStore apply block_push hash=${dbBlockPush.block_hash}, miner=${dbBlockPush.miner_key}`
+      `Apply block_push hash=${dbBlockPush.block_hash}, miner=${dbBlockPush.miner_key}`
     );
     return { applied: true, blockHash };
   }
@@ -253,7 +253,7 @@ export class ChainhookPgStore extends BasePgStoreModule {
       return { applied: false };
     }
     this.logger.info(
-      `ChainhookPgStore apply block_response signer=${dbBlockResponse.signer_key}, hash=${dbBlockResponse.signer_sighash}`
+      `Apply block_response signer=${dbBlockResponse.signer_key}, hash=${dbBlockResponse.signer_sighash}`
     );
     return { applied: true, blockHash, signerKey };
   }
@@ -306,7 +306,7 @@ export class ChainhookPgStore extends BasePgStoreModule {
     // Skip pre-nakamoto blocks
     if (!dbBlock.is_nakamoto_block) {
       this.logger.info(
-        `ChainhookPgStore skipping apply for pre-nakamoto block ${dbBlock.block_height} ${dbBlock.block_hash}`
+        `Skipping apply for pre-nakamoto block ${dbBlock.block_height} ${dbBlock.block_hash}`
       );
     } else {
       // After the block is inserted, calculate the reward_cycle_number, then check if the reward_set_signers
@@ -342,9 +342,7 @@ export class ChainhookPgStore extends BasePgStoreModule {
         // Use setTimeout to ensure we break out of the current sql transaction within the async context
         setTimeout(() => this.events.emit('missingStackerSet', { cycleNumber: cycle_number }));
       }
-      this.logger.info(
-        `ChainhookPgStore apply block ${dbBlock.block_height} ${dbBlock.block_hash}`
-      );
+      this.logger.info(`Apply block ${dbBlock.block_height} ${dbBlock.block_hash}`);
     }
   }
 
@@ -370,7 +368,7 @@ export class ChainhookPgStore extends BasePgStoreModule {
       );
     } else {
       this.logger.info(
-        `ChainhookPgStore apply block_signer_signatures, block=${signerSigs[0].block_height}, count=${insertCount}`
+        `Apply block_signer_signatures, block=${signerSigs[0].block_height}, count=${insertCount}`
       );
     }
   }
@@ -408,7 +406,7 @@ export class ChainhookPgStore extends BasePgStoreModule {
       );
     } else {
       this.logger.info(
-        `ChainhookPgStore apply reward_set_signers, cycle=${rewardSetSigners[0].cycle_number}, count=${insertCount}`
+        `Apply reward_set_signers, cycle=${rewardSetSigners[0].cycle_number}, count=${insertCount}`
       );
     }
     return { rowsDeleted: deleteRows.count, rowsInserted: insertCount };
@@ -418,7 +416,7 @@ export class ChainhookPgStore extends BasePgStoreModule {
     const res = await sql`
       DELETE FROM blocks WHERE block_height = ${blockHeight}
     `;
-    this.logger.info(`ChainhookPgStore rollback block ${blockHeight}`);
+    this.logger.info(`Rollback block ${blockHeight}`);
     if (res.count !== 1) {
       this.logger.warn(
         `Unexpected number of rows deleted for block ${blockHeight}, ${res.count} rows`
@@ -431,7 +429,7 @@ export class ChainhookPgStore extends BasePgStoreModule {
       DELETE FROM block_signer_signatures WHERE block_height = ${blockHeight}
     `;
     this.logger.info(
-      `ChainhookPgStore rollback block signer signatures for block ${blockHeight}, deleted ${res.count} rows`
+      `Rollback block signer signatures for block ${blockHeight}, deleted ${res.count} rows`
     );
   }
 }

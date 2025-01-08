@@ -8,7 +8,7 @@ import {
   runMigrations,
 } from '@hirosystems/api-toolkit';
 import * as path from 'path';
-import { ChainhookPgStore } from './ingestion/pg-write-store';
+import { PgWriteStore } from './ingestion/pg-write-store';
 import { BlockIdParam, normalizeHexString, sleep } from '../helpers';
 import { Fragment } from 'postgres';
 import { DbBlockProposalQueryResponse } from './types';
@@ -20,7 +20,7 @@ export const MIGRATIONS_DIR = path.join(__dirname, '../../migrations');
  * Connects and queries the Signer Metrics API's local postgres DB.
  */
 export class PgStore extends BasePgStore {
-  readonly ingestion: ChainhookPgStore;
+  readonly ingestion: PgWriteStore;
   readonly notifications: NotificationPgStore;
 
   static async connect(opts?: {
@@ -69,7 +69,7 @@ export class PgStore extends BasePgStore {
 
   constructor(sql: PgSqlClient) {
     super(sql);
-    this.ingestion = new ChainhookPgStore(this);
+    this.ingestion = new PgWriteStore(this);
     this.notifications = new NotificationPgStore(this, sql, this.ingestion.events);
   }
 
