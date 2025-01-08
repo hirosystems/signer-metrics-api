@@ -6,7 +6,7 @@ import {
   PgSqlClient,
 } from '@hirosystems/api-toolkit';
 import { EventEmitter } from 'node:events';
-import { DbWriteEvents } from '../chainhook/chainhook-pg-store';
+import { DbWriteEvents } from '../ingestion/pg-write-store';
 import { SignerMessagesEventPayload } from '../types';
 
 export type DbListenEvents = EventEmitter<{

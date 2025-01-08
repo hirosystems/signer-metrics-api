@@ -32,7 +32,7 @@ export type DbWriteEvents = EventEmitter<{
 
 export class ChainhookPgStore extends BasePgStoreModule {
   readonly events: DbWriteEvents = new EventEmitter();
-  readonly logger = defaultLogger.child({ module: 'ChainhookPgStore' });
+  readonly logger = defaultLogger.child({ module: 'PgWriteStore' });
 
   constructor(db: BasePgStore) {
     super(db);

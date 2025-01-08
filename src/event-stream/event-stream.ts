@@ -87,9 +87,9 @@ export class EventStreamHandler {
   ): Promise<void> {
     const time = stopwatch();
     const appliedSignerMessageResults: SignerMessagesEventPayload = [];
-    await this.db.chainhook.sqlWriteTransaction(async sql => {
+    await this.db.ingestion.sqlWriteTransaction(async sql => {
       for (const chunk of stackerDbChunks) {
-        const result = await this.db.chainhook.applyStackerDbChunk(sql, timestamp, chunk);
+        const result = await this.db.ingestion.applyStackerDbChunk(sql, timestamp, chunk);
         appliedSignerMessageResults.push(...result);
       }
       await this.db.updateLastIngestedRedisMsgId(sql, messageId);
@@ -100,7 +100,7 @@ export class EventStreamHandler {
     // Use setTimeout to break out of the call stack so caller is not blocked by event listeners.
     if (appliedSignerMessageResults.length > 0) {
       setTimeout(() => {
-        this.db.chainhook.events.emit('signerMessages', appliedSignerMessageResults);
+        this.db.ingestion.events.emit('signerMessages', appliedSignerMessageResults);
       });
     }
   }
@@ -113,14 +113,14 @@ export class EventStreamHandler {
     // TODO: wrap in sql transaction
     const time = stopwatch();
     await this.db.sqlWriteTransaction(async sql => {
-      const lastIngestedBlockHeight = await this.db.chainhook.getLastIngestedBlockHeight(sql);
+      const lastIngestedBlockHeight = await this.db.ingestion.getLastIngestedBlockHeight(sql);
       if (block.blockHeight <= lastIngestedBlockHeight) {
         this.logger.info(`Skipping previously ingested block ${block.blockHeight}`);
         return;
       }
       this.logger.info(`Apply block ${block.blockHeight}`);
-      await this.db.chainhook.applyBlock(sql, block);
-      await this.db.chainhook.updateChainTipBlockHeight(sql, block.blockHeight);
+      await this.db.ingestion.applyBlock(sql, block);
+      await this.db.ingestion.updateChainTipBlockHeight(sql, block.blockHeight);
       await this.db.updateLastIngestedRedisMsgId(sql, messageId);
     });
     this.logger.info(`Apply block ${block.blockHeight} finished in ${time.getElapsedSeconds()}s`);

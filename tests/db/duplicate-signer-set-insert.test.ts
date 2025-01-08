@@ -19,7 +19,7 @@ describe('Duplicate signer set insert', () => {
     const stackerSetDump = JSON.parse(
       fs.readFileSync('./tests/dumps/dump-stacker-set-cycle-72-2024-11-02.json', 'utf8')
     ) as RpcStackerSetResponse;
-    const insertResult = await db.chainhook.insertRewardSetSigners(
+    const insertResult = await db.ingestion.insertRewardSetSigners(
       db.sql,
       rpcStackerSetToDbRewardSetSigners(stackerSetDump, 72)
     );
@@ -33,7 +33,7 @@ describe('Duplicate signer set insert', () => {
     const stackerSetDump = JSON.parse(
       fs.readFileSync('./tests/dumps/dump-stacker-set-cycle-72-2024-11-02.json', 'utf8')
     ) as RpcStackerSetResponse;
-    const insertResult = await db.chainhook.insertRewardSetSigners(
+    const insertResult = await db.ingestion.insertRewardSetSigners(
       db.sql,
       rpcStackerSetToDbRewardSetSigners(stackerSetDump, 72)
     );
