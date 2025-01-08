@@ -58,62 +58,6 @@ export type DbBlockProposal = {
   reward_cycle: number;
 };
 
-export type DbMockProposal = {
-  received_at: string;
-  miner_key: PgBytea;
-  burn_block_height: number;
-  stacks_tip_consensus_hash: PgBytea;
-  stacks_tip: PgBytea;
-  stacks_tip_height: number;
-  server_version: string;
-  pox_consensus_hash: PgBytea;
-  network_id: number;
-  index_block_hash: PgBytea;
-};
-
-export type DbMockSignature = {
-  received_at: string;
-  signer_key: PgBytea;
-  signature: PgBytea;
-
-  // Mock proposal fields
-  burn_block_height: number;
-  stacks_tip_consensus_hash: PgBytea;
-  stacks_tip: PgBytea;
-  stacks_tip_height: number;
-  server_version: string;
-  pox_consensus_hash: PgBytea;
-  network_id: number;
-  index_block_hash: PgBytea;
-
-  // Metadata fields
-  metadata_server_version: string;
-};
-
-export type DbMockBlock = {
-  received_at: string;
-  miner_key: PgBytea;
-  signature: PgBytea;
-
-  // Mock proposal fields
-  burn_block_height: number;
-  stacks_tip_consensus_hash: PgBytea;
-  stacks_tip: PgBytea;
-  stacks_tip_height: number;
-  server_version: string;
-  pox_consensus_hash: PgBytea;
-  network_id: number;
-  index_block_hash: PgBytea;
-};
-
-export type DbMockBlockSignerSignature = {
-  signer_key: PgBytea;
-  signer_signature: PgBytea;
-  stacks_tip: PgBytea;
-  stacks_tip_height: number;
-  index_block_hash: PgBytea;
-};
-
 export type DbBlockProposalQueryResponse = {
   // block proposal data (from block_proposals):
   received_at: Date;
