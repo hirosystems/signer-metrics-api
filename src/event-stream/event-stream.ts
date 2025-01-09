@@ -41,9 +41,15 @@ export class EventStreamHandler {
       switch (path) {
         case '/new_block': {
           const blockMsg = body as CoreNodeBlockMessage;
+          const nakamotoBlockMsg = body as CoreNodeNakamotoBlockMessage;
+          if (nakamotoBlockMsg.cycle_number && nakamotoBlockMsg.reward_set) {
+            await this.db.ingestion.applyRewardSet(
+              this.db.sql,
+              nakamotoBlockMsg.cycle_number,
+              nakamotoBlockMsg.reward_set
+            );
+          }
           if ('signer_signature_hash' in blockMsg) {
-            const nakamotoBlockMsg = body as CoreNodeNakamotoBlockMessage;
-            // const parsed = parseNakamotoBlockMsg(nakamotoBlockMsg);
             const parsed = await this.threadedParser.parseNakamotoBlock(nakamotoBlockMsg);
             await this.handleNakamotoBlockMsg(messageId, parseInt(timestamp), parsed);
           } else {
@@ -54,7 +60,6 @@ export class EventStreamHandler {
 
         case '/stackerdb_chunks': {
           const msg = body as StackerDbChunk;
-          // const parsed = parseStackerDbChunk(msg);
           const parsed = await this.threadedParser.parseStackerDbChunk(msg);
           await this.handleStackerDbMsg(messageId, parseInt(timestamp), parsed);
           break;

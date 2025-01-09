@@ -21,6 +21,7 @@ import {
   BlockPushedChunkType,
   BlockResponseChunkType,
   ParsedNakamotoBlock,
+  ParsedRewardSet,
   ParsedStackerDbChunk,
 } from '../../event-stream/msg-parsing';
 
@@ -285,9 +286,15 @@ export class PgWriteStore extends BasePgStoreModule {
       throw new Error(`Missing cycle_number for block ${block.blockHeight} reward set`);
     }
 
-    const dbRewardSetSigners = block.rewardSet?.signers?.map((signer, index) => {
+    if (block.rewardSet) {
+      await this.applyRewardSet(sql, block.cycleNumber ?? 0, block.rewardSet);
+    }
+  }
+
+  async applyRewardSet(sql: PgSqlClient, cycleNumber: number, rewardSet: ParsedRewardSet) {
+    const dbRewardSetSigners = rewardSet.signers?.map((signer, index) => {
       const dbSigner: DbRewardSetSigner = {
-        cycle_number: block.cycleNumber ?? 0,
+        cycle_number: cycleNumber,
         signer_key: normalizeHexString(signer.signing_key),
         signer_weight: signer.weight,
         signer_stacked_amount: signer.stacked_amt,
