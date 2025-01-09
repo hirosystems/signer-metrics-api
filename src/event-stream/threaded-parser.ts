@@ -23,6 +23,12 @@ export class ThreadedParser {
       throw new Error('ThreadedParser must be instantiated in the main thread');
     }
     this.worker = new WorkerThreads.Worker(workerFile);
+    this.worker.on('error', err => {
+      this.logger.error('Worker error', err);
+    });
+    this.worker.on('messageerror', err => {
+      this.logger.error('Worker message error', err);
+    });
     this.worker.on('message', (msg: ThreadedParserMsgReply) => {
       const waiter = this.msgRequests.get(msg.msgId);
       if (waiter) {
@@ -42,6 +48,7 @@ export class ThreadedParser {
       block,
     };
     this.msgRequests.set(msg.msgId, replyWaiter as Waiter<ThreadedParserMsgReply>);
+    this.worker.postMessage(msg);
     const reply = await replyWaiter;
     return reply.block;
   }
@@ -54,6 +61,7 @@ export class ThreadedParser {
       chunk,
     };
     this.msgRequests.set(msg.msgId, replyWaiter as Waiter<ThreadedParserMsgReply>);
+    this.worker.postMessage(msg);
     const reply = await replyWaiter;
     return reply.chunk;
   }

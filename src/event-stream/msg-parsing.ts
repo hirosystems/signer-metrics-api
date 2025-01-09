@@ -63,12 +63,12 @@ export interface BlockProposalChunkType extends ChunkMetadata {
 
 export interface BlockResponseChunkType extends ChunkMetadata {
   messageType: 'BlockResponse';
-  blockProposal: ReturnType<typeof parseBlockResponse>;
+  blockResponse: ReturnType<typeof parseBlockResponse>;
 }
 
 export interface BlockPushedChunkType extends ChunkMetadata {
   messageType: 'BlockPushed';
-  blockProposal: ReturnType<typeof parseBlockPushed>;
+  blockPushed: ReturnType<typeof parseBlockPushed>;
 }
 
 export interface MockProposalChunkType extends ChunkMetadata {
@@ -101,7 +101,7 @@ export function parseStackerDbChunk(chunk: StackerDbChunk): ParsedStackerDbChunk
       pubkey: recoverChunkSlotPubkey(msg).pubkey,
       sig: msg.sig,
       ...parseSignerMessage(Buffer.from(msg.data, 'hex')),
-    } as ParsedStackerDbChunk;
+    };
   });
 }
 

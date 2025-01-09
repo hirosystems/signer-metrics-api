@@ -49,6 +49,9 @@ export type ThreadedParserMsgReply = NakamotoBlockMsgReply | StackerDbChunkMsgRe
 if (!WorkerThreads.isMainThread) {
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const mainThreadPort = WorkerThreads.parentPort!;
+  mainThreadPort.on('messageerror', err => {
+    console.error(`Worker thread message error`, err);
+  });
   mainThreadPort.on('message', (msg: ThreadedParserMsgRequest) => {
     let reply: ThreadedParserMsgReply;
     switch (msg.type) {

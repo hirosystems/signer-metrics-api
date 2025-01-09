@@ -34,6 +34,7 @@ const schema = Type.Object({
   STACKS_NODE_RPC_PORT: Type.Number({ minimum: 0, maximum: 65535 }),
 
   REDIS_URL: Type.String(),
+  REDIS_STREAM_KEY_PREFIX: Type.String({ default: '' }),
 
   PGHOST: Type.String(),
   PGPORT: Type.Number({ default: 5432, minimum: 0, maximum: 65535 }),

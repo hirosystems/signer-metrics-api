@@ -186,14 +186,14 @@ export class PgWriteStore extends BasePgStoreModule {
     minerPubkey: string,
     messageData: BlockPushedChunkType
   ): Promise<{ applied: false } | { applied: true; blockHash: string }> {
-    const blockHash = normalizeHexString(messageData.blockProposal.blockHash);
+    const blockHash = normalizeHexString(messageData.blockPushed.blockHash);
     const dbBlockPush: DbBlockPush = {
       received_at: unixTimeMillisecondsToISO(receivedAt),
       miner_key: normalizeHexString(minerPubkey),
-      block_height: Number(messageData.blockProposal.header.chainLength),
-      block_time: unixTimeSecondsToISO(Number(messageData.blockProposal.header.timestamp)),
+      block_height: Number(messageData.blockPushed.header.chainLength),
+      block_time: unixTimeSecondsToISO(Number(messageData.blockPushed.header.timestamp)),
       block_hash: blockHash,
-      index_block_hash: normalizeHexString(messageData.blockProposal.indexBlockHash),
+      index_block_hash: normalizeHexString(messageData.blockPushed.indexBlockHash),
     };
     const result = await sql`
       INSERT INTO block_pushes ${sql(dbBlockPush)}
@@ -219,25 +219,25 @@ export class PgWriteStore extends BasePgStoreModule {
     messageData: BlockResponseChunkType
   ): Promise<{ applied: false } | { applied: true; blockHash: string; signerKey: string }> {
     if (
-      messageData.blockProposal.type !== 'accepted' &&
-      messageData.blockProposal.type !== 'rejected'
+      messageData.blockResponse.type !== 'accepted' &&
+      messageData.blockResponse.type !== 'rejected'
     ) {
       this.logger.error(messageData, `Unexpected BlockResponse type`);
     }
 
-    const blockHash = normalizeHexString(messageData.blockProposal.signerSignatureHash);
+    const blockHash = normalizeHexString(messageData.blockResponse.signerSignatureHash);
     const signerKey = normalizeHexString(signerPubkey);
     const dbBlockResponse: DbBlockResponse = {
       received_at: unixTimeMillisecondsToISO(receivedAt),
       signer_key: signerKey,
-      accepted: messageData.blockProposal.type === 'accepted',
+      accepted: messageData.blockResponse.type === 'accepted',
       signer_sighash: blockHash,
-      metadata_server_version: messageData.blockProposal.metadata?.server_version ?? '',
-      signature: messageData.blockProposal.signature,
-      reason_string: messageData.blockProposal.reason ?? null,
-      reason_code: messageData.blockProposal.reasonCode?.rejectCode ?? null,
-      reject_code: messageData.blockProposal.reasonCode?.validateRejectCode ?? null,
-      chain_id: messageData.blockProposal.chainId ?? null,
+      metadata_server_version: messageData.blockResponse.metadata?.server_version ?? '',
+      signature: normalizeHexString(messageData.blockResponse.signature),
+      reason_string: messageData.blockResponse.reason ?? null,
+      reason_code: messageData.blockResponse.reasonCode?.rejectCode ?? null,
+      reject_code: messageData.blockResponse.reasonCode?.validateRejectCode ?? null,
+      chain_id: messageData.blockResponse.chainId ?? null,
     };
     const result = await sql`
       INSERT INTO block_responses ${sql(dbBlockResponse)}

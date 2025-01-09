@@ -27,6 +27,7 @@ export class EventStreamHandler {
     this.db = opts.db;
     this.eventStream = new StacksEventStream({
       redisUrl: ENV.REDIS_URL,
+      redisStreamPrefix: ENV.REDIS_STREAM_KEY_PREFIX,
       eventStreamType: StacksEventStreamType.all,
       lastMessageId: opts.lastMessageId,
     });
