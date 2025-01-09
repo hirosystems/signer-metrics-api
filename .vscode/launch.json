@@ -30,6 +30,7 @@
       "killBehavior": "polite",
       "preLaunchTask": "npm: testenv:run",
       "postDebugTask": "npm: testenv:stop",
+      "nodeVersionHint": 22
     },
     {
       "type": "node",

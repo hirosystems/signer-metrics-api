@@ -60,7 +60,7 @@
     "@noble/secp256k1": "^2.2.3",
     "@sinclair/typebox": "^0.28.17",
     "@stacks/transactions": "^6.1.0",
-    "@types/node": "^20.16.1",
+    "@types/node": "^22.10.5",
     "bignumber.js": "^9.1.2",
     "date-fns": "^4.1.0",
     "env-schema": "^6.0.0",
