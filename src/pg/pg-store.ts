@@ -73,8 +73,9 @@ export class PgStore extends BasePgStore {
     this.notifications = new NotificationPgStore(this, sql, this.ingestion.events);
   }
 
-  async updateLastIngestedRedisMsgId(sql: PgSqlClient, msgId: string): Promise<void> {
-    await sql`UPDATE chain_tip SET last_redis_msg_id = ${msgId}`;
+  async getLastIngestedBlockHeight(sql: PgSqlClient): Promise<number> {
+    const result = await sql<{ block_height: number }[]>`SELECT block_height FROM chain_tip`;
+    return result[0].block_height;
   }
 
   public async getLastIngestedRedisMsgId(): Promise<string> {

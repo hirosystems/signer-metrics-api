@@ -42,9 +42,8 @@ export class PgWriteStore extends BasePgStoreModule {
     await sql`UPDATE chain_tip SET block_height = ${blockHeight}`;
   }
 
-  async getLastIngestedBlockHeight(sql: PgSqlClient): Promise<number> {
-    const result = await sql<{ block_height: number }[]>`SELECT block_height FROM chain_tip`;
-    return result[0].block_height;
+  async updateLastIngestedRedisMsgId(sql: PgSqlClient, msgId: string): Promise<void> {
+    await sql`UPDATE chain_tip SET last_redis_msg_id = ${msgId}`;
   }
 
   async applyStackerDbChunk(

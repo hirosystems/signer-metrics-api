@@ -92,7 +92,7 @@ export class EventStreamHandler {
         const result = await this.db.ingestion.applyStackerDbChunk(sql, timestamp, chunk);
         appliedSignerMessageResults.push(...result);
       }
-      await this.db.updateLastIngestedRedisMsgId(sql, messageId);
+      await this.db.ingestion.updateLastIngestedRedisMsgId(sql, messageId);
     });
     this.logger.info(`Apply StackerDB chunks finished in ${time.getElapsedSeconds()}s`);
 
@@ -113,7 +113,7 @@ export class EventStreamHandler {
     // TODO: wrap in sql transaction
     const time = stopwatch();
     await this.db.sqlWriteTransaction(async sql => {
-      const lastIngestedBlockHeight = await this.db.ingestion.getLastIngestedBlockHeight(sql);
+      const lastIngestedBlockHeight = await this.db.getLastIngestedBlockHeight(sql);
       if (block.blockHeight <= lastIngestedBlockHeight) {
         this.logger.info(`Skipping previously ingested block ${block.blockHeight}`);
         return;
@@ -121,7 +121,7 @@ export class EventStreamHandler {
       this.logger.info(`Apply block ${block.blockHeight}`);
       await this.db.ingestion.applyBlock(sql, block);
       await this.db.ingestion.updateChainTipBlockHeight(sql, block.blockHeight);
-      await this.db.updateLastIngestedRedisMsgId(sql, messageId);
+      await this.db.ingestion.updateLastIngestedRedisMsgId(sql, messageId);
     });
     this.logger.info(`Apply block ${block.blockHeight} finished in ${time.getElapsedSeconds()}s`);
   }
