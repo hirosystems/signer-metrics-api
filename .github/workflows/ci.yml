@@ -6,6 +6,7 @@ on:
       - main
       - develop
       - beta
+      - redis-stream
     tags-ignore:
       - '**'
     paths-ignore:
