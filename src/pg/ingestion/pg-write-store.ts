@@ -4,7 +4,6 @@ import {
   PgSqlClient,
   batchIterate,
   logger as defaultLogger,
-  stopwatch,
 } from '@hirosystems/api-toolkit';
 import {
   DbBlock,

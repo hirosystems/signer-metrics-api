@@ -15,11 +15,13 @@ import {
   parseStackerDbChunk,
 } from './msg-parsing';
 import { SignerMessagesEventPayload } from '../pg/types';
+import { ThreadedParser } from './threaded-parser';
 
 export class EventStreamHandler {
   db: PgStore;
   logger = defaultLogger.child({ name: 'EventStreamHandler' });
   eventStream: StacksEventStream;
+  threadedParser: ThreadedParser;
 
   constructor(opts: { db: PgStore; lastMessageId: string }) {
     this.db = opts.db;
@@ -28,6 +30,7 @@ export class EventStreamHandler {
       eventStreamType: StacksEventStreamType.all,
       lastMessageId: opts.lastMessageId,
     });
+    this.threadedParser = new ThreadedParser();
   }
 
   async start() {
@@ -39,7 +42,8 @@ export class EventStreamHandler {
           const blockMsg = body as CoreNodeBlockMessage;
           if ('signer_signature_hash' in blockMsg) {
             const nakamotoBlockMsg = body as CoreNodeNakamotoBlockMessage;
-            const parsed = parseNakamotoBlockMsg(nakamotoBlockMsg);
+            // const parsed = parseNakamotoBlockMsg(nakamotoBlockMsg);
+            const parsed = await this.threadedParser.parseNakamotoBlock(nakamotoBlockMsg);
             await this.handleNakamotoBlockMsg(messageId, parseInt(timestamp), parsed);
           } else {
             // ignore pre-Nakamoto blocks
@@ -49,7 +53,8 @@ export class EventStreamHandler {
 
         case '/stackerdb_chunks': {
           const msg = body as StackerDbChunk;
-          const parsed = parseStackerDbChunk(msg);
+          // const parsed = parseStackerDbChunk(msg);
+          const parsed = await this.threadedParser.parseStackerDbChunk(msg);
           await this.handleStackerDbMsg(messageId, parseInt(timestamp), parsed);
           break;
         }

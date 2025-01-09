@@ -94,7 +94,7 @@ export type ParsedStackerDbChunk =
   | MockSignatureChunkType
   | MockBlockChunkType;
 
-export function parseStackerDbChunk(chunk: StackerDbChunk) {
+export function parseStackerDbChunk(chunk: StackerDbChunk): ParsedStackerDbChunk[] {
   return chunk.modified_slots.flatMap(msg => {
     return {
       contract: chunk.contract_id.name,
