@@ -1,3 +1,10 @@
+## [0.13.0-redis-stream.1](https://github.com/hirosystems/signer-metrics-api/compare/v0.12.2...v0.13.0-redis-stream.1) (2025-01-09)
+
+
+### Features
+
+* ingest messages from redis ([#65](https://github.com/hirosystems/signer-metrics-api/issues/65)) ([26f8e62](https://github.com/hirosystems/signer-metrics-api/commit/26f8e62430cccbe6358463352cf3b7fa3eaf7f70)), closes [#66](https://github.com/hirosystems/signer-metrics-api/issues/66)
+
 ## [0.12.2](https://github.com/hirosystems/signer-metrics-api/compare/v0.12.1...v0.12.2) (2024-12-17)
 
 
