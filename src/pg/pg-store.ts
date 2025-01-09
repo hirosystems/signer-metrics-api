@@ -21,7 +21,7 @@ export const MIGRATIONS_DIR = path.join(__dirname, '../../migrations');
  */
 export class PgStore extends BasePgStore {
   readonly ingestion: PgWriteStore;
-  readonly notifications: NotificationPgStore;
+  readonly notifications?: NotificationPgStore;
 
   static async connect(opts?: {
     skipMigrations?: boolean;
@@ -67,10 +67,12 @@ export class PgStore extends BasePgStore {
     return new PgStore(sql);
   }
 
-  constructor(sql: PgSqlClient) {
+  constructor(sql: PgSqlClient, enableListenNotify = false) {
     super(sql);
     this.ingestion = new PgWriteStore(this);
-    this.notifications = new NotificationPgStore(this, sql, this.ingestion.events);
+    if (enableListenNotify) {
+      this.notifications = new NotificationPgStore(this, sql, this.ingestion.events);
+    }
   }
 
   async getLastIngestedBlockHeight(sql: PgSqlClient): Promise<number> {
