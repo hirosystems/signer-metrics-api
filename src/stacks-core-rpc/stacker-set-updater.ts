@@ -25,7 +25,7 @@ export class StackerSetUpdator {
       concurrency: FETCH_STACKER_SET_CONCURRENCY_LIMIT,
       autoStart: true,
     });
-    this.db.chainhook.events.on('missingStackerSet', ({ cycleNumber }) => {
+    this.db.ingestion.events.on('missingStackerSet', ({ cycleNumber }) => {
       this.add({ cycleNumber });
     });
   }
@@ -65,8 +65,8 @@ export class StackerSetUpdator {
         stackerSet.response,
         cycleNumber
       );
-      await this.db.chainhook.sqlWriteTransaction(async sql => {
-        await this.db.chainhook.insertRewardSetSigners(sql, dbRewardSetSigners);
+      await this.db.ingestion.sqlWriteTransaction(async sql => {
+        await this.db.ingestion.insertRewardSetSigners(sql, dbRewardSetSigners);
       });
       logger.info(
         `Updated database with stacker set for cycle ${cycleNumber}, ${dbRewardSetSigners.length} signers`

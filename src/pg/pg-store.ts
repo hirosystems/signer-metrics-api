@@ -8,7 +8,7 @@ import {
   runMigrations,
 } from '@hirosystems/api-toolkit';
 import * as path from 'path';
-import { ChainhookPgStore } from './chainhook/chainhook-pg-store';
+import { PgWriteStore } from './ingestion/pg-write-store';
 import { BlockIdParam, normalizeHexString, sleep } from '../helpers';
 import { Fragment } from 'postgres';
 import { DbBlockProposalQueryResponse } from './types';
@@ -20,8 +20,8 @@ export const MIGRATIONS_DIR = path.join(__dirname, '../../migrations');
  * Connects and queries the Signer Metrics API's local postgres DB.
  */
 export class PgStore extends BasePgStore {
-  readonly chainhook: ChainhookPgStore;
-  readonly notifications: NotificationPgStore;
+  readonly ingestion: PgWriteStore;
+  readonly notifications?: NotificationPgStore;
 
   static async connect(opts?: {
     skipMigrations?: boolean;
@@ -67,10 +67,24 @@ export class PgStore extends BasePgStore {
     return new PgStore(sql);
   }
 
-  constructor(sql: PgSqlClient) {
+  constructor(sql: PgSqlClient, enableListenNotify = false) {
     super(sql);
-    this.chainhook = new ChainhookPgStore(this);
-    this.notifications = new NotificationPgStore(this, sql, this.chainhook.events);
+    this.ingestion = new PgWriteStore(this);
+    if (enableListenNotify) {
+      this.notifications = new NotificationPgStore(this, sql, this.ingestion.events);
+    }
+  }
+
+  async getLastIngestedBlockHeight(sql: PgSqlClient): Promise<number> {
+    const result = await sql<{ block_height: number }[]>`SELECT block_height FROM chain_tip`;
+    return result[0].block_height;
+  }
+
+  public async getLastIngestedRedisMsgId(): Promise<string> {
+    const result = await this.sql<
+      { last_redis_msg_id: string }[]
+    >`SELECT last_redis_msg_id FROM chain_tip`;
+    return result[0].last_redis_msg_id;
   }
 
   async getChainTipBlockHeight(): Promise<number> {

@@ -40,13 +40,13 @@ describe('Db notifications tests', () => {
     const stackerSetDump = JSON.parse(
       fs.readFileSync('./tests/dumps/dump-stacker-set-cycle-72-2024-11-02.json', 'utf8')
     ) as RpcStackerSetResponse;
-    await db.chainhook.insertRewardSetSigners(
+    await db.ingestion.insertRewardSetSigners(
       db.sql,
       rpcStackerSetToDbRewardSetSigners(stackerSetDump, 72)
     );
 
     // insert chainhook-payloads dump
-    const spyInfoLog = jest.spyOn(db.chainhook.logger, 'info').mockImplementation(() => {}); // Surpress noisy logs during bulk insertion test
+    const spyInfoLog = jest.spyOn(db.ingestion.logger, 'info').mockImplementation(() => {}); // Surpress noisy logs during bulk insertion test
     const payloadDumpFile = './tests/dumps/dump-chainhook-payloads-2024-11-02.ndjson.gz';
     const rl = readline.createInterface({
       input: fs.createReadStream(payloadDumpFile).pipe(zlib.createGunzip()),
@@ -75,7 +75,7 @@ describe('Db notifications tests', () => {
           blockPushTestPayload = { ...payload, events: [blockPush] };
         }
       }
-      await db.chainhook.processPayload(payload);
+      await db.ingestion.processPayload(payload);
     }
     rl.close();
     spyInfoLog.mockRestore();
@@ -107,7 +107,7 @@ describe('Db notifications tests', () => {
     );
 
     const initialWriteEvent = waitForEvent(
-      db.chainhook.events,
+      db.ingestion.events,
       'signerMessages',
       msg => {
         return 'proposal' in msg[0] && msg[0].proposal.blockHash === testingBlockHash;
@@ -122,14 +122,14 @@ describe('Db notifications tests', () => {
     });
 
     // delete block proposal from db, returning the data so we can re-write it
-    const blockProposal = await db.chainhook.deleteBlockProposal(db.sql, testingBlockHash);
+    const blockProposal = await db.ingestion.deleteBlockProposal(db.sql, testingBlockHash);
     expect(blockProposal.block_hash).toBe(testingBlockHash);
 
-    const blockResponses = await db.chainhook.deleteBlockResponses(db.sql, testingBlockHash);
+    const blockResponses = await db.ingestion.deleteBlockResponses(db.sql, testingBlockHash);
     expect(blockResponses.length).toBeGreaterThan(0);
     expect(blockResponses[0].signer_sighash).toBe(testingBlockHash);
 
-    await db.chainhook.processPayload(proposalTestPayload);
+    await db.ingestion.processPayload(proposalTestPayload);
 
     const promiseResults = await Promise.all([pgNotifyEvent, initialWriteEvent, clientSocketEvent]);
     expect(
@@ -152,7 +152,7 @@ describe('Db notifications tests', () => {
     );
 
     const initialWriteEvent = waitForEvent(
-      db.chainhook.events,
+      db.ingestion.events,
       'signerMessages',
       msg => {
         return 'push' in msg[0] && msg[0].push.blockHash === testingBlockHash;
@@ -167,10 +167,10 @@ describe('Db notifications tests', () => {
     });
 
     // delete block proposal from db, returning the data so we can re-write it
-    const blockPush = await db.chainhook.deleteBlockPush(db.sql, testingBlockHash);
+    const blockPush = await db.ingestion.deleteBlockPush(db.sql, testingBlockHash);
     expect(blockPush.block_hash).toBe(testingBlockHash);
 
-    await db.chainhook.processPayload(blockPushTestPayload);
+    await db.ingestion.processPayload(blockPushTestPayload);
 
     const promiseResults = await Promise.all([pgNotifyEvent, initialWriteEvent, clientSocketEvent]);
     expect(

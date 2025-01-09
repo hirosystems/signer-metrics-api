@@ -22,8 +22,8 @@ describe('Postgres ingestion tests', () => {
 
   test('ingest chainhook payloads', async () => {
     // Surpress noisy logs during bulk insertion test
-    const spyInfoLog = jest.spyOn(db.chainhook.logger, 'info').mockImplementation(() => {});
-    const spyWarnLog = jest.spyOn(db.chainhook.logger, 'warn').mockImplementation(() => {});
+    const spyInfoLog = jest.spyOn(db.ingestion.logger, 'info').mockImplementation(() => {});
+    const spyWarnLog = jest.spyOn(db.ingestion.logger, 'warn').mockImplementation(() => {});
 
     const payloadDumpFile = './tests/dumps/dump-regtest-chainhook-payloads.ndjson.gz';
     const rl = readline.createInterface({
@@ -32,7 +32,7 @@ describe('Postgres ingestion tests', () => {
     });
     for await (const line of rl) {
       const payload = JSON.parse(line) as StacksPayload;
-      await db.chainhook.processPayload(payload);
+      await db.ingestion.processPayload(payload);
     }
     rl.close();
 

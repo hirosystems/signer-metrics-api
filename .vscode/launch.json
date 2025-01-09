@@ -17,11 +17,6 @@
       "env": {
         "NODE_ENV": "development",
         "TS_NODE_SKIP_IGNORE": "true",
-        "CHAINHOOK_NODE_AUTH_TOKEN": "test",
-        "CHAINHOOK_AUTO_PREDICATE_REGISTRATION": "true",
-        "CHAINHOOK_PREDICATE_PATH": "tmp",
-        "EXTERNAL_HOSTNAME": "host.docker.internal:3199",
-        "EVENT_PORT": "3199",
         "NETWORK": "testnet",
         "PGDATABASE": "postgres",
         "PGHOST": "localhost",
@@ -30,10 +25,12 @@
         "PGPASSWORD": "postgres",
         "STACKS_NODE_RPC_HOST": "127.0.0.1",
         "STACKS_NODE_RPC_PORT": "20443",
+        "REDIS_URL": "redis://127.0.0.1:8379",
       },
       "killBehavior": "polite",
       "preLaunchTask": "npm: testenv:run",
       "postDebugTask": "npm: testenv:stop",
+      "nodeVersionHint": 22
     },
     {
       "type": "node",

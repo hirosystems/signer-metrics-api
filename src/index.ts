@@ -3,7 +3,7 @@ import { buildApiServer, buildPromServer } from './api/init';
 import { ENV } from './env';
 import { isProdEnv } from './helpers';
 import { buildProfilerServer, logger, registerShutdownConfig } from '@hirosystems/api-toolkit';
-import { closeChainhookServer, startChainhookServer } from './chainhook/server';
+import { EventStreamHandler } from './event-stream/event-stream';
 import { startPoxInfoUpdater } from './stacks-core-rpc/pox-info-updater';
 import { StackerSetUpdator } from './stacks-core-rpc/stacker-set-updater';
 
@@ -32,14 +32,18 @@ async function initBackgroundServices(db: PgStore) {
     },
   });
 
-  const server = await startChainhookServer({ db });
+  const blockHeight = await db.getChainTipBlockHeight();
+  const lastRedisMsgId = await db.getLastIngestedRedisMsgId();
+  logger.info(`signer-metrics-api is at block ${blockHeight}, msg_id: ${lastRedisMsgId}`);
+  const eventStreamListener = new EventStreamHandler({ db, lastMessageId: lastRedisMsgId });
   registerShutdownConfig({
-    name: 'Chainhook Server',
+    name: 'Redis Event Stream',
     forceKillable: false,
     handler: async () => {
-      await closeChainhookServer(server);
+      await eventStreamListener.stop();
     },
   });
+  await eventStreamListener.start();
 }
 
 /**

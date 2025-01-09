@@ -29,20 +29,20 @@ describe('Block proposal tests', () => {
     const stackerSetDump = JSON.parse(
       fs.readFileSync('./tests/dumps/dump-stacker-set-cycle-72-2024-11-02.json', 'utf8')
     ) as RpcStackerSetResponse;
-    await db.chainhook.insertRewardSetSigners(
+    await db.ingestion.insertRewardSetSigners(
       db.sql,
       rpcStackerSetToDbRewardSetSigners(stackerSetDump, 72)
     );
 
     // insert chainhook-payloads dump
-    const spyInfoLog = jest.spyOn(db.chainhook.logger, 'info').mockImplementation(() => {}); // Surpress noisy logs during bulk insertion test
+    const spyInfoLog = jest.spyOn(db.ingestion.logger, 'info').mockImplementation(() => {}); // Surpress noisy logs during bulk insertion test
     const payloadDumpFile = './tests/dumps/dump-chainhook-payloads-2024-11-02.ndjson.gz';
     const rl = readline.createInterface({
       input: fs.createReadStream(payloadDumpFile).pipe(zlib.createGunzip()),
       crlfDelay: Infinity,
     });
     for await (const line of rl) {
-      await db.chainhook.processPayload(JSON.parse(line) as StacksPayload);
+      await db.ingestion.processPayload(JSON.parse(line) as StacksPayload);
     }
     rl.close();
     spyInfoLog.mockRestore();
@@ -66,8 +66,8 @@ describe('Block proposal tests', () => {
     expect(testProposal.status).toBe('accepted');
 
     // Delete from blocks table
-    await db.chainhook.rollBackBlock(db.sql, blockPush.block_height);
-    await db.chainhook.rollBackBlockSignerSignatures(db.sql, blockPush.block_height);
+    await db.ingestion.rollBackBlock(db.sql, blockPush.block_height);
+    await db.ingestion.rollBackBlockSignerSignatures(db.sql, blockPush.block_height);
     // Set chaintip to the block before the block push
     await db.sql`UPDATE chain_tip SET block_height = ${blockPush.block_height - 1}`;
 
