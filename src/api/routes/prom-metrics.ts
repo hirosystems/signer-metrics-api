@@ -16,8 +16,10 @@ export const SignerPromMetricsRoutes: FastifyPluginAsync<
 
   const signerRegistry = new Registry();
 
+  const metricsPrefix = 'signer_api_';
+
   new Gauge({
-    name: 'time_since_last_pending_block_proposal_ms',
+    name: metricsPrefix + 'time_since_last_pending_block_proposal_ms',
     help: 'Time in milliseconds since the oldest pending block proposal',
     registers: [signerRegistry],
     async collect() {
@@ -30,7 +32,7 @@ export const SignerPromMetricsRoutes: FastifyPluginAsync<
   });
 
   new Gauge({
-    name: 'avg_block_push_time_ms',
+    name: metricsPrefix + 'avg_block_push_time_ms',
     help: 'Average time (in milliseconds) taken for block proposals to be accepted and pushed over different block periods',
     labelNames: ['period'] as const,
     registers: [signerRegistry],
@@ -46,7 +48,7 @@ export const SignerPromMetricsRoutes: FastifyPluginAsync<
   });
 
   new Gauge({
-    name: 'proposal_acceptance_rate',
+    name: metricsPrefix + 'proposal_acceptance_rate',
     help: 'The acceptance rate of block proposals for different block ranges (as a float between 0 and 1).',
     labelNames: ['period'],
     registers: [signerRegistry],
@@ -62,7 +64,7 @@ export const SignerPromMetricsRoutes: FastifyPluginAsync<
   });
 
   new Gauge({
-    name: 'signer_state_count',
+    name: metricsPrefix + 'signer_state_count',
     help: 'Count of signer states over different block periods',
     labelNames: ['signer', 'period', 'state'] as const,
     registers: [signerRegistry],
