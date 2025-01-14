@@ -251,7 +251,7 @@ describe('Db notifications tests', () => {
     const receivedLines = responseTest.text.split('\n');
 
     const expectedPendingProposalLineRegex =
-      /# TYPE time_since_last_pending_block_proposal_ms gauge\ntime_since_last_pending_block_proposal_ms [1-9]\d*/;
+      /# TYPE signer_api_time_since_last_pending_block_proposal_ms gauge\nsigner_api_time_since_last_pending_block_proposal_ms [1-9]\d*/;
     expect(responseTest.text).toMatch(expectedPendingProposalLineRegex);
 
     const expectedPushTimeLines = `# TYPE avg_block_push_time_ms gauge
