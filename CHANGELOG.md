@@ -1,3 +1,10 @@
+## [0.12.3](https://github.com/hirosystems/signer-metrics-api/compare/v0.12.2...v0.12.3) (2025-01-15)
+
+
+### Bug Fixes
+
+* **prometheus:** adds prefix to each metric and fixes default prom port ([7825bb5](https://github.com/hirosystems/signer-metrics-api/commit/7825bb5604d8937195e67bc81c68f0dd487b260b))
+
 ## [0.12.2](https://github.com/hirosystems/signer-metrics-api/compare/v0.12.1...v0.12.2) (2024-12-17)
 
 
