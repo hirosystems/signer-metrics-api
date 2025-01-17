@@ -354,7 +354,7 @@ ${metricPrefix}signer_state_count{signer="0x03fc7cb917698b6137060f434988f7688520
       expect.arrayContaining(expectedSignerStateLines.split("\n")),
     );
 
-    const expectedWeightPercentageLines = `# TYPE signer_api_signer_weight_percentage gauge
+    const expectedWeightPercentageLines = `# TYPE ${metricPrefix}signer_weight_percentage gauge
 ${metricPrefix}signer_weight_percentage{signer="0x02e8620935d58ebffa23c260f6917cbd0915ea17d7a46df17e131540237d335504"} 76
 ${metricPrefix}signer_weight_percentage{signer="0x036a44f61d85efa844b42475f107b106dc8fb209ae27813893c3269c59821e0333"} 6
 ${metricPrefix}signer_weight_percentage{signer="0x0382ebc8732f0d5f1501a9f842dc6a357497303c71ea8ca4b3858f41fe64e2c3a1"} 2
