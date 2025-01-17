@@ -756,6 +756,13 @@ export class PgStore extends BasePgStore {
     return dbRewardSetSigners;
   }
 
+  async getCurrentCycleNumber() {
+    const result = await this.sql<{ cycle_number: number }[]>`
+      SELECT MAX(cycle_number) AS cycle_number FROM reward_set_signers
+    `;
+    return result[0]?.cycle_number;
+  }
+
   async getSignerForCycle(cycleNumber: number, signerId: string) {
     const dbRewardSetSigner = await this.sql<
       {

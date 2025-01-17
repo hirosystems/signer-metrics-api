@@ -68,4 +68,20 @@ export function configureSignerMetrics(db: PgStore) {
       }
     },
   });
+
+  new Gauge({
+    name: metricsPrefix + 'signer_weight_percentage',
+    help: 'Signer weight percentage for the current cycle',
+    labelNames: ['signer'] as const,
+    async collect() {
+      const dbResults = await db.sqlTransaction(async sql => {
+        const cycle = await db.getCurrentCycleNumber();
+        return await db.getSignersForCycle({ sql, cycleNumber: cycle, limit: 60, offset: 0 });
+      });
+      this.reset();
+      for (const row of dbResults) {
+        this.set({ signer: row.signer_key }, row.weight_percentage);
+      }
+    },
+  });
 }
