@@ -4,7 +4,7 @@ import * as zlib from "node:zlib";
 import * as supertest from "supertest";
 import { FastifyInstance } from "fastify";
 import { StacksPayload } from "@hirosystems/chainhook-client";
-import { buildApiServer } from "../../src/api/init";
+import { buildApiServer, buildPromServer } from "../../src/api/init";
 import { PgStore } from "../../src/pg/pg-store";
 import { BlockProposalsEntry } from "../../src/api/schemas";
 import {
@@ -19,6 +19,9 @@ import {
 } from "../../src/api/routes/socket-io";
 import { waitForEvent } from "../../src/helpers";
 import { ENV } from "../../src/env";
+import { configureSignerMetrics } from "../../src/prom-metrics";
+import { IFastifyMetrics } from 'fastify-metrics';
+import * as prom from 'prom-client';
 
 describe("Db notifications tests", () => {
   let db: PgStore;
@@ -230,6 +233,11 @@ describe("Db notifications tests", () => {
   });
 
   test("prometheus signer metrics", async () => {
+    const metrics: IFastifyMetrics = { client: prom, initMetricsInRegistry() {} };
+    const promServer = await buildPromServer({ metrics });
+    configureSignerMetrics(db);
+    await promServer.listen({ host: "127.0.0.1", port: 9153 });
+
     const bucketsEnvName = "SIGNER_PROMETHEUS_METRICS_BLOCK_PERIODS";
     const metricPrefix = "signer_api_";
     const orig = ENV[bucketsEnvName];
@@ -304,8 +312,8 @@ describe("Db notifications tests", () => {
       ]),
     );
 
-    const responseTest = await supertest(apiServer.server)
-      .get("/signer-metrics/metrics")
+    const responseTest = await supertest(promServer.server)
+      .get("/metrics")
       .expect(200);
     const receivedLines = responseTest.text.split("\n");
 
@@ -348,5 +356,7 @@ ${metricPrefix}signer_state_count{signer="0x03fc7cb917698b6137060f434988f7688520
 
     process.env[bucketsEnvName] = orig;
     ENV.reload();
+
+    await promServer.close();
   });
 });
