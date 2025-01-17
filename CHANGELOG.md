@@ -1,3 +1,10 @@
+## [0.12.5](https://github.com/hirosystems/signer-metrics-api/compare/v0.12.4...v0.12.5) (2025-01-17)
+
+
+### Bug Fixes
+
+* create optimized query to get current cycle signer weight percentages ([#70](https://github.com/hirosystems/signer-metrics-api/issues/70)) ([8bcb54b](https://github.com/hirosystems/signer-metrics-api/commit/8bcb54bde240070fa4ab078df1dda8c207ea251c))
+
 ## [0.12.4](https://github.com/hirosystems/signer-metrics-api/compare/v0.12.3...v0.12.4) (2025-01-17)
 
 
