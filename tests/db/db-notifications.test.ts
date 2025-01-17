@@ -4,7 +4,7 @@ import * as zlib from "node:zlib";
 import * as supertest from "supertest";
 import { FastifyInstance } from "fastify";
 import { StacksPayload } from "@hirosystems/chainhook-client";
-import { buildApiServer } from "../../src/api/init";
+import { buildApiServer, buildPromServer } from "../../src/api/init";
 import { PgStore } from "../../src/pg/pg-store";
 import { BlockProposalsEntry } from "../../src/api/schemas";
 import {
@@ -19,6 +19,9 @@ import {
 } from "../../src/api/routes/socket-io";
 import { waitForEvent } from "../../src/helpers";
 import { ENV } from "../../src/env";
+import { configureSignerMetrics } from "../../src/prom-metrics";
+import { IFastifyMetrics } from 'fastify-metrics';
+import * as prom from 'prom-client';
 
 describe("Db notifications tests", () => {
   let db: PgStore;
@@ -230,6 +233,11 @@ describe("Db notifications tests", () => {
   });
 
   test("prometheus signer metrics", async () => {
+    const metrics: IFastifyMetrics = { client: prom, initMetricsInRegistry() {} };
+    const promServer = await buildPromServer({ metrics });
+    configureSignerMetrics(db);
+    await promServer.listen({ host: "127.0.0.1", port: 9153 });
+
     const bucketsEnvName = "SIGNER_PROMETHEUS_METRICS_BLOCK_PERIODS";
     const metricPrefix = "signer_api_";
     const orig = ENV[bucketsEnvName];
@@ -304,8 +312,8 @@ describe("Db notifications tests", () => {
       ]),
     );
 
-    const responseTest = await supertest(apiServer.server)
-      .get("/signer-metrics/metrics")
+    const responseTest = await supertest(promServer.server)
+      .get("/metrics")
       .expect(200);
     const receivedLines = responseTest.text.split("\n");
 
@@ -346,7 +354,25 @@ ${metricPrefix}signer_state_count{signer="0x03fc7cb917698b6137060f434988f7688520
       expect.arrayContaining(expectedSignerStateLines.split("\n")),
     );
 
+    const expectedWeightPercentageLines = `# TYPE ${metricPrefix}signer_weight_percentage gauge
+${metricPrefix}signer_weight_percentage{signer="0x02e8620935d58ebffa23c260f6917cbd0915ea17d7a46df17e131540237d335504"} 76
+${metricPrefix}signer_weight_percentage{signer="0x036a44f61d85efa844b42475f107b106dc8fb209ae27813893c3269c59821e0333"} 6
+${metricPrefix}signer_weight_percentage{signer="0x0382ebc8732f0d5f1501a9f842dc6a357497303c71ea8ca4b3858f41fe64e2c3a1"} 2
+${metricPrefix}signer_weight_percentage{signer="0x0333545cd2634813ea042c9dfc199b6e635dc0db391b6104b002d82393c9a58691"} 2
+${metricPrefix}signer_weight_percentage{signer="0x0399649284ed10a00405f032f8567b5e5463838aaa00af8d6bc9da71dda4e19c9c"} 2
+${metricPrefix}signer_weight_percentage{signer="0x037fc1bb0eab484f5807ba2bfdeb208f9104fa89abbbb8034e23f33df4b9e5ab10"} 2
+${metricPrefix}signer_weight_percentage{signer="0x02f5b5555964731f77bc3a3767ef3ed64ed0ba2971e8792272349db1a148e43ad5"} 2
+${metricPrefix}signer_weight_percentage{signer="0x02abcde47f94fcf54f6926127368ddd2ae8c11a27b854269378113e2f6835cb372"} 2
+${metricPrefix}signer_weight_percentage{signer="0x02b635d0521ef891a2549253eff2f5d09665af0ecfb21b0aacbf2658e7e7b06761"} 2
+${metricPrefix}signer_weight_percentage{signer="0x03fc7cb917698b6137060f434988f7688520972dfb944f9b03c0fbf1c75303e79a"} 2
+${metricPrefix}signer_weight_percentage{signer="0x02567b1f5056f6c3e59e759f66216d21239904d1cc2d847c5dcc3c2b6534d7bead"} 2`;
+    expect(receivedLines).toEqual(
+      expect.arrayContaining(expectedWeightPercentageLines.split("\n")),
+    );
+
     process.env[bucketsEnvName] = orig;
     ENV.reload();
+
+    await promServer.close();
   });
 });
