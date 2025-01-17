@@ -756,11 +756,21 @@ export class PgStore extends BasePgStore {
     return dbRewardSetSigners;
   }
 
-  async getCurrentCycleNumber() {
-    const result = await this.sql<{ cycle_number: number }[]>`
-      SELECT MAX(cycle_number) AS cycle_number FROM reward_set_signers
+  async getCurrentCycleSignersWeightPercentage() {
+    return await this.sql<{ signer_key: string; weight: number }[]>`
+      WITH current_cycle AS (
+        SELECT MAX(cycle_number) AS cycle_number
+        FROM reward_set_signers
+      ),
+      total_weight AS (
+        SELECT SUM(signer_weight) AS total
+        FROM reward_set_signers
+        WHERE cycle_number = (SELECT cycle_number FROM current_cycle)
+      )
+      SELECT signer_key, ROUND((signer_weight::numeric / (SELECT total FROM total_weight)::numeric) * 100.0, 3)::float AS weight
+      FROM reward_set_signers
+      WHERE cycle_number = (SELECT cycle_number FROM current_cycle)
     `;
-    return result[0]?.cycle_number;
   }
 
   async getSignerForCycle(cycleNumber: number, signerId: string) {
