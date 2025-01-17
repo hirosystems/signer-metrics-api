@@ -1,3 +1,10 @@
+## [0.12.4](https://github.com/hirosystems/signer-metrics-api/compare/v0.12.3...v0.12.4) (2025-01-17)
+
+
+### Bug Fixes
+
+* integrate custom metrics to private endpoint and add signer weight percentage metric ([#69](https://github.com/hirosystems/signer-metrics-api/issues/69)) ([d113b7c](https://github.com/hirosystems/signer-metrics-api/commit/d113b7c7b7a91d843989fbee1465a6e239959379))
+
 ## [0.12.3](https://github.com/hirosystems/signer-metrics-api/compare/v0.12.2...v0.12.3) (2025-01-15)
 
 
