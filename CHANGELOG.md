@@ -1,3 +1,10 @@
+## [0.12.6](https://github.com/hirosystems/signer-metrics-api/compare/v0.12.5...v0.12.6) (2025-01-27)
+
+
+### Bug Fixes
+
+* newest unconfirmed block propsal metric ([#71](https://github.com/hirosystems/signer-metrics-api/issues/71)) ([cb4b117](https://github.com/hirosystems/signer-metrics-api/commit/cb4b11754e8b1814d49cbbedfa2d6467e9b3aa05))
+
 ## [0.12.5](https://github.com/hirosystems/signer-metrics-api/compare/v0.12.4...v0.12.5) (2025-01-17)
 
 
