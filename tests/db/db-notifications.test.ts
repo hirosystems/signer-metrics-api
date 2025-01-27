@@ -254,8 +254,9 @@ describe("Db notifications tests", () => {
     await db.sql`DELETE FROM blocks WHERE block_height >= ${block_height}`;
     await db.sql`DELETE FROM block_pushes WHERE block_height >= ${block_height}`;
 
-    const pendingProposalDate = await db.getLastPendingProposalDate({
+    const pendingProposalDate = await db.getPendingProposalDate({
       sql: db.sql,
+      kind: 'oldest',
     });
     expect(pendingProposalDate).toBeInstanceOf(Date);
     expect(
@@ -318,7 +319,7 @@ describe("Db notifications tests", () => {
     const receivedLines = responseTest.text.split("\n");
 
     const expectedPendingProposalLineRegex = new RegExp(
-      `# TYPE ${metricPrefix}time_since_last_pending_block_proposal_ms gauge\n${metricPrefix}time_since_last_pending_block_proposal_ms [1-9]\d*`,
+      `# TYPE ${metricPrefix}time_since_oldest_pending_block_proposal_ms gauge\n${metricPrefix}time_since_oldest_pending_block_proposal_ms [1-9]\d*`,
       "g",
     );
     expect(responseTest.text).toMatch(expectedPendingProposalLineRegex);

@@ -1077,7 +1077,7 @@ export class PgStore extends BasePgStore {
     return result;
   }
 
-  async getLastPendingProposalDate(args: { sql: PgSqlClient }) {
+  async getPendingProposalDate(args: { sql: PgSqlClient; kind: 'oldest' | 'newest' }) {
     const result = await args.sql<
       {
         received_at: Date | null;
@@ -1090,15 +1090,15 @@ export class PgStore extends BasePgStore {
             (SELECT COALESCE(MAX(block_height), 0) FROM block_pushes)
           ) AS height
       ),
-      oldest_pending_proposal AS (
+      pending_proposal AS (
         SELECT received_at
         FROM block_proposals bp
         WHERE bp.block_height > (SELECT height FROM max_heights)
-        ORDER BY received_at ASC
+        ORDER BY received_at ${args.kind == 'newest' ? args.sql`DESC` : args.sql`ASC`}
         LIMIT 1
       )
       SELECT received_at
-      FROM oldest_pending_proposal
+      FROM pending_proposal
     `;
 
     // Return the computed value or null if no pending proposals exist
