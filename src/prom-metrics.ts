@@ -9,11 +9,23 @@ export function configureSignerMetrics(db: PgStore) {
   const metricsPrefix = 'signer_api_';
 
   new Gauge({
-    name: metricsPrefix + 'time_since_last_pending_block_proposal_ms',
+    name: metricsPrefix + 'time_since_oldest_pending_block_proposal_ms',
     help: 'Time in milliseconds since the oldest pending block proposal',
     async collect() {
       const dbResult = await db.sqlTransaction(async sql => {
-        return await db.getLastPendingProposalDate({ sql });
+        return await db.getPendingProposalDate({ sql, kind: 'oldest' });
+      });
+      this.reset();
+      this.set(dbResult ? Date.now() - dbResult.getTime() : 0);
+    },
+  });
+
+  new Gauge({
+    name: metricsPrefix + 'time_since_newest_pending_block_proposal_ms',
+    help: 'Time in milliseconds since the most recent pending block proposal',
+    async collect() {
+      const dbResult = await db.sqlTransaction(async sql => {
+        return await db.getPendingProposalDate({ sql, kind: 'newest' });
       });
       this.reset();
       this.set(dbResult ? Date.now() - dbResult.getTime() : 0);
