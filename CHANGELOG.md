@@ -1,3 +1,10 @@
+## [0.12.7](https://github.com/hirosystems/signer-metrics-api/compare/v0.12.6...v0.12.7) (2025-03-03)
+
+
+### Bug Fixes
+
+* optimize sql query used for the `signer_state_count` metric ([#73](https://github.com/hirosystems/signer-metrics-api/issues/73)) ([6394e58](https://github.com/hirosystems/signer-metrics-api/commit/6394e58c2a6d4668783e543dbc2c7e071ceda701))
+
 ## [0.12.6](https://github.com/hirosystems/signer-metrics-api/compare/v0.12.5...v0.12.6) (2025-01-27)
 
 
