@@ -923,6 +923,7 @@ export class PgStore extends BasePgStore {
       recent_blocks AS (
         SELECT
           bp.block_hash,
+          bp.received_at,
           ROW_NUMBER() OVER (ORDER BY bp.received_at DESC) AS row_num
         FROM block_proposals bp
         ORDER BY bp.received_at DESC
@@ -938,15 +939,19 @@ export class PgStore extends BasePgStore {
         JOIN recent_blocks rb
           ON rb.row_num <= br.range_value
       ),
+      -- Filter block_responses with a received_at older than the oldest recent_blocks timestamp
+      block_responses_after AS (
+        SELECT * FROM block_responses br
+        WHERE br.received_at >= (
+          SELECT MIN(received_at) - INTERVAL '1 hour' FROM recent_blocks
+        )
+      ),
+      -- Filter block_responses with hashes not included in recent_blocks, or with signer_keys not included in this cycle
       relevant_responses AS (
-        -- Pre-filter block_responses to only those relevant to recent_blocks and signer_keys
-        SELECT
-          br.signer_key,
-          br.signer_sighash,
-          br.accepted
-        FROM block_responses br
-        WHERE br.signer_sighash IN (SELECT block_hash FROM recent_blocks)
-          AND br.signer_key IN (SELECT signer_key FROM signer_keys)
+        SELECT br.signer_key, br.signer_sighash, br.accepted
+        FROM block_responses_after br
+        JOIN recent_blocks rb ON br.signer_sighash = rb.block_hash
+        JOIN signer_keys sk ON br.signer_key = sk.signer_key
       ),
       responses_with_states AS (
         SELECT
