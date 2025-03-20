@@ -1,3 +1,178 @@
+## [0.12.7](https://github.com/hirosystems/signer-metrics-api/compare/v0.12.6...v0.12.7) (2025-03-03)
+
+
+### Bug Fixes
+
+* optimize sql query used for the `signer_state_count` metric ([#73](https://github.com/hirosystems/signer-metrics-api/issues/73)) ([6394e58](https://github.com/hirosystems/signer-metrics-api/commit/6394e58c2a6d4668783e543dbc2c7e071ceda701))
+
+## [0.12.6](https://github.com/hirosystems/signer-metrics-api/compare/v0.12.5...v0.12.6) (2025-01-27)
+
+
+### Bug Fixes
+
+* newest unconfirmed block propsal metric ([#71](https://github.com/hirosystems/signer-metrics-api/issues/71)) ([cb4b117](https://github.com/hirosystems/signer-metrics-api/commit/cb4b11754e8b1814d49cbbedfa2d6467e9b3aa05))
+
+## [0.12.5](https://github.com/hirosystems/signer-metrics-api/compare/v0.12.4...v0.12.5) (2025-01-17)
+
+
+### Bug Fixes
+
+* create optimized query to get current cycle signer weight percentages ([#70](https://github.com/hirosystems/signer-metrics-api/issues/70)) ([8bcb54b](https://github.com/hirosystems/signer-metrics-api/commit/8bcb54bde240070fa4ab078df1dda8c207ea251c))
+
+## [0.12.4](https://github.com/hirosystems/signer-metrics-api/compare/v0.12.3...v0.12.4) (2025-01-17)
+
+
+### Bug Fixes
+
+* integrate custom metrics to private endpoint and add signer weight percentage metric ([#69](https://github.com/hirosystems/signer-metrics-api/issues/69)) ([d113b7c](https://github.com/hirosystems/signer-metrics-api/commit/d113b7c7b7a91d843989fbee1465a6e239959379))
+
+## [0.12.3](https://github.com/hirosystems/signer-metrics-api/compare/v0.12.2...v0.12.3) (2025-01-15)
+
+
+### Bug Fixes
+
+* **prometheus:** adds prefix to each metric and fixes default prom port ([7825bb5](https://github.com/hirosystems/signer-metrics-api/commit/7825bb5604d8937195e67bc81c68f0dd487b260b))
+
+## [0.12.2](https://github.com/hirosystems/signer-metrics-api/compare/v0.12.1...v0.12.2) (2024-12-17)
+
+
+### Bug Fixes
+
+* remove unused vercel url ([#64](https://github.com/hirosystems/signer-metrics-api/issues/64)) ([e05712d](https://github.com/hirosystems/signer-metrics-api/commit/e05712d913992e96707272d22635ee4a795f34a2))
+
+## [0.12.1](https://github.com/hirosystems/signer-metrics-api/compare/v0.12.0...v0.12.1) (2024-11-25)
+
+
+### Bug Fixes
+
+* remove accidental cartesian product of `blocks_pushes` * `blocks` in pending proposal date query ([#62](https://github.com/hirosystems/signer-metrics-api/issues/62)) ([1bcc4c1](https://github.com/hirosystems/signer-metrics-api/commit/1bcc4c14a66a133c28a9d57ff2f58487774cff91))
+
+## [0.12.0](https://github.com/hirosystems/signer-metrics-api/compare/v0.11.0...v0.12.0) (2024-11-22)
+
+
+### Features
+
+* signer prometheus metrics ([#61](https://github.com/hirosystems/signer-metrics-api/issues/61)) ([d7a84f4](https://github.com/hirosystems/signer-metrics-api/commit/d7a84f47df419c4f6cfe271379a0442b083c35da))
+
+## [0.11.0](https://github.com/hirosystems/signer-metrics-api/compare/v0.10.1...v0.11.0) (2024-11-22)
+
+
+### Features
+
+* ingest block-push events ([#60](https://github.com/hirosystems/signer-metrics-api/issues/60)) ([47f524d](https://github.com/hirosystems/signer-metrics-api/commit/47f524d7bd5c63b23d052848873e1b3789764f55))
+
+## [0.10.1](https://github.com/hirosystems/signer-metrics-api/compare/v0.10.0...v0.10.1) (2024-11-15)
+
+
+### Bug Fixes
+
+* socket-io cors ([#59](https://github.com/hirosystems/signer-metrics-api/issues/59)) ([da5164e](https://github.com/hirosystems/signer-metrics-api/commit/da5164e7f52c1843809fce2352d6f0c50dd269c8))
+
+## [0.10.0](https://github.com/hirosystems/signer-metrics-api/compare/v0.9.0...v0.10.0) (2024-11-15)
+
+
+### Features
+
+* socket-io blockProposal notifications ([#58](https://github.com/hirosystems/signer-metrics-api/issues/58)) ([79334e2](https://github.com/hirosystems/signer-metrics-api/commit/79334e23d1ab0d5b27b3df90c1160b487f498026))
+
+## [0.9.0](https://github.com/hirosystems/signer-metrics-api/compare/v0.8.2...v0.9.0) (2024-11-12)
+
+
+### Features
+
+* implement `/v1/block_proposals` endpoint ([#56](https://github.com/hirosystems/signer-metrics-api/issues/56)) ([49fc6e8](https://github.com/hirosystems/signer-metrics-api/commit/49fc6e88fcafa50895e5efc5b3e4811f2861d4a5))
+
+## [0.8.2](https://github.com/hirosystems/signer-metrics-api/compare/v0.8.1...v0.8.2) (2024-11-08)
+
+
+### Bug Fixes
+
+* downgrade breaking change typebox ([#54](https://github.com/hirosystems/signer-metrics-api/issues/54)) ([c11afe6](https://github.com/hirosystems/signer-metrics-api/commit/c11afe6eb10c39e3731308a15d6a62e9a069561b))
+
+## [0.8.1](https://github.com/hirosystems/signer-metrics-api/compare/v0.8.0...v0.8.1) (2024-11-08)
+
+
+### Bug Fixes
+
+* re-org issue with cycle-signer-set data ([#53](https://github.com/hirosystems/signer-metrics-api/issues/53)) ([4f592e7](https://github.com/hirosystems/signer-metrics-api/commit/4f592e7e00907480b714dc6e72169fc0976c36e7))
+
+## [0.8.0](https://github.com/hirosystems/signer-metrics-api/compare/v0.7.0...v0.8.0) (2024-11-08)
+
+
+### Features
+
+* add slot_index property to signers ([#46](https://github.com/hirosystems/signer-metrics-api/issues/46)) ([79e399a](https://github.com/hirosystems/signer-metrics-api/commit/79e399a568e53d8c4d1ec48e30ee13cde3e898d8))
+
+## [0.7.0](https://github.com/hirosystems/signer-metrics-api/compare/v0.6.0...v0.7.0) (2024-11-08)
+
+
+### Features
+
+* implement `/v1/blocks/{hash_or_height}` endpoint ([#42](https://github.com/hirosystems/signer-metrics-api/issues/42)) ([3ec299e](https://github.com/hirosystems/signer-metrics-api/commit/3ec299efe0983769d6ff06881af6fe7a556aac37))
+
+## [0.6.0](https://github.com/hirosystems/signer-metrics-api/compare/v0.5.0...v0.6.0) (2024-11-05)
+
+
+### Features
+
+* add signer last_seen and version fields ([bcc0b16](https://github.com/hirosystems/signer-metrics-api/commit/bcc0b16b00c321564169f93da59319481d0cd636))
+
+## [0.5.0](https://github.com/hirosystems/signer-metrics-api/compare/v0.4.6...v0.5.0) (2024-11-05)
+
+
+### Features
+
+* support from/to time range query in cycle signers endpoint ([#37](https://github.com/hirosystems/signer-metrics-api/issues/37)) ([a96736b](https://github.com/hirosystems/signer-metrics-api/commit/a96736bf30d4dd6f9345b1fbdaf3cc88ff88ed76))
+
+## [0.4.6](https://github.com/hirosystems/signer-metrics-api/compare/v0.4.5...v0.4.6) (2024-11-02)
+
+
+### Bug Fixes
+
+* correct ordering for cycle signers endpoint ([#31](https://github.com/hirosystems/signer-metrics-api/issues/31)) ([9fd2fc4](https://github.com/hirosystems/signer-metrics-api/commit/9fd2fc456ff0f46cf0a5e90a507c9541b58d314f))
+
+## [0.4.5](https://github.com/hirosystems/signer-metrics-api/compare/v0.4.4...v0.4.5) (2024-11-01)
+
+
+### Bug Fixes
+
+* max start block height for signer predicate messages ([#29](https://github.com/hirosystems/signer-metrics-api/issues/29)) ([6d16ff2](https://github.com/hirosystems/signer-metrics-api/commit/6d16ff2798d1384a4098a974f4d093719df36bbb))
+
+## [0.4.4](https://github.com/hirosystems/signer-metrics-api/compare/v0.4.3...v0.4.4) (2024-10-31)
+
+
+### Bug Fixes
+
+* skip postgres ingestion for pre-nakamoto blocks ([dda2167](https://github.com/hirosystems/signer-metrics-api/commit/dda2167d0ae30b58acbcc3a4adb3303379b44a68))
+
+## [0.4.3](https://github.com/hirosystems/signer-metrics-api/compare/v0.4.2...v0.4.3) (2024-10-31)
+
+
+### Bug Fixes
+
+* memleak in sleep abort event listener ([e68e90e](https://github.com/hirosystems/signer-metrics-api/commit/e68e90e0aaad878aa01222afca7efb7a1fd6c873))
+
+## [0.4.2](https://github.com/hirosystems/signer-metrics-api/compare/v0.4.1...v0.4.2) (2024-10-30)
+
+
+### Bug Fixes
+
+* signer message predicate startBlock from db chaintip ([8ee51dd](https://github.com/hirosystems/signer-metrics-api/commit/8ee51dd5a578359fc65de3a36d11a6c5c869e2e3))
+
+## [0.4.1](https://github.com/hirosystems/signer-metrics-api/compare/v0.4.0...v0.4.1) (2024-10-30)
+
+
+### Bug Fixes
+
+* disable predicate healthcheck likely causing predicate restarts ([6c9b802](https://github.com/hirosystems/signer-metrics-api/commit/6c9b802f209545575ee7d3c1281bbb368243d714))
+
+## [0.4.0](https://github.com/hirosystems/signer-metrics-api/compare/v0.3.0...v0.4.0) (2024-10-30)
+
+
+### Features
+
+* skip reward-set check query during initial mainnet block ingestion ([#18](https://github.com/hirosystems/signer-metrics-api/issues/18)) ([8212d52](https://github.com/hirosystems/signer-metrics-api/commit/8212d5247c4c40545315bc19ba09844bfd30271a))
+
 ## [0.3.0](https://github.com/hirosystems/signer-metrics-api/compare/v0.2.2...v0.3.0) (2024-10-28)
 
 

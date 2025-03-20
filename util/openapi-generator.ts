@@ -1,33 +1,43 @@
-import Fastify, { FastifyPluginAsync } from 'fastify';
+import * as dotenv from 'dotenv';
+
+// First load default.env to prevent envSchema from throwing errors
+const defaultParsed = dotenv.config({ path: `${__dirname}/default.env` }).parsed;
+dotenv.populate(process.env as Record<string, string>, defaultParsed as Record<string, string>);
+
+import Fastify from 'fastify';
 import { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import { Api } from '../src/api/init';
 import FastifySwagger from '@fastify/swagger';
-import { existsSync, mkdirSync, writeFileSync } from 'fs';
-import { Server } from 'http';
+import { mkdirSync, writeFileSync } from 'fs';
 import { OpenApiSchemaOptions } from '../src/api/schemas';
+import * as path from 'node:path';
 
 /**
  * Generates `openapi.yaml` based on current Swagger definitions.
  */
-export const ApiGenerator: FastifyPluginAsync<
-  Record<never, never>,
-  Server,
-  TypeBoxTypeProvider
-> = async (fastify, options) => {
+async function generateOpenApiFiles() {
+  const outputDir = path.resolve('./tmp');
+  console.log(`Writing OpenAPI files to ${outputDir}...`);
+  const yamlFile = path.resolve(outputDir, 'openapi.yaml');
+  const jsonFile = path.resolve(outputDir, 'openapi.json');
+
+  const fastify = Fastify({
+    trustProxy: true,
+    logger: true,
+  }).withTypeProvider<TypeBoxTypeProvider>();
+
   await fastify.register(FastifySwagger, OpenApiSchemaOptions);
-  await fastify.register(Api, { prefix: '/signer-metrics' });
-  if (!existsSync('./tmp')) {
-    mkdirSync('./tmp');
-  }
-  writeFileSync('./tmp/openapi.yaml', fastify.swagger({ yaml: true }));
-  writeFileSync('./tmp/openapi.json', JSON.stringify(fastify.swagger(), null, 2));
-};
+  await fastify.register(Api);
+  await fastify.ready();
 
-const fastify = Fastify({
-  trustProxy: true,
-  logger: true,
-}).withTypeProvider<TypeBoxTypeProvider>();
+  mkdirSync(outputDir, { recursive: true });
+  writeFileSync(yamlFile, fastify.swagger({ yaml: true }));
+  writeFileSync(jsonFile, JSON.stringify(fastify.swagger(), null, 2));
 
-void fastify.register(ApiGenerator).then(async () => {
   await fastify.close();
-});
+
+  console.log(`OpenAPI yaml file written to ${yamlFile}`);
+  console.log(`OpenAPI json file written to ${jsonFile}`);
+}
+
+void generateOpenApiFiles();

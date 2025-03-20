@@ -1,0 +1,555 @@
+{
+  "stacker_set": {
+    "rewarded_addresses": [
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "c8cf675d4a0a38407a6f88fbfd2fa19e341a9a03"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "bb236afa61610c279b370fec86160c02ea9089a0"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "698c3bedee8c09cd04876011d0923f3c6f65884d"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "403df0bdbeabba9412139a426ae96ef9febbd7db"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "2aeaa6e18ecf99b904df38282ef4c42fbb572da8"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "14392abf82acf46658e8d393d36c25e13c4ca99d"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0b5ed1a4d5ead349ec3ee515d6ccc3ca41825864"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0909954cd62efc550a1869bbdbb11729cc747dcc"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0909954cd62efc550a1869bbdbb11729cc747dcc"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0909954cd62efc550a1869bbdbb11729cc747dcc"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Standard": [
+          {
+            "version": 26,
+            "bytes": "0668e5970f60a251894ed1ec4753d88a7c50dacb"
+          },
+          "SerializeP2PKH"
+        ]
+      },
+      {
+        "Addr20": [
+          false,
+          "P2WPKH",
+          [
+            234,
+            143,
+            5,
+            179,
+            123,
+            108,
+            251,
+            221,
+            103,
+            129,
+            15,
+            231,
+            16,
+            46,
+            202,
+            34,
+            19,
+            32,
+            230,
+            195
+          ]
+        ]
+      },
+      {
+        "Addr20": [
+          false,
+          "P2WPKH",
+          [
+            51,
+            98,
+            105,
+            49,
+            32,
+            176,
+            109,
+            2,
+            0,
+            18,
+            187,
+            151,
+            44,
+            166,
+            226,
+            14,
+            74,
+            221,
+            208,
+            97
+          ]
+        ]
+      }
+    ],
+    "start_cycle_state": {
+      "missed_reward_slots": []
+    },
+    "signers": [
+      {
+        "signing_key": "02567b1f5056f6c3e59e759f66216d21239904d1cc2d847c5dcc3c2b6534d7bead",
+        "stacked_amt": 6490000003000,
+        "weight": 1
+      },
+      {
+        "signing_key": "02abcde47f94fcf54f6926127368ddd2ae8c11a27b854269378113e2f6835cb372",
+        "stacked_amt": 6500000000000,
+        "weight": 1
+      },
+      {
+        "signing_key": "02b635d0521ef891a2549253eff2f5d09665af0ecfb21b0aacbf2658e7e7b06761",
+        "stacked_amt": 6500000000000,
+        "weight": 1
+      },
+      {
+        "signing_key": "02e8620935d58ebffa23c260f6917cbd0915ea17d7a46df17e131540237d335504",
+        "stacked_amt": 250000000000000,
+        "weight": 38
+      },
+      {
+        "signing_key": "02f5b5555964731f77bc3a3767ef3ed64ed0ba2971e8792272349db1a148e43ad5",
+        "stacked_amt": 7000000000000,
+        "weight": 1
+      },
+      {
+        "signing_key": "0333545cd2634813ea042c9dfc199b6e635dc0db391b6104b002d82393c9a58691",
+        "stacked_amt": 9690000000000,
+        "weight": 1
+      },
+      {
+        "signing_key": "036a44f61d85efa844b42475f107b106dc8fb209ae27813893c3269c59821e0333",
+        "stacked_amt": 19380000000000,
+        "weight": 3
+      },
+      {
+        "signing_key": "037fc1bb0eab484f5807ba2bfdeb208f9104fa89abbbb8034e23f33df4b9e5ab10",
+        "stacked_amt": 7500000000000,
+        "weight": 1
+      },
+      {
+        "signing_key": "0382ebc8732f0d5f1501a9f842dc6a357497303c71ea8ca4b3858f41fe64e2c3a1",
+        "stacked_amt": 10000000000000,
+        "weight": 1
+      },
+      {
+        "signing_key": "0399649284ed10a00405f032f8567b5e5463838aaa00af8d6bc9da71dda4e19c9c",
+        "stacked_amt": 7700000000000,
+        "weight": 1
+      },
+      {
+        "signing_key": "03fc7cb917698b6137060f434988f7688520972dfb944f9b03c0fbf1c75303e79a",
+        "stacked_amt": 6500000000000,
+        "weight": 1
+      }
+    ],
+    "pox_ustx_threshold": 6460000000000
+  }
+}

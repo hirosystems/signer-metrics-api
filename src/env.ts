@@ -26,9 +26,14 @@ const schema = Type.Object({
   /** Hostname that will be reported to the chainhook node so it can call us back with events */
   EXTERNAL_HOSTNAME: Type.String({ default: '127.0.0.1' }),
   /** Port in which to serve prometheus metrics */
-  PROMETHEUS_PORT: Type.Number({ default: 9154 }),
+  PROMETHEUS_PORT: Type.Number({ default: 9153 }),
   /** Port in which to serve the profiler */
   PROFILER_PORT: Type.Number({ default: 9119 }),
+
+  SIGNER_PROMETHEUS_METRICS_BLOCK_PERIODS: Type.String({
+    pattern: '^\\d+(,\\d+)*$',
+    default: '5,10,25,100,1000',
+  }),
 
   STACKS_NODE_RPC_HOST: Type.String(),
   STACKS_NODE_RPC_PORT: Type.Number({ minimum: 0, maximum: 65535 }),
@@ -59,6 +64,7 @@ const schema = Type.Object({
   PGUSER: Type.String(),
   PGPASSWORD: Type.String(),
   PGDATABASE: Type.String(),
+  PGSCHEMA: Type.Optional(Type.String()),
   /** Limit to how many concurrent connections can be created */
   PG_CONNECTION_POOL_MAX: Type.Number({ default: 10 }),
   PG_IDLE_TIMEOUT: Type.Number({ default: 0 }),
@@ -66,7 +72,19 @@ const schema = Type.Object({
 });
 type Env = Static<typeof schema>;
 
-export const ENV = envSchema<Env>({
-  schema: schema,
-  dotenv: true,
-});
+function getEnv() {
+  const env = {};
+  function reload() {
+    Object.keys(env).forEach(key => delete (env as Record<string, any>)[key]);
+    return Object.assign(env, {
+      reload,
+      ...envSchema<Env>({
+        schema: schema,
+        dotenv: true,
+      }),
+    });
+  }
+  return reload();
+}
+
+export const ENV = getEnv();

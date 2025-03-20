@@ -36,6 +36,49 @@
       "postDebugTask": "npm: testenv:stop",
     },
     {
+      "type": "node",
+      "request": "launch",
+      "name": "Generate OpenAPI spec",
+      "runtimeArgs": ["-r", "ts-node/register"],
+      "args": ["${workspaceFolder}/util/openapi-generator.ts"],
+      "outputCapture": "std",
+      "internalConsoleOptions": "openOnSessionStart",
+      "env": {
+        "NODE_ENV": "development",
+        "TS_NODE_SKIP_IGNORE": "true"
+      }
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Jest: unit tests",
+      "program": "${workspaceFolder}/node_modules/jest/bin/jest",
+      "args": [
+        "--testTimeout=3600000",
+        "--runInBand",
+        "--no-cache",
+        "--selectProjects",
+        "unit-tests",
+      ],
+      "outputCapture": "std",
+      "console": "internalConsole",
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Jest: db tests",
+      "program": "${workspaceFolder}/node_modules/jest/bin/jest",
+      "args": [
+        "--testTimeout=3600000",
+        "--runInBand",
+        "--no-cache",
+        "--selectProjects",
+        "db-tests",
+      ],
+      "outputCapture": "std",
+      "console": "internalConsole",
+    },
+    {
       "name": "Chunk parser prototyping",
       "type": "node",
       "request": "launch",

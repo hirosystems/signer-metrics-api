@@ -1,6 +1,12 @@
-       /     /   ▶ Project name   
-      / --- /      Project description (one liner).
-     /     /       Eli5 (one liner).
+       /     /   ▶ Signer Metrics API   
+      / --- /      REST API for monitoring and analyzing signer behavior on the Stacks blockchain network.
+     /     /       
+
+<div align="center">
+  
+[![codecov](https://codecov.io/gh/hirosystems/signer-metrics-api/branch/main/graph/badge.svg?token=z6VwMM0h0C)](https://codecov.io/gh/hirosystems/signer-metrics-api)
+
+</div>
 
 <div align="center">
 
@@ -20,6 +26,8 @@
 ## Quick-start
 
 ## Documentation
+
+https://signer-metrics-api.vercel.app/
 
 ## Bugs and feature requests
 

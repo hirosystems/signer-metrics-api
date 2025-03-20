@@ -1,13 +1,20 @@
 import { Type, TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import { FastifyPluginCallback } from 'fastify';
 import { Server } from 'http';
-import { ApiStatusResponse } from '../schemas';
+import {
+  CycleSigner,
+  CycleSignerResponse,
+  CycleSignerResponseSchema,
+  CycleSignersResponseSchema,
+} from '../schemas';
+import { parseTime } from '../../helpers';
+import { InvalidRequestError } from '../errors';
 
 export const CycleRoutes: FastifyPluginCallback<
   Record<never, never>,
   Server,
   TypeBoxTypeProvider
-> = (fastify, options, done) => {
+> = (fastify, _options, done) => {
   fastify.get(
     '/v1/cycles/:cycle_number/signers',
     {
@@ -20,6 +27,12 @@ export const CycleRoutes: FastifyPluginCallback<
           cycle_number: Type.Integer({ description: 'PoX cycle number' }),
         }),
         querystring: Type.Object({
+          from: Type.Optional(
+            Type.String({ description: 'Start of time range (e.g., now-2h or ISO timestamp)' })
+          ),
+          to: Type.Optional(
+            Type.String({ description: 'End of time range (e.g., now or ISO timestamp)' })
+          ),
           limit: Type.Integer({
             description: 'Number of results to return (default: 100)',
             default: 100,
@@ -30,85 +43,52 @@ export const CycleRoutes: FastifyPluginCallback<
           }),
         }),
         response: {
-          200: Type.Object({
-            total: Type.Integer(),
-            // TODO: implement cursor pagination
-            // next_cursor: Type.String(),
-            // prev_cursor: Type.String(),
-            // cursor: Type.String(),
-            limit: Type.Integer(),
-            offset: Type.Integer(),
-            results: Type.Array(
-              Type.Object({
-                signer_key: Type.String(),
-                weight: Type.Integer({
-                  description:
-                    'Voting weight of this signer (based on slots allocated which is proportional to stacked amount)',
-                }),
-                weight_percentage: Type.Number({
-                  description: 'Voting weight percent (weight / total_weight)',
-                }),
-                stacked_amount: Type.String({
-                  description:
-                    'Total STX stacked associated with this signer (string quoted integer)',
-                }),
-                stacked_amount_percent: Type.Number({
-                  description: 'Stacked amount percent (stacked_amount / total_stacked_amount)',
-                }),
-                proposals_accepted_count: Type.Integer({
-                  description: 'Number of block proposals accepted by this signer',
-                }),
-                proposals_rejected_count: Type.Integer({
-                  description: 'Number of block proposals rejected by this signer',
-                }),
-                proposals_missed_count: Type.Integer({
-                  description: 'Number of block proposals missed by this signer',
-                }),
-                average_response_time_ms: Type.Number({
-                  description:
-                    'Time duration (in milliseconds) taken to submit responses to block proposals (tracked best effort)',
-                }),
-                // TODO: implement these nice-to-have fields
-                /*
-                mined_blocks_accepted_included_count: Type.Integer({
-                  description: 'Number of mined blocks where signer approved and was included',
-                }),
-                mined_blocks_accepted_excluded_count: Type.Integer({
-                  description: 'Number of mined blocks where signer approved but was not included',
-                }),
-                mined_blocks_rejected_count: Type.Integer({
-                  description: 'Number of mined blocks where signer rejected',
-                }),
-                mined_blocks_missing_count: Type.Integer({
-                  description: 'Number of mined blocks where signer was missing',
-                }),
-                */
-              })
-            ),
-          }),
+          200: CycleSignersResponseSchema,
         },
       },
     },
     async (request, reply) => {
+      const { from, to, limit, offset } = request.query;
+
+      const fromDate = from ? parseTime(from) : null;
+      const toDate = to ? parseTime(to) : null;
+      if (from && !fromDate) {
+        throw new InvalidRequestError('`from` parameter has an invalid format.');
+      }
+      if (to && !toDate) {
+        throw new InvalidRequestError('`to` parameter has an invalid format.');
+      }
+      if (fromDate && toDate && fromDate > toDate) {
+        throw new InvalidRequestError('`from` parameter must be earlier than `to` parameter.');
+      }
+
       const result = await fastify.db.sqlTransaction(async sql => {
-        const results = await fastify.db.getSignersForCycle(
-          request.params.cycle_number,
-          request.query.limit,
-          request.query.offset
-        );
+        const results = await fastify.db.getSignersForCycle({
+          sql,
+          cycleNumber: request.params.cycle_number,
+          fromDate: fromDate ?? undefined,
+          toDate: toDate ?? undefined,
+          limit,
+          offset,
+        });
 
         const formatted = results.map(result => {
-          return {
+          const cycleSinger: CycleSigner = {
             signer_key: result.signer_key,
+            slot_index: result.slot_index,
             weight: result.weight,
             weight_percentage: result.weight_percentage,
             stacked_amount: result.stacked_amount,
             stacked_amount_percent: result.stacked_amount_percentage,
+            stacked_amount_rank: result.stacked_amount_rank,
             proposals_accepted_count: result.proposals_accepted_count,
             proposals_rejected_count: result.proposals_rejected_count,
             proposals_missed_count: result.proposals_missed_count,
             average_response_time_ms: result.average_response_time_ms,
+            last_seen: result.last_block_response_time?.toISOString() ?? null,
+            version: result.last_metadata_server_version ?? null,
           };
+          return cycleSinger;
         });
 
         return {
@@ -138,60 +118,12 @@ export const CycleRoutes: FastifyPluginCallback<
           404: Type.Object({
             error: Type.String({ description: 'Error message when signer is not found' }),
           }),
-          200: Type.Object({
-            signer_key: Type.String(),
-            weight: Type.Integer({
-              description:
-                'Voting weight of this signer (based on slots allocated which is proportional to stacked amount)',
-            }),
-            weight_percentage: Type.Number({
-              description: 'Voting weight percent (weight / total_weight)',
-            }),
-            stacked_amount: Type.String({
-              description: 'Total STX stacked associated with this signer (string quoted integer)',
-            }),
-            stacked_amount_percent: Type.Number({
-              description: 'Stacked amount percent (stacked_amount / total_stacked_amount)',
-            }),
-            stacked_amount_rank: Type.Integer({
-              description:
-                "This signer's rank in the list of all signers (for this cycle) ordered by stacked amount",
-            }),
-            proposals_accepted_count: Type.Integer({
-              description: 'Number of block proposals accepted by this signer',
-            }),
-            proposals_rejected_count: Type.Integer({
-              description: 'Number of block proposals rejected by this signer',
-            }),
-            proposals_missed_count: Type.Integer({
-              description: 'Number of block proposals missed by this signer',
-            }),
-            // TODO: implement these nice-to-have fields
-            /*
-            mined_blocks_accepted_included_count: Type.Integer({
-              description: 'Number of mined blocks where signer approved and was included',
-            }),
-            mined_blocks_accepted_excluded_count: Type.Integer({
-              description: 'Number of mined blocks where signer approved but was not included',
-            }),
-            mined_blocks_rejected_count: Type.Integer({
-              description: 'Number of mined blocks where signer rejected',
-            }),
-            mined_blocks_missing_count: Type.Integer({
-              description:
-                'Number of mined blocks where signer was missing (did not submit an accept or reject response)',
-            }),
-            */
-            average_response_time_ms: Type.Number({
-              description:
-                'Time duration (in milliseconds) taken to submit responses to block proposals (tracked best effort)',
-            }),
-          }),
+          200: CycleSignerResponseSchema,
         },
       },
     },
     async (request, reply) => {
-      const result = await fastify.db.sqlTransaction(async sql => {
+      const result = await fastify.db.sqlTransaction(async _sql => {
         const signer = await fastify.db.getSignerForCycle(
           request.params.cycle_number,
           request.params.signer_id
@@ -202,9 +134,9 @@ export const CycleRoutes: FastifyPluginCallback<
             error: 'Signer not found',
           });
         }
-
-        return {
+        const cycleSigner: CycleSignerResponse = {
           signer_key: signer.signer_key,
+          slot_index: signer.slot_index,
           weight: signer.weight,
           weight_percentage: signer.weight_percentage,
           stacked_amount: signer.stacked_amount,
@@ -214,7 +146,10 @@ export const CycleRoutes: FastifyPluginCallback<
           proposals_rejected_count: signer.proposals_rejected_count,
           proposals_missed_count: signer.proposals_missed_count,
           average_response_time_ms: signer.average_response_time_ms,
+          last_seen: signer.last_block_response_time?.toISOString() ?? null,
+          version: signer.last_metadata_server_version ?? null,
         };
+        return cycleSigner;
       });
       await reply.send(result);
     }

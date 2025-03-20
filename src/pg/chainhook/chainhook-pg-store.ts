@@ -1,14 +1,16 @@
 import {
+  BasePgStore,
   BasePgStoreModule,
   PgSqlClient,
   batchIterate,
-  logger,
+  logger as defaultLogger,
   stopwatch,
 } from '@hirosystems/api-toolkit';
 import { StacksEvent, StacksPayload } from '@hirosystems/chainhook-client';
 import {
   DbBlock,
   DbBlockProposal,
+  DbBlockPush,
   DbBlockResponse,
   DbBlockSignerSignature,
   DbMockBlock,
@@ -16,6 +18,7 @@ import {
   DbMockProposal,
   DbMockSignature,
   DbRewardSetSigner,
+  SignerMessagesEventPayload,
 } from '../types';
 import { normalizeHexString, unixTimeMillisecondsToISO, unixTimeSecondsToISO } from '../../helpers';
 import { EventEmitter } from 'node:events';
@@ -37,6 +40,11 @@ type BlockResponseData = Extract<
   { type: 'BlockResponse' }
 >['data'];
 
+type BlockPushedData = Extract<
+  SignerMessage['payload']['data']['message'],
+  { type: 'BlockPushed' }
+>['data'];
+
 type MockProposalData = Extract<
   SignerMessage['payload']['data']['message'],
   { type: 'MockProposal' }
@@ -52,16 +60,28 @@ type MockBlockData = Extract<
   { type: 'MockBlock' }
 >['data'];
 
+export type DbWriteEvents = EventEmitter<{
+  missingStackerSet: [{ cycleNumber: number }];
+  signerMessages: [SignerMessagesEventPayload];
+}>;
+
 export class ChainhookPgStore extends BasePgStoreModule {
-  readonly events = new EventEmitter<{ missingStackerSet: [{ cycleNumber: number }] }>();
+  readonly events: DbWriteEvents = new EventEmitter();
+  readonly logger = defaultLogger.child({ module: 'ChainhookPgStore' });
+
+  constructor(db: BasePgStore) {
+    super(db);
+  }
 
   async processPayload(payload: StacksPayload): Promise<void> {
+    const appliedSignerMessageResults: SignerMessagesEventPayload = [];
+
     await this.sqlWriteTransaction(async sql => {
       for (const block of payload.rollback) {
-        logger.info(`ChainhookPgStore rollback block ${block.block_identifier.index}`);
+        this.logger.info(`ChainhookPgStore rollback block ${block.block_identifier.index}`);
         const time = stopwatch();
         await this.updateStacksBlock(sql, block, 'rollback');
-        logger.info(
+        this.logger.info(
           `ChainhookPgStore rollback block ${
             block.block_identifier.index
           } finished in ${time.getElapsedSeconds()}s`
@@ -73,16 +93,16 @@ export class ChainhookPgStore extends BasePgStoreModule {
       }
       for (const block of payload.apply) {
         if (block.block_identifier.index <= (await this.getLastIngestedBlockHeight())) {
-          logger.info(
+          this.logger.info(
             `ChainhookPgStore skipping previously ingested block ${block.block_identifier.index}`
           );
           continue;
         }
-        logger.info(`ChainhookPgStore apply block ${block.block_identifier.index}`);
+        this.logger.info(`ChainhookPgStore apply block ${block.block_identifier.index}`);
         const time = stopwatch();
         await this.updateStacksBlock(sql, block, 'apply');
         await this.updateChainTipBlockHeight(block.block_identifier.index);
-        logger.info(
+        this.logger.info(
           `ChainhookPgStore apply block ${
             block.block_identifier.index
           } finished in ${time.getElapsedSeconds()}s`
@@ -91,12 +111,21 @@ export class ChainhookPgStore extends BasePgStoreModule {
 
       for (const event of payload.events) {
         if (event.payload.type === 'SignerMessage') {
-          await this.applySignerMessageEvent(sql, event);
+          const applyResults = await this.applySignerMessageEvent(sql, event);
+          appliedSignerMessageResults.push(...applyResults);
         } else {
-          logger.error(`Unknown chainhook payload event type: ${event.payload.type}`);
+          this.logger.error(`Unknown chainhook payload event type: ${event.payload.type}`);
         }
       }
     });
+
+    // After the sql transaction is complete, emit events for the applied signer messages.
+    // Use setTimeout to break out of the call stack so caller is not blocked by event listeners.
+    if (appliedSignerMessageResults.length > 0) {
+      setTimeout(() => {
+        this.events.emit('signerMessages', appliedSignerMessageResults);
+      });
+    }
   }
 
   async updateChainTipBlockHeight(blockHeight: number): Promise<void> {
@@ -108,28 +137,62 @@ export class ChainhookPgStore extends BasePgStoreModule {
     return result[0].block_height;
   }
 
-  private async applySignerMessageEvent(sql: PgSqlClient, event: SignerMessage) {
+  private async applySignerMessageEvent(
+    sql: PgSqlClient,
+    event: SignerMessage
+  ): Promise<SignerMessagesEventPayload> {
+    const appliedResults: SignerMessagesEventPayload = [];
     switch (event.payload.data.message.type) {
       case 'BlockProposal': {
-        await this.applyBlockProposal(
+        const res = await this.applyBlockProposal(
           sql,
           event.received_at_ms,
           event.payload.data.pubkey,
           event.payload.data.message.data
         );
+        if (res.applied) {
+          appliedResults.push({
+            proposal: {
+              receiptTimestamp: event.received_at_ms,
+              blockHash: res.blockHash,
+            },
+          });
+        }
         break;
       }
       case 'BlockResponse': {
-        await this.applyBlockResponse(
+        const res = await this.applyBlockResponse(
           sql,
           event.received_at_ms,
           event.payload.data.pubkey,
           event.payload.data.message.data
         );
+        if (res.applied) {
+          appliedResults.push({
+            response: {
+              receiptTimestamp: event.received_at_ms,
+              blockHash: res.blockHash,
+              signerKey: res.signerKey,
+            },
+          });
+        }
         break;
       }
       case 'BlockPushed': {
-        logger.info(`Ignoring BlockPushed StackerDB event`);
+        const res = await this.applyBlockPush(
+          sql,
+          event.received_at_ms,
+          event.payload.data.pubkey,
+          event.payload.data.message.data
+        );
+        if (res.applied) {
+          appliedResults.push({
+            push: {
+              receiptTimestamp: event.received_at_ms,
+              blockHash: res.blockHash,
+            },
+          });
+        }
         break;
       }
       case 'MockProposal': {
@@ -161,10 +224,11 @@ export class ChainhookPgStore extends BasePgStoreModule {
         break;
       }
       default: {
-        logger.error(event.payload.data, `Unknown StackerDB event type`);
+        this.logger.error(event.payload.data, `Unknown StackerDB event type`);
         break;
       }
     }
+    return appliedResults;
   }
 
   private async applyMockBlock(
@@ -191,32 +255,47 @@ export class ChainhookPgStore extends BasePgStoreModule {
       network_id: messageData.mock_proposal.peer_info.network_id,
       index_block_hash: normalizeHexString(messageData.mock_proposal.peer_info.index_block_hash),
     };
-    const result = await sql`
+    const mockBlockInsertResult = await sql`
       INSERT INTO mock_blocks ${sql(dbMockBlock)}
       ON CONFLICT ON CONSTRAINT mock_blocks_idb_unique DO NOTHING
     `;
 
-    if (result.count === 0) {
-      logger.info(
+    if (mockBlockInsertResult.count === 0) {
+      this.logger.info(
         `Skipped inserting duplicate mock block height=${dbMockBlock.stacks_tip_height}, hash=${dbMockBlock.stacks_tip}`
       );
-      return;
-    }
+    } else {
+      this.logger.info(
+        `ChainhookPgStore apply mock_block height=${dbMockBlock.stacks_tip_height}, hash=${dbMockBlock.stacks_tip}`
+      );
 
-    for (const batch of batchIterate(messageData.mock_signatures, 500)) {
-      const sigs = batch.map(sig => {
-        const dbSig: DbMockBlockSignerSignature = {
-          signer_key: normalizeHexString(sig.pubkey),
-          signer_signature: normalizeHexString(sig.signature),
-          stacks_tip: sig.mock_proposal.peer_info.stacks_tip,
-          stacks_tip_height: sig.mock_proposal.peer_info.stacks_tip_height,
-          index_block_hash: sig.mock_proposal.peer_info.index_block_hash,
-        };
-        return dbSig;
-      });
-      await sql`
-        INSERT INTO mock_block_signer_signatures ${sql(sigs)}
-      `;
+      let mockBlockSigInsertCount = 0;
+      for (const batch of batchIterate(messageData.mock_signatures, 500)) {
+        const sigs = batch.map(sig => {
+          const dbSig: DbMockBlockSignerSignature = {
+            signer_key: normalizeHexString(sig.pubkey),
+            signer_signature: normalizeHexString(sig.signature),
+            stacks_tip: sig.mock_proposal.peer_info.stacks_tip,
+            stacks_tip_height: sig.mock_proposal.peer_info.stacks_tip_height,
+            index_block_hash: sig.mock_proposal.peer_info.index_block_hash,
+          };
+          return dbSig;
+        });
+        // TODO: add unique constraint here
+        const sigInsertResult = await sql`
+          INSERT INTO mock_block_signer_signatures ${sql(sigs)}
+        `;
+        mockBlockSigInsertCount += sigInsertResult.count;
+      }
+      if (mockBlockSigInsertCount === 0) {
+        this.logger.info(
+          `Skipped inserting duplicate mock block signer signatures for block ${dbMockBlock.stacks_tip_height}`
+        );
+      } else {
+        this.logger.info(
+          `ChainhookPgStore apply mock_block_signer_signatures, block=${dbMockBlock.stacks_tip_height}, count=${mockBlockSigInsertCount}`
+        );
+      }
     }
   }
 
@@ -251,8 +330,12 @@ export class ChainhookPgStore extends BasePgStoreModule {
       ON CONFLICT ON CONSTRAINT mock_signatures_signer_key_idb_unique DO NOTHING
     `;
     if (result.count === 0) {
-      logger.info(
+      this.logger.info(
         `Skipped inserting duplicate mock signature height=${dbMockSignature.stacks_tip_height}, hash=${dbMockSignature.stacks_tip}, signer=${dbMockSignature.signer_key}`
+      );
+    } else {
+      this.logger.info(
+        `ChainhookPgStore apply mock_signature height=${dbMockSignature.stacks_tip_height}, hash=${dbMockSignature.stacks_tip}, signer=${dbMockSignature.signer_key}`
       );
     }
   }
@@ -280,8 +363,12 @@ export class ChainhookPgStore extends BasePgStoreModule {
       ON CONFLICT ON CONSTRAINT mock_proposals_idb_unique DO NOTHING
     `;
     if (result.count === 0) {
-      logger.info(
+      this.logger.info(
         `Skipped inserting duplicate mock proposal height=${dbMockProposal.stacks_tip_height}, hash=${dbMockProposal.stacks_tip}`
+      );
+    } else {
+      this.logger.info(
+        `ChainhookPgStore apply mock_proposal height=${dbMockProposal.stacks_tip_height}, hash=${dbMockProposal.stacks_tip}`
       );
     }
   }
@@ -291,13 +378,14 @@ export class ChainhookPgStore extends BasePgStoreModule {
     receivedAt: number,
     minerPubkey: string,
     messageData: BlockProposalData
-  ) {
+  ): Promise<{ applied: false } | { applied: true; blockHash: string }> {
+    const blockHash = normalizeHexString(messageData.block.block_hash);
     const dbBlockProposal: DbBlockProposal = {
       received_at: unixTimeMillisecondsToISO(receivedAt),
       miner_key: normalizeHexString(minerPubkey),
       block_height: messageData.block.header.chain_length,
       block_time: unixTimeSecondsToISO(messageData.block.header.timestamp),
-      block_hash: normalizeHexString(messageData.block.block_hash),
+      block_hash: blockHash,
       index_block_hash: normalizeHexString(messageData.block.index_block_hash),
       reward_cycle: messageData.reward_cycle,
       burn_block_height: messageData.burn_height,
@@ -307,10 +395,85 @@ export class ChainhookPgStore extends BasePgStoreModule {
       ON CONFLICT ON CONSTRAINT block_proposals_block_hash_unique DO NOTHING
     `;
     if (result.count === 0) {
-      logger.info(
+      this.logger.info(
         `Skipped inserting duplicate block proposal height=${dbBlockProposal.block_height}, hash=${dbBlockProposal.block_hash}`
       );
+      return { applied: false };
     }
+    this.logger.info(
+      `ChainhookPgStore apply block_proposal height=${dbBlockProposal.block_height}, hash=${dbBlockProposal.block_hash}`
+    );
+    return { applied: true, blockHash };
+  }
+
+  async deleteBlockProposal(sql: PgSqlClient, blockHash: string): Promise<DbBlockProposal> {
+    const result = await sql<DbBlockProposal[]>`
+      DELETE FROM block_proposals WHERE block_hash = ${blockHash} RETURNING *
+    `;
+    if (result.length === 0) {
+      throw new Error(`Block proposal not found for hash ${blockHash}`);
+    }
+    // copy the result to a new object to remove the id field
+    const proposal = { ...result[0], id: undefined };
+    delete proposal.id;
+    return proposal;
+  }
+
+  async deleteBlockPush(sql: PgSqlClient, blockHash: string): Promise<DbBlockPush> {
+    const result = await sql<DbBlockProposal[]>`
+      DELETE FROM block_pushes WHERE block_hash = ${blockHash} RETURNING *
+    `;
+    if (result.length === 0) {
+      throw new Error(`Block push not found for hash ${blockHash}`);
+    }
+    // copy the result to a new object to remove the id field
+    const blockPush = { ...result[0], id: undefined };
+    delete blockPush.id;
+    return blockPush;
+  }
+
+  async deleteBlockResponses(sql: PgSqlClient, blockHash: string): Promise<DbBlockResponse[]> {
+    const result = await sql<DbBlockResponse[]>`
+      DELETE FROM block_responses WHERE signer_sighash = ${blockHash} RETURNING *
+    `;
+    // copy the results to a new object to remove the id field
+    return result.map(r => {
+      const response = { ...r, id: undefined };
+      delete response.id;
+      return response;
+    });
+  }
+
+  private async applyBlockPush(
+    sql: PgSqlClient,
+    receivedAt: number,
+    minerPubkey: string,
+    messageData: BlockPushedData
+  ): Promise<{ applied: false } | { applied: true; blockHash: string }> {
+    const blockHash = normalizeHexString(messageData.block.block_hash);
+    const dbBlockPush: DbBlockPush = {
+      received_at: unixTimeMillisecondsToISO(receivedAt),
+      miner_key: normalizeHexString(minerPubkey),
+      block_height: messageData.block.header.chain_length,
+      block_time: unixTimeSecondsToISO(messageData.block.header.timestamp),
+      block_hash: blockHash,
+      index_block_hash: normalizeHexString(messageData.block.index_block_hash),
+    };
+    const result = await sql`
+      INSERT INTO block_pushes ${sql(dbBlockPush)}
+      ON CONFLICT ON CONSTRAINT block_pushes_block_hash_unique DO NOTHING
+    `;
+
+    if (result.count === 0) {
+      this.logger.info(
+        `Skipped inserting duplicate block push hash=${dbBlockPush.block_hash}, miner=${dbBlockPush.miner_key}`
+      );
+      return { applied: false };
+    }
+    this.logger.info(
+      `ChainhookPgStore apply block_push hash=${dbBlockPush.block_hash}, miner=${dbBlockPush.miner_key}`
+    );
+    return { applied: true, blockHash };
   }
 
   private async applyBlockResponse(
@@ -318,9 +481,9 @@ export class ChainhookPgStore extends BasePgStoreModule {
     receivedAt: number,
     signerPubkey: string,
     messageData: BlockResponseData
-  ) {
+  ): Promise<{ applied: false } | { applied: true; blockHash: string; signerKey: string }> {
     if (messageData.type !== 'Accepted' && messageData.type !== 'Rejected') {
-      logger.error(messageData, `Unexpected BlockResponse type`);
+      this.logger.error(messageData, `Unexpected BlockResponse type`);
     }
     const accepted = messageData.type === 'Accepted';
 
@@ -335,12 +498,13 @@ export class ChainhookPgStore extends BasePgStoreModule {
         rejectCode = rejectReason[RejectReasonValidationFailed];
       }
     }
-
+    const blockHash = normalizeHexString(messageData.data.signer_signature_hash);
+    const signerKey = normalizeHexString(signerPubkey);
     const dbBlockResponse: DbBlockResponse = {
       received_at: unixTimeMillisecondsToISO(receivedAt),
-      signer_key: normalizeHexString(signerPubkey),
+      signer_key: signerKey,
       accepted: accepted,
-      signer_sighash: normalizeHexString(messageData.data.signer_signature_hash),
+      signer_sighash: blockHash,
       metadata_server_version: messageData.data.metadata.server_version,
       signature: messageData.data.signature,
       reason_string: accepted ? null : messageData.data.reason,
@@ -354,10 +518,15 @@ export class ChainhookPgStore extends BasePgStoreModule {
     `;
 
     if (result.count === 0) {
-      logger.info(
+      this.logger.info(
         `Skipped inserting duplicate block response signer=${dbBlockResponse.signer_key}, hash=${dbBlockResponse.signer_sighash}`
       );
+      return { applied: false };
     }
+    this.logger.info(
+      `ChainhookPgStore apply block_response signer=${dbBlockResponse.signer_key}, hash=${dbBlockResponse.signer_sighash}`
+    );
+    return { applied: true, blockHash, signerKey };
   }
 
   private async updateStacksBlock(
@@ -396,7 +565,7 @@ export class ChainhookPgStore extends BasePgStoreModule {
       };
       return dbSig;
     });
-    if (dbSignerSignatures && dbSignerSignatures.length > 0) {
+    if (dbSignerSignatures) {
       await this.insertBlockSignerSignatures(sql, dbSignerSignatures);
     }
 
@@ -404,14 +573,13 @@ export class ChainhookPgStore extends BasePgStoreModule {
       throw new Error(`Missing cycle_number for block ${block.block_identifier.index} reward set`);
     }
 
-    const dbRewardSetSigners = block.metadata.reward_set?.signers?.map(signer => {
+    const dbRewardSetSigners = block.metadata.reward_set?.signers?.map((signer, index) => {
       const dbSigner: DbRewardSetSigner = {
-        cycle_number: block.metadata.cycle_number as number,
-        burn_block_height: dbBlock.burn_block_height,
-        block_height: dbBlock.block_height,
+        cycle_number: block.metadata.cycle_number ?? 0,
         signer_key: normalizeHexString(signer.signing_key),
         signer_weight: signer.weight,
         signer_stacked_amount: signer.stacked_amt,
+        slot_index: index,
       };
       return dbSigner;
     });
@@ -421,98 +589,141 @@ export class ChainhookPgStore extends BasePgStoreModule {
   }
 
   private async insertBlock(sql: PgSqlClient, dbBlock: DbBlock) {
-    // After the block is inserted, calculate the reward_cycle_number, then check if the reward_set_signers
-    // table contains any rows for the calculated cycle_number.
-    const result = await sql<{ cycle_number: number | null; reward_set_exists: boolean }[]>`
-      WITH inserted AS (
-        INSERT INTO blocks ${sql(dbBlock)}
-        RETURNING burn_block_height
-      ),
-      cycle_number AS (
-        SELECT FLOOR((inserted.burn_block_height - ct.first_burnchain_block_height) / ct.reward_cycle_length) AS cycle_number
-        FROM inserted, chain_tip AS ct
-        LIMIT 1
-      )
-      SELECT 
-        cn.cycle_number,
-        EXISTS (
-          SELECT 1 
-          FROM reward_set_signers 
-          WHERE cycle_number = cn.cycle_number
-          LIMIT 1
-        ) AS reward_set_exists
-      FROM cycle_number AS cn
-    `;
-    const { cycle_number, reward_set_exists } = result[0];
-    if (cycle_number === null) {
-      logger.warn(`Failed to calculate cycle number for block ${dbBlock.block_height}`);
-    } else if (cycle_number !== null && !reward_set_exists) {
-      logger.warn(
-        `Missing reward set signers for cycle ${cycle_number} in block ${dbBlock.block_height}`
+    // Skip pre-nakamoto blocks
+    if (!dbBlock.is_nakamoto_block) {
+      this.logger.info(
+        `ChainhookPgStore skipping apply for pre-nakamoto block ${dbBlock.block_height} ${dbBlock.block_hash}`
       );
-      // Use setImmediate to ensure we break out of the current sql transaction within the async context
-      setImmediate(() => this.events.emit('missingStackerSet', { cycleNumber: cycle_number }));
+    } else {
+      // After the block is inserted, calculate the reward_cycle_number, then check if the reward_set_signers
+      // table contains any rows for the calculated cycle_number.
+      // TODO: add unique constraint here
+      const result = await sql<{ cycle_number: number | null; reward_set_exists: boolean }[]>`
+        WITH inserted AS (
+          INSERT INTO blocks ${sql(dbBlock)}
+          RETURNING burn_block_height
+        ),
+        cycle_number AS (
+          SELECT FLOOR((inserted.burn_block_height - ct.first_burnchain_block_height) / ct.reward_cycle_length) AS cycle_number
+          FROM inserted, chain_tip AS ct
+          LIMIT 1
+        )
+        SELECT 
+          cn.cycle_number,
+          EXISTS (
+            SELECT 1 
+            FROM reward_set_signers 
+            WHERE cycle_number = cn.cycle_number
+            LIMIT 1
+          ) AS reward_set_exists
+        FROM cycle_number AS cn
+      `;
+      const { cycle_number, reward_set_exists } = result[0];
+      if (cycle_number === null) {
+        this.logger.warn(`Failed to calculate cycle number for block ${dbBlock.block_height}`);
+      } else if (cycle_number !== null && !reward_set_exists) {
+        this.logger.warn(
+          `Missing reward set signers for cycle ${cycle_number} in block ${dbBlock.block_height}`
+        );
+        // Use setTimeout to ensure we break out of the current sql transaction within the async context
+        setTimeout(() => this.events.emit('missingStackerSet', { cycleNumber: cycle_number }));
+      }
+      this.logger.info(
+        `ChainhookPgStore apply block ${dbBlock.block_height} ${dbBlock.block_hash}`
+      );
     }
-    logger.info(`ChainhookPgStore apply block ${dbBlock.block_height} ${dbBlock.block_hash}`);
   }
 
   private async insertBlockSignerSignatures(
     sql: PgSqlClient,
     signerSigs: DbBlockSignerSignature[]
   ) {
-    for await (const batch of batchIterate(signerSigs, 500)) {
-      await sql`
+    if (signerSigs.length === 0) {
+      // nothing to insert
+      return;
+    }
+    let insertCount = 0;
+    for (const batch of batchIterate(signerSigs, 500)) {
+      // TODO: add unique constraint here
+      const result = await sql`
         INSERT INTO block_signer_signatures ${sql(batch)}
       `;
+      insertCount += result.count;
+    }
+    if (insertCount === 0) {
+      this.logger.info(
+        `Skipped inserting duplicate block signer signatures for block ${signerSigs[0].block_height}`
+      );
+    } else {
+      this.logger.info(
+        `ChainhookPgStore apply block_signer_signatures, block=${signerSigs[0].block_height}, count=${insertCount}`
+      );
     }
   }
 
-  async insertRewardSetSigners(sql: PgSqlClient, rewardSetSigners: DbRewardSetSigner[]) {
-    for await (const batch of batchIterate(rewardSetSigners, 500)) {
+  async insertRewardSetSigners(
+    sql: PgSqlClient,
+    rewardSetSigners: DbRewardSetSigner[]
+  ): Promise<{ rowsDeleted: number; rowsInserted: number }> {
+    if (rewardSetSigners.length === 0) {
+      return { rowsDeleted: 0, rowsInserted: 0 };
+    }
+
+    const cycleNumber = rewardSetSigners[0].cycle_number;
+    const deleteRows = await sql`
+        DELETE FROM reward_set_signers
+        WHERE cycle_number = ${cycleNumber}
+      `;
+    if (deleteRows.count > 0) {
+      this.logger.warn(
+        `Deleted existing reward set signers for cycle ${cycleNumber} before inserting new rows, deleted ${deleteRows.count} rows`
+      );
+    }
+
+    let insertCount = 0;
+    for (const batch of batchIterate(rewardSetSigners, 500)) {
       const result = await sql`
         INSERT INTO reward_set_signers ${sql(batch)}
         ON CONFLICT ON CONSTRAINT reward_set_signers_cycle_unique DO NOTHING
       `;
-      if (result.count === 0) {
-        logger.warn(
-          `Skipped inserting duplicate reward set signers for cycle ${rewardSetSigners[0].cycle_number}`
-        );
-      }
+      insertCount += result.count;
     }
+    if (insertCount === 0) {
+      this.logger.info(
+        `Skipped inserting duplicate reward set signers for cycle ${rewardSetSigners[0].cycle_number}`
+      );
+    } else {
+      this.logger.info(
+        `ChainhookPgStore apply reward_set_signers, cycle=${rewardSetSigners[0].cycle_number}, count=${insertCount}`
+      );
+    }
+    return { rowsDeleted: deleteRows.count, rowsInserted: insertCount };
   }
 
   private async rollBackTransactions(sql: PgSqlClient, block: StacksEvent) {
     const blockHeight = block.block_identifier.index;
     await this.rollBackBlock(sql, blockHeight);
     await this.rollBackBlockSignerSignatures(sql, blockHeight);
-    await this.rollBackRewardSetSigners(sql, blockHeight);
   }
 
-  private async rollBackBlock(sql: PgSqlClient, blockHeight: number) {
+  async rollBackBlock(sql: PgSqlClient, blockHeight: number) {
     const res = await sql`
       DELETE FROM blocks WHERE block_height = ${blockHeight}
     `;
-    logger.info(`ChainhookPgStore rollback block ${blockHeight}`);
+    this.logger.info(`ChainhookPgStore rollback block ${blockHeight}`);
     if (res.count !== 1) {
-      logger.warn(`Unexpected number of rows deleted for block ${blockHeight}, ${res.count} rows`);
+      this.logger.warn(
+        `Unexpected number of rows deleted for block ${blockHeight}, ${res.count} rows`
+      );
     }
   }
 
-  private async rollBackBlockSignerSignatures(sql: PgSqlClient, blockHeight: number) {
+  async rollBackBlockSignerSignatures(sql: PgSqlClient, blockHeight: number) {
     const res = await sql`
       DELETE FROM block_signer_signatures WHERE block_height = ${blockHeight}
     `;
-    logger.info(
+    this.logger.info(
       `ChainhookPgStore rollback block signer signatures for block ${blockHeight}, deleted ${res.count} rows`
-    );
-  }
-
-  private async rollBackRewardSetSigners(sql: PgSqlClient, blockHeight: number) {
-    const res = await sql`
-      DELETE FROM reward_set_signers WHERE block_height = ${blockHeight}
-    `;
-    logger.info(
-      `ChainhookPgStore rollback reward set signers for block ${blockHeight}, deleted ${res.count} rows`
     );
   }
 }

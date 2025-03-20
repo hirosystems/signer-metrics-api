@@ -1,6 +1,6 @@
 import { PgStore } from '../pg/pg-store';
 import PQueue from 'p-queue';
-import { fetchStackerSet, getStacksNodeUrl } from './stacks-core-rpc-client';
+import { fetchStackerSet, RpcStackerSetResponse } from './stacks-core-rpc-client';
 import { sleep } from '../helpers';
 import { logger } from '@hirosystems/api-toolkit';
 import { DbRewardSetSigner } from '../pg/types';
@@ -43,7 +43,7 @@ export class StackerSetUpdator {
     this.queuedCycleNumbers.add(cycleNumber);
     void this.queue
       .add(() => this.fetchStackerSet(cycleNumber))
-      .catch(error => {
+      .catch((error: unknown) => {
         if (!this.abortController.signal.aborted) {
           logger.error(error, `Unexpected stacker-set fetch queue error for cycle ${cycleNumber}`);
           this.queuedCycleNumbers.delete(cycleNumber);
@@ -61,17 +61,10 @@ export class StackerSetUpdator {
         return; // Exit job successful fetch
       }
       logger.info(`Fetched stacker set for cycle ${cycleNumber}, updating database ...`);
-      const dbRewardSetSigners = stackerSet.response.stacker_set.signers.map(entry => {
-        const rewardSetSigner: DbRewardSetSigner = {
-          cycle_number: cycleNumber,
-          block_height: 0,
-          burn_block_height: 0,
-          signer_key: Buffer.from(entry.signing_key.replace(/^0x/, ''), 'hex'),
-          signer_weight: entry.weight,
-          signer_stacked_amount: entry.stacked_amt.toString(),
-        };
-        return rewardSetSigner;
-      });
+      const dbRewardSetSigners = rpcStackerSetToDbRewardSetSigners(
+        stackerSet.response,
+        cycleNumber
+      );
       await this.db.chainhook.sqlWriteTransaction(async sql => {
         await this.db.chainhook.insertRewardSetSigners(sql, dbRewardSetSigners);
       });
@@ -88,10 +81,26 @@ export class StackerSetUpdator {
         `Failed to fetch stacker set for cycle ${cycleNumber}, retrying in ${FETCH_STACKER_SET_RETRY_INTERVAL_MS}ms ...`
       );
       await sleep(FETCH_STACKER_SET_RETRY_INTERVAL_MS, this.abortController.signal);
-      setImmediate(() => {
+      setTimeout(() => {
         this.queuedCycleNumbers.delete(cycleNumber);
         this.add({ cycleNumber });
       });
     }
   }
+}
+
+export function rpcStackerSetToDbRewardSetSigners(
+  rpcResponse: RpcStackerSetResponse,
+  cycleNumber: number
+): DbRewardSetSigner[] {
+  return rpcResponse.stacker_set.signers.map((entry, index) => {
+    const rewardSetSigner: DbRewardSetSigner = {
+      cycle_number: cycleNumber,
+      signer_key: Buffer.from(entry.signing_key.replace(/^0x/, ''), 'hex'),
+      signer_weight: entry.weight,
+      signer_stacked_amount: entry.stacked_amt.toString(),
+      slot_index: index,
+    };
+    return rewardSetSigner;
+  });
 }

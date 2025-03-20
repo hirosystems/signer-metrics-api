@@ -14,15 +14,18 @@ export async function startChainhookServer(args: { db: PgStore }): Promise<Chain
   const blockHeight = await args.db.getChainTipBlockHeight();
   logger.info(`ChainhookServer is at block ${blockHeight}`);
 
+  const startHeight = ENV.NETWORK === 'mainnet' ? 171800 : 1;
+  const startBlock = Math.max(startHeight, blockHeight);
+
   const predicates: EventObserverPredicate[] = [];
   if (ENV.CHAINHOOK_AUTO_PREDICATE_REGISTRATION) {
     predicates.push({
-      name: 'signer-monitor-api-signer-messages',
+      name: 'signer-metrics-api-signer-messages',
       version: 1,
       chain: 'stacks',
       networks: {
         [ENV.NETWORK]: {
-          startBlock: 1,
+          start_block: startBlock,
           if_this: {
             scope: 'signer_message',
             after_timestamp: 1,
@@ -31,15 +34,15 @@ export async function startChainhookServer(args: { db: PgStore }): Promise<Chain
       },
     });
     predicates.push({
-      name: 'signer-monitor-api-blocks',
+      name: 'signer-metrics-api-blocks',
       version: 1,
       chain: 'stacks',
       networks: {
         [ENV.NETWORK]: {
-          start_block: blockHeight,
+          start_block: startBlock,
           if_this: {
             scope: 'block_height',
-            higher_than: 1,
+            higher_than: startHeight,
           },
         },
       },
@@ -55,7 +58,8 @@ export async function startChainhookServer(args: { db: PgStore }): Promise<Chain
     validate_chainhook_payloads: false,
     body_limit: ENV.EVENT_SERVER_BODY_LIMIT,
     predicate_disk_file_path: ENV.CHAINHOOK_PREDICATE_PATH,
-    predicate_health_check_interval_ms: 300_000,
+    // TODO: bug around predicate re-registration
+    // predicate_health_check_interval_ms: 300_000,
     node_type: 'chainhook',
   };
   const chainhook: ChainhookNodeOptions = {
