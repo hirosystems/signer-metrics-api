@@ -1,3 +1,10 @@
+## [0.13.0-redis-stream.4](https://github.com/hirosystems/signer-metrics-api/compare/v0.13.0-redis-stream.3...v0.13.0-redis-stream.4) (2025-03-31)
+
+
+### Bug Fixes
+
+* sanitize redis client name string ([e0960da](https://github.com/hirosystems/signer-metrics-api/commit/e0960da28b4d87d0051388aa358e1d6f7263971d))
+
 ## [0.13.0-redis-stream.3](https://github.com/hirosystems/signer-metrics-api/compare/v0.13.0-redis-stream.2...v0.13.0-redis-stream.3) (2025-03-31)
 
 
