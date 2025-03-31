@@ -27,6 +27,7 @@ export class PgStore extends BasePgStore {
     skipMigrations?: boolean;
     /** If a PGSCHEMA is run `CREATE SCHEMA IF NOT EXISTS schema_name` */
     createSchema?: boolean;
+    enableListenNotify?: boolean;
   }): Promise<PgStore> {
     const pgConfig: PgConnectionArgs = {
       host: ENV.PGHOST,
@@ -64,10 +65,10 @@ export class PgStore extends BasePgStore {
         }
       }
     }
-    return new PgStore(sql);
+    return new PgStore(sql, opts?.enableListenNotify ?? false);
   }
 
-  constructor(sql: PgSqlClient, enableListenNotify = false) {
+  constructor(sql: PgSqlClient, enableListenNotify: boolean) {
     super(sql);
     this.ingestion = new PgWriteStore(this);
     if (enableListenNotify) {

@@ -65,4 +65,8 @@ export class ThreadedParser {
     const reply = await replyWaiter;
     return reply.chunk;
   }
+
+  async close() {
+    await this.worker.terminate();
+  }
 }
