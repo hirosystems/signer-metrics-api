@@ -21,7 +21,7 @@ const schema = Type.Object({
   API_PORT: Type.Number({ default: 3011, minimum: 0, maximum: 65535 }),
 
   /** Port in which to serve prometheus metrics */
-  PROMETHEUS_PORT: Type.Number({ default: 9154 }),
+  PROMETHEUS_PORT: Type.Number({ default: 9153 }),
   /** Port in which to serve the profiler */
   PROFILER_PORT: Type.Number({ default: 9119 }),
 

@@ -770,6 +770,23 @@ export class PgStore extends BasePgStore {
     return dbRewardSetSigners;
   }
 
+  async getCurrentCycleSignersWeightPercentage() {
+    return await this.sql<{ signer_key: string; weight: number }[]>`
+      WITH current_cycle AS (
+        SELECT MAX(cycle_number) AS cycle_number
+        FROM reward_set_signers
+      ),
+      total_weight AS (
+        SELECT SUM(signer_weight) AS total
+        FROM reward_set_signers
+        WHERE cycle_number = (SELECT cycle_number FROM current_cycle)
+      )
+      SELECT signer_key, ROUND((signer_weight::numeric / (SELECT total FROM total_weight)::numeric) * 100.0, 3)::float AS weight
+      FROM reward_set_signers
+      WHERE cycle_number = (SELECT cycle_number FROM current_cycle)
+    `;
+  }
+
   async getSignerForCycle(cycleNumber: number, signerId: string) {
     const dbRewardSetSigner = await this.sql<
       {
@@ -920,6 +937,7 @@ export class PgStore extends BasePgStore {
       recent_blocks AS (
         SELECT
           bp.block_hash,
+          bp.received_at,
           ROW_NUMBER() OVER (ORDER BY bp.received_at DESC) AS row_num
         FROM block_proposals bp
         ORDER BY bp.received_at DESC
@@ -935,15 +953,19 @@ export class PgStore extends BasePgStore {
         JOIN recent_blocks rb
           ON rb.row_num <= br.range_value
       ),
+      -- Filter block_responses with a received_at older than the oldest recent_blocks timestamp
+      block_responses_after AS (
+        SELECT * FROM block_responses br
+        WHERE br.received_at >= (
+          SELECT MIN(received_at) - INTERVAL '1 hour' FROM recent_blocks
+        )
+      ),
+      -- Filter block_responses with hashes not included in recent_blocks, or with signer_keys not included in this cycle
       relevant_responses AS (
-        -- Pre-filter block_responses to only those relevant to recent_blocks and signer_keys
-        SELECT
-          br.signer_key,
-          br.signer_sighash,
-          br.accepted
-        FROM block_responses br
-        WHERE br.signer_sighash IN (SELECT block_hash FROM recent_blocks)
-          AND br.signer_key IN (SELECT signer_key FROM signer_keys)
+        SELECT br.signer_key, br.signer_sighash, br.accepted
+        FROM block_responses_after br
+        JOIN recent_blocks rb ON br.signer_sighash = rb.block_hash
+        JOIN signer_keys sk ON br.signer_key = sk.signer_key
       ),
       responses_with_states AS (
         SELECT
@@ -1074,7 +1096,7 @@ export class PgStore extends BasePgStore {
     return result;
   }
 
-  async getLastPendingProposalDate(args: { sql: PgSqlClient }) {
+  async getPendingProposalDate(args: { sql: PgSqlClient; kind: 'oldest' | 'newest' }) {
     const result = await args.sql<
       {
         received_at: Date | null;
@@ -1087,15 +1109,15 @@ export class PgStore extends BasePgStore {
             (SELECT COALESCE(MAX(block_height), 0) FROM block_pushes)
           ) AS height
       ),
-      oldest_pending_proposal AS (
+      pending_proposal AS (
         SELECT received_at
         FROM block_proposals bp
         WHERE bp.block_height > (SELECT height FROM max_heights)
-        ORDER BY received_at ASC
+        ORDER BY received_at ${args.kind == 'newest' ? args.sql`DESC` : args.sql`ASC`}
         LIMIT 1
       )
       SELECT received_at
-      FROM oldest_pending_proposal
+      FROM pending_proposal
     `;
 
     // Return the computed value or null if no pending proposals exist
