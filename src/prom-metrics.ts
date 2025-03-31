@@ -1,28 +1,19 @@
-import { Gauge, Registry } from 'prom-client';
-import { ENV } from '../../env';
-import { FastifyPluginAsync } from 'fastify';
-import { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
-import { Server } from 'node:http';
+import { Gauge } from 'prom-client';
+import { ENV } from './env';
+import { PgStore } from './pg/pg-store';
 
-export const SignerPromMetricsRoutes: FastifyPluginAsync<
-  Record<never, never>,
-  Server,
-  TypeBoxTypeProvider
-> = async (fastify, _options) => {
-  const db = fastify.db;
-
+export function configureSignerMetrics(db: PgStore) {
   // Getter for block periods so that the env var can be updated
   const getBlockPeriods = () => ENV.SIGNER_PROMETHEUS_METRICS_BLOCK_PERIODS.split(',').map(Number);
 
-  const signerRegistry = new Registry();
+  const metricsPrefix = 'signer_api_';
 
   new Gauge({
-    name: 'time_since_last_pending_block_proposal_ms',
+    name: metricsPrefix + 'time_since_oldest_pending_block_proposal_ms',
     help: 'Time in milliseconds since the oldest pending block proposal',
-    registers: [signerRegistry],
     async collect() {
       const dbResult = await db.sqlTransaction(async sql => {
-        return await db.getLastPendingProposalDate({ sql });
+        return await db.getPendingProposalDate({ sql, kind: 'oldest' });
       });
       this.reset();
       this.set(dbResult ? Date.now() - dbResult.getTime() : 0);
@@ -30,10 +21,21 @@ export const SignerPromMetricsRoutes: FastifyPluginAsync<
   });
 
   new Gauge({
-    name: 'avg_block_push_time_ms',
+    name: metricsPrefix + 'time_since_newest_pending_block_proposal_ms',
+    help: 'Time in milliseconds since the most recent pending block proposal',
+    async collect() {
+      const dbResult = await db.sqlTransaction(async sql => {
+        return await db.getPendingProposalDate({ sql, kind: 'newest' });
+      });
+      this.reset();
+      this.set(dbResult ? Date.now() - dbResult.getTime() : 0);
+    },
+  });
+
+  new Gauge({
+    name: metricsPrefix + 'avg_block_push_time_ms',
     help: 'Average time (in milliseconds) taken for block proposals to be accepted and pushed over different block periods',
     labelNames: ['period'] as const,
-    registers: [signerRegistry],
     async collect() {
       const dbResults = await db.sqlTransaction(async sql => {
         return await db.getRecentBlockPushMetrics({ sql, blockRanges: getBlockPeriods() });
@@ -46,10 +48,9 @@ export const SignerPromMetricsRoutes: FastifyPluginAsync<
   });
 
   new Gauge({
-    name: 'proposal_acceptance_rate',
+    name: metricsPrefix + 'proposal_acceptance_rate',
     help: 'The acceptance rate of block proposals for different block ranges (as a float between 0 and 1).',
     labelNames: ['period'],
-    registers: [signerRegistry],
     async collect() {
       const dbResults = await db.sqlTransaction(async sql => {
         return await db.getRecentBlockAcceptanceMetrics({ sql, blockRanges: getBlockPeriods() });
@@ -62,10 +63,9 @@ export const SignerPromMetricsRoutes: FastifyPluginAsync<
   });
 
   new Gauge({
-    name: 'signer_state_count',
+    name: metricsPrefix + 'signer_state_count',
     help: 'Count of signer states over different block periods',
     labelNames: ['signer', 'period', 'state'] as const,
-    registers: [signerRegistry],
     async collect() {
       const dbResults = await db.sqlTransaction(async sql => {
         return await db.getRecentSignerMetrics({ sql, blockRanges: getBlockPeriods() });
@@ -81,31 +81,16 @@ export const SignerPromMetricsRoutes: FastifyPluginAsync<
     },
   });
 
-  fastify.get(
-    '/metrics',
-    {
-      schema: {
-        operationId: 'getPrometheusMetrics',
-        summary: 'API Signer Prometheus Metrics',
-        description: 'Retreives the Prometheus metrics signer and block proposal related data',
-        tags: ['Prometheus Metrics'],
-        response: {
-          200: {
-            description: 'Prometheus metrics in plain text format',
-            content: {
-              'text/plain': {
-                schema: { type: 'string' },
-              },
-            },
-          },
-        },
-      },
+  new Gauge({
+    name: metricsPrefix + 'signer_weight_percentage',
+    help: 'Signer weight percentage for the current cycle',
+    labelNames: ['signer'] as const,
+    async collect() {
+      const dbResults = await db.getCurrentCycleSignersWeightPercentage();
+      this.reset();
+      for (const row of dbResults) {
+        this.set({ signer: row.signer_key }, row.weight);
+      }
     },
-    async (_, reply) => {
-      const metrics = await signerRegistry.metrics();
-      await reply.type(signerRegistry.contentType).send(metrics);
-    }
-  );
-
-  await Promise.resolve();
-};
+  });
+}

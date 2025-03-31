@@ -1,9 +1,37 @@
-## [0.13.0-redis-stream.1](https://github.com/hirosystems/signer-metrics-api/compare/v0.12.2...v0.13.0-redis-stream.1) (2025-01-09)
+## [0.12.7](https://github.com/hirosystems/signer-metrics-api/compare/v0.12.6...v0.12.7) (2025-03-03)
 
 
-### Features
+### Bug Fixes
 
-* ingest messages from redis ([#65](https://github.com/hirosystems/signer-metrics-api/issues/65)) ([26f8e62](https://github.com/hirosystems/signer-metrics-api/commit/26f8e62430cccbe6358463352cf3b7fa3eaf7f70)), closes [#66](https://github.com/hirosystems/signer-metrics-api/issues/66)
+* optimize sql query used for the `signer_state_count` metric ([#73](https://github.com/hirosystems/signer-metrics-api/issues/73)) ([6394e58](https://github.com/hirosystems/signer-metrics-api/commit/6394e58c2a6d4668783e543dbc2c7e071ceda701))
+
+## [0.12.6](https://github.com/hirosystems/signer-metrics-api/compare/v0.12.5...v0.12.6) (2025-01-27)
+
+
+### Bug Fixes
+
+* newest unconfirmed block propsal metric ([#71](https://github.com/hirosystems/signer-metrics-api/issues/71)) ([cb4b117](https://github.com/hirosystems/signer-metrics-api/commit/cb4b11754e8b1814d49cbbedfa2d6467e9b3aa05))
+
+## [0.12.5](https://github.com/hirosystems/signer-metrics-api/compare/v0.12.4...v0.12.5) (2025-01-17)
+
+
+### Bug Fixes
+
+* create optimized query to get current cycle signer weight percentages ([#70](https://github.com/hirosystems/signer-metrics-api/issues/70)) ([8bcb54b](https://github.com/hirosystems/signer-metrics-api/commit/8bcb54bde240070fa4ab078df1dda8c207ea251c))
+
+## [0.12.4](https://github.com/hirosystems/signer-metrics-api/compare/v0.12.3...v0.12.4) (2025-01-17)
+
+
+### Bug Fixes
+
+* integrate custom metrics to private endpoint and add signer weight percentage metric ([#69](https://github.com/hirosystems/signer-metrics-api/issues/69)) ([d113b7c](https://github.com/hirosystems/signer-metrics-api/commit/d113b7c7b7a91d843989fbee1465a6e239959379))
+
+## [0.12.3](https://github.com/hirosystems/signer-metrics-api/compare/v0.12.2...v0.12.3) (2025-01-15)
+
+
+### Bug Fixes
+
+* **prometheus:** adds prefix to each metric and fixes default prom port ([7825bb5](https://github.com/hirosystems/signer-metrics-api/commit/7825bb5604d8937195e67bc81c68f0dd487b260b))
 
 ## [0.12.2](https://github.com/hirosystems/signer-metrics-api/compare/v0.12.1...v0.12.2) (2024-12-17)
 

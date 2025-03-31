@@ -6,6 +6,7 @@ import { buildProfilerServer, logger, registerShutdownConfig } from '@hirosystem
 import { EventStreamHandler } from './event-stream/event-stream';
 import { startPoxInfoUpdater } from './stacks-core-rpc/pox-info-updater';
 import { StackerSetUpdator } from './stacks-core-rpc/stacker-set-updater';
+import { configureSignerMetrics } from './prom-metrics';
 
 /**
  * Initializes background services. Only for `default` and `writeonly` run modes.
@@ -72,6 +73,7 @@ async function initApiService(db: PgStore) {
         await promServer.close();
       },
     });
+    configureSignerMetrics(db);
     await promServer.listen({ host: ENV.API_HOST, port: ENV.PROMETHEUS_PORT });
   }
 }

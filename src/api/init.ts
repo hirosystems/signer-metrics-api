@@ -12,7 +12,6 @@ import { CycleRoutes } from './routes/cycle';
 import { BlockRoutes } from './routes/blocks';
 import { BlockProposalsRoutes } from './routes/block-proposals';
 import { SocketIORoutes } from './routes/socket-io';
-import { SignerPromMetricsRoutes } from './routes/prom-metrics';
 
 export const Api: FastifyPluginAsync<Record<never, never>, Server, TypeBoxTypeProvider> = async (
   fastify,
@@ -25,7 +24,6 @@ export const Api: FastifyPluginAsync<Record<never, never>, Server, TypeBoxTypePr
       await fastify.register(BlockRoutes);
       await fastify.register(BlockProposalsRoutes);
       await fastify.register(SocketIORoutes);
-      await fastify.register(SignerPromMetricsRoutes);
     },
     { prefix: '/signer-metrics' }
   );
