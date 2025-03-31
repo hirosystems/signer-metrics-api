@@ -16,6 +16,7 @@ import {
 } from './msg-parsing';
 import { SignerMessagesEventPayload } from '../pg/types';
 import { ThreadedParser } from './threaded-parser';
+import { SERVER_VERSION } from '@hirosystems/api-toolkit';
 
 export class EventStreamHandler {
   db: PgStore;
@@ -30,6 +31,7 @@ export class EventStreamHandler {
       redisStreamPrefix: ENV.REDIS_STREAM_KEY_PREFIX,
       eventStreamType: StacksEventStreamType.all,
       lastMessageId: opts.lastMessageId,
+      appName: `signer-metrics-api ${SERVER_VERSION.tag} (${SERVER_VERSION.branch}:${SERVER_VERSION.commit})`,
     });
     this.threadedParser = new ThreadedParser();
   }
