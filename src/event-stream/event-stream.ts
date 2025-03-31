@@ -18,6 +18,12 @@ import { SignerMessagesEventPayload } from '../pg/types';
 import { ThreadedParser } from './threaded-parser';
 import { SERVER_VERSION } from '@hirosystems/api-toolkit';
 
+// TODO: move this into the @hirosystems/salt-n-pepper-client lib
+function sanitizeRedisClientName(value: string): string {
+  const nameSanitizer = /[^!-~]+/g;
+  return value.trim().replace(nameSanitizer, '-');
+}
+
 export class EventStreamHandler {
   db: PgStore;
   logger = defaultLogger.child({ name: 'EventStreamHandler' });
@@ -26,12 +32,15 @@ export class EventStreamHandler {
 
   constructor(opts: { db: PgStore; lastMessageId: string }) {
     this.db = opts.db;
+    const appName = sanitizeRedisClientName(
+      `signer-metrics-api ${SERVER_VERSION.tag} (${SERVER_VERSION.branch}:${SERVER_VERSION.commit})`
+    );
     this.eventStream = new StacksEventStream({
       redisUrl: ENV.REDIS_URL,
       redisStreamPrefix: ENV.REDIS_STREAM_KEY_PREFIX,
       eventStreamType: StacksEventStreamType.all,
       lastMessageId: opts.lastMessageId,
-      appName: `signer-metrics-api ${SERVER_VERSION.tag} (${SERVER_VERSION.branch}:${SERVER_VERSION.commit})`,
+      appName,
     });
     this.threadedParser = new ThreadedParser();
   }
