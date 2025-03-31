@@ -1,3 +1,10 @@
+## [0.13.0-redis-stream.2](https://github.com/hirosystems/signer-metrics-api/compare/v0.13.0-redis-stream.1...v0.13.0-redis-stream.2) (2025-03-31)
+
+
+### Bug Fixes
+
+* close worker thread on process shutdown ([968374c](https://github.com/hirosystems/signer-metrics-api/commit/968374caadb8a1e0a6979a965dd719ef49f8fb9a))
+
 ## [0.12.7](https://github.com/hirosystems/signer-metrics-api/compare/v0.12.6...v0.12.7) (2025-03-03)
 
 
