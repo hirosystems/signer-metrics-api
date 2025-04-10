@@ -53,29 +53,39 @@ if (!WorkerThreads.isMainThread) {
     console.error(`Worker thread message error`, err);
   });
   mainThreadPort.on('message', (msg: ThreadedParserMsgRequest) => {
-    let reply: ThreadedParserMsgReply;
-    switch (msg.type) {
-      case ThreadedParserMsgType.NakamotoBlock: {
-        reply = {
-          type: ThreadedParserMsgType.NakamotoBlock,
-          msgId: msg.msgId,
-          block: parseNakamotoBlockMsg(msg.block),
-        } satisfies NakamotoBlockMsgReply;
-        break;
-      }
-      case ThreadedParserMsgType.StackerDbChunk: {
-        reply = {
-          type: ThreadedParserMsgType.StackerDbChunk,
-          msgId: msg.msgId,
-          chunk: parseStackerDbChunk(msg.chunk),
-        } satisfies StackerDbChunkMsgReply;
-        break;
-      }
-      default: {
-        const _exhaustiveCheck: never = msg;
-        throw new Error(`Unhandled message type: ${msg}`);
-      }
+    try {
+      handleWorkerMsg(msg);
+    } catch (err) {
+      console.error(`Error handling message from main thread`, err);
     }
-    mainThreadPort.postMessage(reply);
   });
+}
+
+function handleWorkerMsg(msg: ThreadedParserMsgRequest) {
+  let reply: ThreadedParserMsgReply;
+  switch (msg.type) {
+    case ThreadedParserMsgType.NakamotoBlock: {
+      reply = {
+        type: ThreadedParserMsgType.NakamotoBlock,
+        msgId: msg.msgId,
+        block: parseNakamotoBlockMsg(msg.block),
+      } satisfies NakamotoBlockMsgReply;
+      break;
+    }
+    case ThreadedParserMsgType.StackerDbChunk: {
+      reply = {
+        type: ThreadedParserMsgType.StackerDbChunk,
+        msgId: msg.msgId,
+        chunk: parseStackerDbChunk(msg.chunk),
+      } satisfies StackerDbChunkMsgReply;
+      break;
+    }
+    default: {
+      const _exhaustiveCheck: never = msg;
+      throw new Error(`Unhandled message type: ${msg}`);
+    }
+  }
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  const mainThreadPort = WorkerThreads.parentPort!;
+  mainThreadPort.postMessage(reply);
 }
