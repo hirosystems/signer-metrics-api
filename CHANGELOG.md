@@ -1,3 +1,10 @@
+## [0.13.0-redis-stream.7](https://github.com/hirosystems/signer-metrics-api/compare/v0.13.0-redis-stream.6...v0.13.0-redis-stream.7) (2025-04-10)
+
+
+### Bug Fixes
+
+* update stacks.js to fix tx parsing error ([9601efd](https://github.com/hirosystems/signer-metrics-api/commit/9601efde7d5eb083aead54b424b9a3c83edc0b4b))
+
 ## [0.13.0-redis-stream.6](https://github.com/hirosystems/signer-metrics-api/compare/v0.13.0-redis-stream.5...v0.13.0-redis-stream.6) (2025-04-10)
 
 
