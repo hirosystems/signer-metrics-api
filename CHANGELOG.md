@@ -1,3 +1,10 @@
+## [0.13.0-redis-stream.6](https://github.com/hirosystems/signer-metrics-api/compare/v0.13.0-redis-stream.5...v0.13.0-redis-stream.6) (2025-04-10)
+
+
+### Bug Fixes
+
+* more logging for threaded worker parser errors (addition 2) ([74c57fb](https://github.com/hirosystems/signer-metrics-api/commit/74c57fb77a3780c0211d9adffeddebd9514343b1))
+
 ## [0.13.0-redis-stream.5](https://github.com/hirosystems/signer-metrics-api/compare/v0.13.0-redis-stream.4...v0.13.0-redis-stream.5) (2025-04-10)
 
 
