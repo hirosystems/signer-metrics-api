@@ -56,6 +56,7 @@ if (!WorkerThreads.isMainThread) {
     try {
       handleWorkerMsg(msg);
     } catch (err) {
+      console.error(`Failed to parse message: ${JSON.stringify(msg)}`);
       console.error(`Error handling message from main thread`, err);
     }
   });
