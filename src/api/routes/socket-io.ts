@@ -78,11 +78,11 @@ export const SocketIORoutes: FastifyPluginAsync<
   };
 
   fastify.addHook('onListen', () => {
-    fastify.db.notifications.events.on('signerMessages', signerMessageListener);
+    fastify.db.ingestion.events.on('signerMessages', signerMessageListener);
   });
 
   fastify.addHook('preClose', done => {
-    fastify.db?.notifications.events.off('signerMessages', signerMessageListener);
+    fastify.db?.ingestion.events.off('signerMessages', signerMessageListener);
     io.local.disconnectSockets(true);
     done();
   });

@@ -1,3 +1,49 @@
+## [0.13.0-redis-stream.7](https://github.com/hirosystems/signer-metrics-api/compare/v0.13.0-redis-stream.6...v0.13.0-redis-stream.7) (2025-04-10)
+
+
+### Bug Fixes
+
+* update stacks.js to fix tx parsing error ([9601efd](https://github.com/hirosystems/signer-metrics-api/commit/9601efde7d5eb083aead54b424b9a3c83edc0b4b))
+
+## [0.13.0-redis-stream.6](https://github.com/hirosystems/signer-metrics-api/compare/v0.13.0-redis-stream.5...v0.13.0-redis-stream.6) (2025-04-10)
+
+
+### Bug Fixes
+
+* more logging for threaded worker parser errors (addition 2) ([74c57fb](https://github.com/hirosystems/signer-metrics-api/commit/74c57fb77a3780c0211d9adffeddebd9514343b1))
+
+## [0.13.0-redis-stream.5](https://github.com/hirosystems/signer-metrics-api/compare/v0.13.0-redis-stream.4...v0.13.0-redis-stream.5) (2025-04-10)
+
+
+### Bug Fixes
+
+* more logging for threaded worker parser errors ([a5c8172](https://github.com/hirosystems/signer-metrics-api/commit/a5c81725362ef35e0acf1ac5ec96d8214e628e90))
+
+## [0.13.0-redis-stream.4](https://github.com/hirosystems/signer-metrics-api/compare/v0.13.0-redis-stream.3...v0.13.0-redis-stream.4) (2025-03-31)
+
+
+### Bug Fixes
+
+* sanitize redis client name string ([e0960da](https://github.com/hirosystems/signer-metrics-api/commit/e0960da28b4d87d0051388aa358e1d6f7263971d))
+
+## [0.13.0-redis-stream.3](https://github.com/hirosystems/signer-metrics-api/compare/v0.13.0-redis-stream.2...v0.13.0-redis-stream.3) (2025-03-31)
+
+
+### Bug Fixes
+
+* create optimized query to get current cycle signer weight percentages ([#70](https://github.com/hirosystems/signer-metrics-api/issues/70)) ([8bcb54b](https://github.com/hirosystems/signer-metrics-api/commit/8bcb54bde240070fa4ab078df1dda8c207ea251c))
+* integrate custom metrics to private endpoint and add signer weight percentage metric ([#69](https://github.com/hirosystems/signer-metrics-api/issues/69)) ([d113b7c](https://github.com/hirosystems/signer-metrics-api/commit/d113b7c7b7a91d843989fbee1465a6e239959379))
+* newest unconfirmed block propsal metric ([#71](https://github.com/hirosystems/signer-metrics-api/issues/71)) ([cb4b117](https://github.com/hirosystems/signer-metrics-api/commit/cb4b11754e8b1814d49cbbedfa2d6467e9b3aa05))
+* optimize sql query used for the `signer_state_count` metric ([#73](https://github.com/hirosystems/signer-metrics-api/issues/73)) ([6394e58](https://github.com/hirosystems/signer-metrics-api/commit/6394e58c2a6d4668783e543dbc2c7e071ceda701))
+* **prometheus:** adds prefix to each metric and fixes default prom port ([7825bb5](https://github.com/hirosystems/signer-metrics-api/commit/7825bb5604d8937195e67bc81c68f0dd487b260b))
+
+## [0.13.0-redis-stream.2](https://github.com/hirosystems/signer-metrics-api/compare/v0.13.0-redis-stream.1...v0.13.0-redis-stream.2) (2025-03-31)
+
+
+### Bug Fixes
+
+* close worker thread on process shutdown ([968374c](https://github.com/hirosystems/signer-metrics-api/commit/968374caadb8a1e0a6979a965dd719ef49f8fb9a))
+
 ## [0.12.7](https://github.com/hirosystems/signer-metrics-api/compare/v0.12.6...v0.12.7) (2025-03-03)
 
 
