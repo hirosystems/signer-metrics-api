@@ -116,5 +116,7 @@ export default async function setup(): Promise<void> {
   process.env.STACKS_NODE_RPC_PORT = '1';
   process.env.CHAINHOOK_NODE_AUTH_TOKEN = '';
 
+  process.env.REDIS_URL = 'redis://127.0.0.1:7379';
+
   await startPostgresContainer();
 }

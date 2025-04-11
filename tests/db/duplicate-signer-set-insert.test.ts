@@ -8,7 +8,6 @@ describe('Duplicate signer set insert', () => {
 
   beforeAll(async () => {
     db = await PgStore.connect();
-    db.notifications._sqlNotifyDisabled = true;
   });
 
   afterAll(async () => {
