@@ -88,13 +88,28 @@ export interface MockBlockChunkType extends ChunkMetadata {
   mockBlock: ReturnType<typeof parseMockBlock>;
 }
 
+// https://github.com/stacks-network/stacks-core/blob/9d4cc3acd2c07d103b16750c1f3bdd6bf99a5232/libsigner/src/v0/messages.rs#L551
+export interface StateMachineUpdate extends ChunkMetadata {
+  messageType: 'StateMachineUpdate';
+
+  // burn_block: ConsensusHash,
+  // burn_block_height: u64,
+  // current_miner_pkh: Hash160,
+  // parent_tenure_id: ConsensusHash,
+  // parent_tenure_last_block: StacksBlockId,
+  // parent_tenure_last_block_height: u64,
+  // active_signer_protocol_version: u64,
+  // local_supported_signer_protocol_version: u64,
+}
+
 export type ParsedStackerDbChunk =
   | BlockProposalChunkType
   | BlockResponseChunkType
   | BlockPushedChunkType
   | MockProposalChunkType
   | MockSignatureChunkType
-  | MockBlockChunkType;
+  | MockBlockChunkType
+  | StateMachineUpdate;
 
 export function parseStackerDbChunk(chunk: StackerDbChunk): ParsedStackerDbChunk[] {
   return chunk.modified_slots.flatMap(msg => {
@@ -128,6 +143,7 @@ enum SignerMessageTypePrefix {
   MockProposal = 3,
   MockSignature = 4,
   MockBlock = 5,
+  StateMachineUpdate = 6,
 }
 
 // https://github.com/stacks-network/stacks-core/blob/cd702e7dfba71456e4983cf530d5b174e34507dc/libsigner/src/v0/messages.rs#L206
@@ -165,6 +181,10 @@ function parseSignerMessage(msg: Buffer) {
       return {
         messageType: 'MockBlock',
         mockBlock: parseMockBlock(cursor),
+      } as const;
+    case SignerMessageTypePrefix.StateMachineUpdate:
+      return {
+        messageType: 'StateMachineUpdate',
       } as const;
     default:
       throw new Error(`Unknown message type prefix: ${messageType}`);

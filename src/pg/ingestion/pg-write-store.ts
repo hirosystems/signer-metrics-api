@@ -102,6 +102,10 @@ export class PgWriteStore extends BasePgStoreModule {
         // ignore
         break;
       }
+      case 'StateMachineUpdate': {
+        // ignore
+        break;
+      }
       default: {
         this.logger.error(chunk, `Unknown StackerDB event type`);
         break;
