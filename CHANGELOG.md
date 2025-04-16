@@ -1,3 +1,10 @@
+## [0.13.1](https://github.com/hirosystems/signer-metrics-api/compare/v0.13.0...v0.13.1) (2025-04-16)
+
+
+### Bug Fixes
+
+* ignore `StateMachineUpdate` msg types while parsing ([#79](https://github.com/hirosystems/signer-metrics-api/issues/79)) ([18dc008](https://github.com/hirosystems/signer-metrics-api/commit/18dc0081703becd4b86004433460497dd22964da))
+
 ## [0.13.0](https://github.com/hirosystems/signer-metrics-api/compare/v0.12.7...v0.13.0) (2025-04-11)
 
 
