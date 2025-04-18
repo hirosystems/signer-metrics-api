@@ -1,3 +1,10 @@
+## [0.13.2](https://github.com/hirosystems/signer-metrics-api/compare/v0.13.1...v0.13.2) (2025-04-18)
+
+
+### Bug Fixes
+
+* upgrade stacks.js to 7.0.6 ([#81](https://github.com/hirosystems/signer-metrics-api/issues/81)) ([0802b57](https://github.com/hirosystems/signer-metrics-api/commit/0802b57b5116d4a462e7a4bc125895059d386a1f))
+
 ## [0.13.1](https://github.com/hirosystems/signer-metrics-api/compare/v0.13.0...v0.13.1) (2025-04-16)
 
 
