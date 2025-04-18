@@ -59,7 +59,7 @@
     "@hirosystems/salt-n-pepper-client": "^1.0.4-beta.1",
     "@noble/secp256k1": "^2.2.3",
     "@sinclair/typebox": "^0.28.17",
-    "@stacks/transactions": "^7.0.5",
+    "@stacks/transactions": "^7.0.6",
     "@types/node": "^22.10.5",
     "bignumber.js": "^9.1.2",
     "date-fns": "^4.1.0",
