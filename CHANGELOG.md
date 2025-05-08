@@ -1,3 +1,10 @@
+## [0.13.3](https://github.com/hirosystems/signer-metrics-api/compare/v0.13.2...v0.13.3) (2025-05-08)
+
+
+### Bug Fixes
+
+* parsing new enums in the BlockResponse(ValidationFailed) chunks ([#83](https://github.com/hirosystems/signer-metrics-api/issues/83)) ([8078267](https://github.com/hirosystems/signer-metrics-api/commit/8078267a7aa95985c0fe19eea470b19358f13f67))
+
 ## [0.13.2](https://github.com/hirosystems/signer-metrics-api/compare/v0.13.1...v0.13.2) (2025-04-18)
 
 
