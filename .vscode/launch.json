@@ -97,5 +97,27 @@
       ],
       "program": "${workspaceFolder}/testing/csv-to-json.js"
     },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Current js File",
+      "program": "${file}",
+      "cwd": "${fileDirname}",
+      "skipFiles": ["<node_internals>/**"],
+      "console": "integratedTerminal"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Current TS File (ts-node)",
+      "runtimeExecutable": "ts-node",
+      "args": ["--transpile-only", "${file}"],
+      "cwd": "${fileDirname}",
+      "skipFiles": ["<node_internals>/**"],
+      "console": "integratedTerminal",
+      "env": {
+        "TS_NODE_PROJECT": "${workspaceFolder}/tsconfig.json"
+      }
+    }
   ]
 }

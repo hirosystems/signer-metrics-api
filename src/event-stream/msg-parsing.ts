@@ -351,6 +351,7 @@ function parseSignerMessageMetadata(cursor: BufferCursor) {
   return { server_version: cursor.readVecString() };
 }
 
+// https://github.com/stacks-network/stacks-core/blob/e45867c1781a7c45541e765cd42b6a084996fec8/libsigner/src/v0/messages.rs#L934
 const RejectCodeTypePrefix = {
   // The block was rejected due to validation issues
   ValidationFailed: 0,
@@ -367,13 +368,41 @@ const RejectCodeTypePrefix = {
 };
 
 enum ValidateRejectCode {
-  BadBlockHash = 0,
-  BadTransaction = 1,
-  InvalidBlock = 2,
-  ChainstateError = 3,
-  UnknownParent = 4,
-  NonCanonicalTenure = 5,
-  NoSuchTenure = 6,
+  /// The block was rejected due to validation issues
+  ValidationFailed = 0,
+  /// The block was rejected due to connectivity issues with the signer
+  ConnectivityIssues = 1,
+  /// The block was rejected in a prior round
+  RejectedInPriorRound = 2,
+  /// The block was rejected due to no sortition view
+  NoSortitionView = 3,
+  /// The block was rejected due to a mismatch with expected sortition view
+  SortitionViewMismatch = 4,
+  /// The block was rejected due to a testing directive
+  TestingDirective = 5,
+  /// The block attempted to reorg the previous tenure but was not allowed
+  ReorgNotAllowed = 6,
+  /// The bitvec field does not match what is expected
+  InvalidBitvec = 7,
+  /// The miner's pubkey hash does not match the winning pubkey hash
+  PubkeyHashMismatch = 8,
+  /// The miner has been marked as invalid
+  InvalidMiner = 9,
+  /// Miner is last sortition winner, when the current sortition winner is
+  /// still valid
+  NotLatestSortitionWinner = 10,
+  /// The block does not confirm the expected parent block
+  InvalidParentBlock = 11,
+  /// The block contains a block found tenure change, but we've already seen
+  /// a block found
+  DuplicateBlockFound = 12,
+  /// The block attempted a tenure extend but the burn view has not changed
+  /// and not enough time has passed for a time-based tenure extend
+  InvalidTenureExtend = 13,
+  /// Unknown reject code, for forward compatibility
+  Unknown = 254,
+  /// The block was approved, no rejection details needed
+  NotRejected = 255,
 }
 
 // https://github.com/stacks-network/stacks-core/blob/cd702e7dfba71456e4983cf530d5b174e34507dc/libsigner/src/v0/messages.rs#L812
