@@ -21,6 +21,7 @@
     "migrate": "ts-node node_modules/.bin/node-pg-migrate -j ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "vendor-secp256k1": "mkdir -p src/vendored/@noble/secp256k1 && cp node_modules/@noble/secp256k1/index.ts src/vendored/@noble/secp256k1/index.ts",
     "generate:openapi": "rimraf ./tmp && node -r ts-node/register ./util/openapi-generator.ts",
     "generate:docs": "redocly build-docs ./tmp/openapi.yaml --output ./tmp/index.html",
     "generate:git-info": "rimraf .git-info && node_modules/.bin/api-toolkit-git-info",

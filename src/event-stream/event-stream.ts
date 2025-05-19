@@ -53,7 +53,7 @@ export class EventStreamHandler {
   }
 
   async handleMsg(messageId: string, timestamp: string, path: string, body: any) {
-    this.logger.info(`${path}: received Stacks stream event`);
+    this.logger.info(`${path}: received Stacks stream event, msgId: ${messageId}`);
     switch (path) {
       case '/new_block': {
         const blockMsg = body as CoreNodeBlockMessage;

@@ -24,10 +24,10 @@ export class ThreadedParser {
     }
     this.worker = new WorkerThreads.Worker(workerFile);
     this.worker.on('error', err => {
-      this.logger.error('Worker error', err);
+      this.logger.error(err, 'Worker error');
     });
     this.worker.on('messageerror', err => {
-      this.logger.error('Worker message error', err);
+      this.logger.error(err, 'Worker message error');
     });
     this.worker.on('message', (msg: ThreadedParserMsgReply) => {
       const waiter = this.msgRequests.get(msg.msgId);

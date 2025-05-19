@@ -131,7 +131,7 @@ async function waitForRedis(): Promise<void> {
     url: process.env['REDIS_URL'],
     name: 'salt-n-pepper-server-tests',
   });
-  redisClient.on('error', (err: Error) => console.error('Redis Client Error', err));
+  redisClient.on('error', (err: Error) => console.error(`Redis not ready: ${err}`));
   redisClient.once('ready', () => console.log('Connected to Redis successfully!'));
   while (true) {
     try {
