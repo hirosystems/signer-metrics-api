@@ -24,6 +24,7 @@ export function normalizeHexString(hexString: string): string {
   return hexString.startsWith('0x') ? hexString : '0x' + hexString;
 }
 
+// This is a workaround for Node.js versions that do not support Symbol.dispose
 const DisposeSymbol: typeof Symbol.dispose = Symbol.dispose ?? Symbol.for('nodejs.dispose');
 
 export function sleep(ms: number, signal?: AbortSignal): Promise<void> {
@@ -88,31 +89,57 @@ export type BlockIdParam =
   | { type: 'latest'; latest: true };
 
 /**
- * Similar to `node:events.once` but with a predicate to filter events and supports typed EventEmitters
+ * Creates a Promise that is fulfilled when the `EventEmitter` emits the given event.
+ * The Promise will resolve with an array of all the arguments emitted to the given event.
+ *
+ * Similar to [`node:events.once`]({@link https://nodejs.org/api/events.html#eventsonceemitter-name-options})
+ * but with a predicate to filter events and supports typed EventEmitters.
  */
-export function waitForEvent<T extends Record<string, any[]>, K extends keyof T>(
-  emitter: EventEmitter<T>,
-  event: K,
-  predicate: (...args: T[K]) => boolean,
-  signal?: AbortSignal
-): Promise<T[K]> {
+export function onceFilter<
+  EventMap extends Record<string, any[]> = Record<string, any[]>,
+  K extends Extract<keyof EventMap, string> = Extract<keyof EventMap, string>,
+>(
+  emitter: EventEmitter<EventMap>,
+  eventName: K,
+  predicate: (...args: EventMap[K]) => boolean,
+  options?: { signal?: AbortSignal }
+): Promise<EventMap[K]> {
   return new Promise((resolve, reject) => {
-    if (signal?.aborted) {
-      reject(signal.reason as Error);
+    // Immediate abort check
+    if (options?.signal?.aborted) {
+      reject((options.signal.reason as Error) ?? new Error('Aborted'));
       return;
     }
-    const disposable = signal ? addAbortListener(signal, onAbort) : undefined;
-    const handler = (...args: T[K]) => {
-      if (predicate(...args)) {
-        disposable?.[DisposeSymbol]();
-        (emitter as EventEmitter).off(event as string, handler);
-        resolve(args);
+
+    // Cleanup helper: remove both the event listener and the abort listener
+    const cleanup = () => {
+      (emitter as EventEmitter).off(eventName, listener);
+      disposable?.[DisposeSymbol]();
+    };
+
+    // Abort handler
+    const onAbort = () => {
+      cleanup();
+      reject((options?.signal?.reason as Error) ?? new Error('Aborted'));
+    };
+
+    // Our event listener that checks the predicate
+    const listener = (...args: EventMap[K]) => {
+      try {
+        if (predicate(...args)) {
+          cleanup();
+          resolve(args);
+        }
+      } catch (err) {
+        cleanup();
+        reject(err as Error);
+        return;
       }
     };
-    (emitter as EventEmitter).on(event as string, handler);
-    function onAbort() {
-      (emitter as EventEmitter).off(event as string, handler);
-      reject((signal?.reason as Error) ?? new Error('Aborted'));
-    }
+
+    // Install the AbortSignal listener via Node’s helper
+    const disposable = options?.signal ? addAbortListener(options.signal, onAbort) : undefined;
+
+    (emitter as EventEmitter).on(eventName, listener);
   });
 }

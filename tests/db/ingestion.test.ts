@@ -4,9 +4,12 @@ import * as readline from 'node:readline/promises';
 import * as zlib from 'node:zlib';
 import { EventStreamHandler } from '../../src/event-stream/event-stream';
 import { timeout } from '@hirosystems/api-toolkit';
+import { onceFilter } from '../../src/helpers';
 
 describe('End-to-end ingestion tests', () => {
   let snpObserverUrl: string;
+
+  const sampleEventsLastMsgId = '5402-0'; // last msgID in the stackerdb-sample-events.tsv.gz events dump
 
   let db: PgStore;
   beforeAll(async () => {
@@ -51,9 +54,21 @@ describe('End-to-end ingestion tests', () => {
 
   test('ingest msgs from SNP server', async () => {
     const lastRedisMsgId = await db.getLastIngestedRedisMsgId();
+    expect(lastRedisMsgId).toBe('0');
     const eventStreamListener = new EventStreamHandler({ db, lastMessageId: lastRedisMsgId });
     await eventStreamListener.start();
-    await timeout(9000000);
+    // wait for last msgID to be processed
+    const [{ msgId: lastMsgProcessed }] = await onceFilter(
+      eventStreamListener.events,
+      'processedMessage',
+      ({ msgId }) => {
+        return msgId === sampleEventsLastMsgId;
+      }
+    );
+    expect(lastMsgProcessed).toBe(sampleEventsLastMsgId);
+
+    const finalPostgresMsgId = await db.getLastIngestedRedisMsgId();
+    expect(finalPostgresMsgId).toBe(sampleEventsLastMsgId);
   });
 
   test('validate blocks ingested', async () => {

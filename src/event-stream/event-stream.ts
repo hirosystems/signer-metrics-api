@@ -17,6 +17,7 @@ import {
 import { SignerMessagesEventPayload } from '../pg/types';
 import { ThreadedParser } from './threaded-parser';
 import { SERVER_VERSION } from '@hirosystems/api-toolkit';
+import { EventEmitter } from 'node:events';
 
 // TODO: move this into the @hirosystems/salt-n-pepper-client lib
 function sanitizeRedisClientName(value: string): string {
@@ -29,6 +30,10 @@ export class EventStreamHandler {
   logger = defaultLogger.child({ name: 'EventStreamHandler' });
   eventStream: StacksEventStream;
   threadedParser: ThreadedParser;
+
+  readonly events = new EventEmitter<{
+    processedMessage: [{ msgId: string }];
+  }>();
 
   constructor(opts: { db: PgStore; lastMessageId: string }) {
     this.db = opts.db;
@@ -99,6 +104,7 @@ export class EventStreamHandler {
         this.logger.warn(`Unhandled stacks stream event: ${path}`);
         break;
     }
+    this.events.emit('processedMessage', { msgId: messageId });
   }
 
   async stop(): Promise<void> {

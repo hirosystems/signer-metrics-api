@@ -1,4 +1,5 @@
 import * as WorkerThreads from 'node:worker_threads';
+import * as path from 'node:path';
 import { waiter, Waiter, logger as defaultLogger } from '@hirosystems/api-toolkit';
 import { CoreNodeNakamotoBlockMessage, StackerDbChunk } from './core-node-message';
 import { ParsedNakamotoBlock, ParsedStackerDbChunk } from './msg-parsing';
@@ -22,7 +23,16 @@ export class ThreadedParser {
     if (!WorkerThreads.isMainThread) {
       throw new Error('ThreadedParser must be instantiated in the main thread');
     }
-    this.worker = new WorkerThreads.Worker(workerFile);
+    const workerOpt: WorkerThreads.WorkerOptions = {};
+    if (path.extname(workerFile) === '.ts') {
+      if (process.env.NODE_ENV !== 'test') {
+        throw new Error(
+          'Worker threads are being created with ts-node outside of a test environment'
+        );
+      }
+      workerOpt.execArgv = ['-r', 'ts-node/register/transpile-only'];
+    }
+    this.worker = new WorkerThreads.Worker(workerFile, workerOpt);
     this.worker.on('error', err => {
       this.logger.error(err, 'Worker error');
     });
