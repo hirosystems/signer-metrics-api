@@ -10,6 +10,7 @@ describe('End-to-end ingestion tests', () => {
   let snpObserverUrl: string;
 
   const sampleEventsLastMsgId = '5402-0'; // last msgID in the stackerdb-sample-events.tsv.gz events dump
+  const sampleEventsBlockHeight = 505; // last block height in the stackerdb-sample-events.tsv.gz events dump
 
   let db: PgStore;
   beforeAll(async () => {
@@ -66,13 +67,16 @@ describe('End-to-end ingestion tests', () => {
       }
     );
     expect(lastMsgProcessed).toBe(sampleEventsLastMsgId);
+    await eventStreamListener.stop();
+  });
 
+  test('validate all events ingested', async () => {
     const finalPostgresMsgId = await db.getLastIngestedRedisMsgId();
     expect(finalPostgresMsgId).toBe(sampleEventsLastMsgId);
   });
 
   test('validate blocks ingested', async () => {
     const chainTip = await db.getChainTipBlockHeight();
-    expect(chainTip).toBe(145);
+    expect(chainTip).toBe(sampleEventsBlockHeight);
   });
 });
