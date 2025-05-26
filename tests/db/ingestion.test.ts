@@ -3,7 +3,6 @@ import * as fs from 'node:fs';
 import * as readline from 'node:readline/promises';
 import * as zlib from 'node:zlib';
 import { EventStreamHandler } from '../../src/event-stream/event-stream';
-import { timeout } from '@hirosystems/api-toolkit';
 import { onceFilter } from '../../src/helpers';
 
 describe('End-to-end ingestion tests', () => {
