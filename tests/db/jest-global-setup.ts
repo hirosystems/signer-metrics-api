@@ -71,7 +71,10 @@ async function startContainer(args: {
       Labels: { [testContainerLabel]: 'true' },
       Image: image,
       ExposedPorts: exposedPorts,
-      HostConfig: { PortBindings: portBindings },
+      HostConfig: {
+        PortBindings: portBindings,
+        ExtraHosts: ['host.docker.internal:host-gateway'],
+      },
       Env: env,
     });
 
@@ -186,7 +189,7 @@ export default async function setup(): Promise<void> {
         `POSTGRES_USER=${pgConfig.PGUSER}`,
         `POSTGRES_PASSWORD=${pgConfig.PGPASSWORD}`,
         `POSTGRES_DB=${pgConfig.PGDATABASE}`,
-        `POSTGRES_PORT=${pgPort}`,
+        `PGPORT=${pgPort}`,
       ],
     });
     pgConfig.PGPORT = pgHostPort.toString();
