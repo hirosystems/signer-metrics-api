@@ -1,4 +1,4 @@
-import { addAbortListener, EventEmitter } from 'node:events';
+import { addAbortListener } from 'node:events';
 import { parseISO, sub, isValid, Duration } from 'date-fns';
 
 export const isDevEnv = process.env.NODE_ENV === 'development';
@@ -87,59 +87,3 @@ export type BlockIdParam =
   | { type: 'height'; height: number }
   | { type: 'hash'; hash: string }
   | { type: 'latest'; latest: true };
-
-/**
- * Creates a Promise that is fulfilled when the `EventEmitter` emits the given event.
- * The Promise will resolve with an array of all the arguments emitted to the given event.
- *
- * Similar to [`node:events.once`]({@link https://nodejs.org/api/events.html#eventsonceemitter-name-options})
- * but with a predicate to filter events and supports typed EventEmitters.
- */
-export function onceFilter<
-  EventMap extends Record<string, any[]> = Record<string, any[]>,
-  K extends Extract<keyof EventMap, string> = Extract<keyof EventMap, string>,
->(
-  emitter: EventEmitter<EventMap>,
-  eventName: K,
-  predicate: (...args: EventMap[K]) => boolean,
-  options?: { signal?: AbortSignal }
-): Promise<EventMap[K]> {
-  return new Promise((resolve, reject) => {
-    // Immediate abort check
-    if (options?.signal?.aborted) {
-      reject((options.signal.reason as Error) ?? new Error('Aborted'));
-      return;
-    }
-
-    // Cleanup helper: remove both the event listener and the abort listener
-    const cleanup = () => {
-      (emitter as EventEmitter).off(eventName, listener);
-      disposable?.[DisposeSymbol]();
-    };
-
-    // Abort handler
-    const onAbort = () => {
-      cleanup();
-      reject((options?.signal?.reason as Error) ?? new Error('Aborted'));
-    };
-
-    // Our event listener that checks the predicate
-    const listener = (...args: EventMap[K]) => {
-      try {
-        if (predicate(...args)) {
-          cleanup();
-          resolve(args);
-        }
-      } catch (err) {
-        cleanup();
-        reject(err as Error);
-        return;
-      }
-    };
-
-    // Install the AbortSignal listener via Node’s helper
-    const disposable = options?.signal ? addAbortListener(options.signal, onAbort) : undefined;
-
-    (emitter as EventEmitter).on(eventName, listener);
-  });
-}

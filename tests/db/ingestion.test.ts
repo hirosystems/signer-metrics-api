@@ -3,7 +3,7 @@ import * as fs from 'node:fs';
 import * as readline from 'node:readline/promises';
 import * as zlib from 'node:zlib';
 import { EventStreamHandler } from '../../src/event-stream/event-stream';
-import { onceFilter } from '../../src/helpers';
+import { onceWhen } from '@hirosystems/api-toolkit';
 
 describe('End-to-end ingestion tests', () => {
   let snpObserverUrl: string;
@@ -58,7 +58,7 @@ describe('End-to-end ingestion tests', () => {
     const eventStreamListener = new EventStreamHandler({ db, lastMessageId: lastRedisMsgId });
     await eventStreamListener.start();
     // wait for last msgID to be processed
-    const [{ msgId: lastMsgProcessed }] = await onceFilter(
+    const [{ msgId: lastMsgProcessed }] = await onceWhen(
       eventStreamListener.events,
       'processedMessage',
       ({ msgId }) => {
