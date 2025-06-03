@@ -1,5 +1,5 @@
 import * as crypto from 'node:crypto';
-import * as secp from '@noble/secp256k1';
+import * as secp from '../vendored/@noble/secp256k1';
 import { CoreNodeNakamotoBlockMessage, ModifiedSlot, StackerDbChunk } from './core-node-message';
 import { BufferCursor } from './buffer-cursor';
 import { BufferWriter } from './buffer-writer';
