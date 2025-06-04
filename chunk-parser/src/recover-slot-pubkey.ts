@@ -1,17 +1,6 @@
 import crypto from 'node:crypto';
-// import * as secp from '@noble/secp256k1';
+import * as secp from '@noble/secp256k1';
 import { ModifiedSlot, NewNakamotoBlockMessage, toU32BeBytes } from './common';
-
-let secp: typeof import('@noble/secp256k1');
-
-async function getSecp() {
-  if (!secp) secp = await import('@noble/secp256k1');
-  return secp;
-}
-getSecp().catch(error => {
-  console.error(`Failed to load secp256k1: ${error}`, error);
-  throw error;
-});
 
 /** Get the digest to sign that authenticates this chunk data and metadata */
 function authDigest(slot: ModifiedSlot): Buffer {
