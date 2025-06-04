@@ -36,9 +36,6 @@ async function pruneContainers(docker: Docker, label: string) {
   const containers = await docker.listContainers({ all: true, filters: { label: [label] } });
   for (const container of containers) {
     const c = docker.getContainer(container.Id);
-    if (container.State !== 'exited') {
-      await c.stop().catch(_err => {});
-    }
     await c.remove({ v: true, force: true });
   }
   await docker.pruneContainers({ filters: { label: [label] } });
@@ -83,10 +80,11 @@ async function startContainer(args: {
 
     console.log(`${image} container started on ports ${JSON.stringify(ports)}`);
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    const containerIds = ((globalThis as any).__TEST_DOCKER_CONTAINER_IDS as string[]) ?? [];
-    containerIds.push(container.id);
-    Object.assign(globalThis, { __TEST_DOCKER_CONTAINER_IDS: containerIds });
+    const containers: { id: string; image: string }[] =
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      (globalThis as any).__TEST_DOCKER_CONTAINERS ?? [];
+    containers.push({ id: container.id, image });
+    Object.assign(globalThis, { __TEST_DOCKER_CONTAINERS: containers });
 
     return { image, containerId: container.id };
   } catch (error) {
@@ -126,6 +124,7 @@ async function waitForPostgres(): Promise<void> {
     },
   });
   await sql`SELECT 1`;
+  await sql.end();
   console.log('Postgres is ready');
 }
 

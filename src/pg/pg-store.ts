@@ -10,7 +10,6 @@ import {
 import * as path from 'path';
 import { PgWriteStore } from './ingestion/pg-write-store';
 import { BlockIdParam, normalizeHexString, sleep } from '../helpers';
-import { Fragment } from 'postgres';
 import { DbBlockProposalQueryResponse } from './types';
 import { NotificationPgStore } from './notifications/pg-notifications';
 
@@ -491,20 +490,18 @@ export class PgStore extends BasePgStore {
   }
 
   async getSignerDataForBlock({ sql, blockId }: { sql: PgSqlClient; blockId: BlockIdParam }) {
-    let blockFilter: Fragment;
-    switch (blockId.type) {
-      case 'height':
-        blockFilter = sql`block_height = ${blockId.height}`;
-        break;
-      case 'hash':
-        blockFilter = sql`block_hash = ${normalizeHexString(blockId.hash)}`;
-        break;
-      case 'latest':
-        blockFilter = sql`block_height = (SELECT block_height FROM chain_tip)`;
-        break;
-      default:
-        throw new Error(`Invalid blockId type: ${blockId}`);
-    }
+    const blockFilter = (() => {
+      switch (blockId.type) {
+        case 'height':
+          return sql`block_height = ${blockId.height}`;
+        case 'hash':
+          return sql`block_hash = ${normalizeHexString(blockId.hash)}`;
+        case 'latest':
+          return sql`block_height = (SELECT block_height FROM chain_tip)`;
+        default:
+          throw new Error(`Invalid blockId type: ${blockId}`);
+      }
+    })();
 
     const result = await sql<
       {
