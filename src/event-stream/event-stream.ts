@@ -12,15 +12,13 @@ import { ParsedNakamotoBlock, ParsedStackerDbChunk } from './msg-parsing';
 import { SignerMessagesEventPayload } from '../pg/types';
 import { SERVER_VERSION } from '@hirosystems/api-toolkit';
 import { EventEmitter } from 'node:events';
-import * as msgParserWorkerBlocks from './msg-parser-worker-blocks';
-import * as msgParserWorkerStackerDb from './msg-parser-worker-stackerdb';
+import * as msgParserWorkerBlocks from './threaded-parser-worker';
 
 export class EventStreamHandler {
   db: PgStore;
   logger = defaultLogger.child({ name: 'EventStreamHandler' });
   eventStream: StacksEventStream;
-  threadedParserBlocks = new WorkerThreadManager(msgParserWorkerBlocks);
-  threadedParserStackerDb = new WorkerThreadManager(msgParserWorkerStackerDb);
+  threadedParser = new WorkerThreadManager(msgParserWorkerBlocks);
 
   readonly events = new EventEmitter<{
     processedMessage: [{ msgId: string }];
@@ -59,8 +57,9 @@ export class EventStreamHandler {
           );
         }
         if ('signer_signature_hash' in blockMsg) {
-          const parsed = await this.threadedParserBlocks.exec(nakamotoBlockMsg);
-          await this.handleNakamotoBlockMsg(messageId, parseInt(timestamp), parsed);
+          const parsed = await this.threadedParser.exec({ kind: 'block', msg: nakamotoBlockMsg });
+          const result = parsed.result as ParsedNakamotoBlock;
+          await this.handleNakamotoBlockMsg(messageId, parseInt(timestamp), result);
         } else {
           // ignore pre-Nakamoto blocks
         }
@@ -69,8 +68,9 @@ export class EventStreamHandler {
 
       case '/stackerdb_chunks': {
         const msg = body as StackerDbChunk;
-        const parsed = await this.threadedParserStackerDb.exec(msg);
-        await this.handleStackerDbMsg(messageId, parseInt(timestamp), parsed);
+        const parsed = await this.threadedParser.exec({ kind: 'chunk', msg });
+        const result = parsed.result as ParsedStackerDbChunk[];
+        await this.handleStackerDbMsg(messageId, parseInt(timestamp), result);
         break;
       }
 
@@ -97,8 +97,7 @@ export class EventStreamHandler {
 
   async stop(): Promise<void> {
     await this.eventStream.stop();
-    await this.threadedParserBlocks.close();
-    await this.threadedParserStackerDb.close();
+    await this.threadedParser.close();
   }
 
   async handleStackerDbMsg(
