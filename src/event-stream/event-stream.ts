@@ -43,7 +43,7 @@ export class EventStreamHandler {
     this.eventStream = new StacksEventStream({
       redisUrl: ENV.REDIS_URL,
       redisStreamPrefix: ENV.REDIS_STREAM_KEY_PREFIX,
-      eventStreamType: StacksEventStreamType.all,
+      eventStreamType: StacksEventStreamType.signerEvents,
       lastMessageId: opts.lastMessageId,
       appName,
     });
