@@ -1,3 +1,10 @@
+## [0.13.4](https://github.com/hirosystems/signer-metrics-api/compare/v0.13.3...v0.13.4) (2025-07-02)
+
+
+### Bug Fixes
+
+* update SNP lib ([#86](https://github.com/hirosystems/signer-metrics-api/issues/86)) ([6506bef](https://github.com/hirosystems/signer-metrics-api/commit/6506beffc13b79c6650f196e42ca2ab475f4ad16))
+
 ## [0.13.3](https://github.com/hirosystems/signer-metrics-api/compare/v0.13.2...v0.13.3) (2025-05-08)
 
 
