@@ -428,9 +428,9 @@ export class PgWriteStore extends BasePgStoreModule {
 
     const cycleNumber = rewardSetSigners[0].cycle_number;
     const deleteRows = await sql`
-        DELETE FROM reward_set_signers
-        WHERE cycle_number = ${cycleNumber}
-      `;
+      DELETE FROM reward_set_signers
+      WHERE cycle_number = ${cycleNumber}
+    `;
     if (deleteRows.count > 0) {
       this.logger.warn(
         `Deleted existing reward set signers for cycle ${cycleNumber} before inserting new rows, deleted ${deleteRows.count} rows`
@@ -453,6 +453,27 @@ export class PgWriteStore extends BasePgStoreModule {
       this.logger.info(
         `Apply reward_set_signers, cycle=${rewardSetSigners[0].cycle_number}, count=${insertCount}`
       );
+      // Update the `signer_stacked_amount_percentage` and `signer_stacked_amount_rank` for each signer
+      // in the `reward_set_signers` table.
+      await sql`
+        WITH total_stacked_amount AS (
+          SELECT SUM(signer_stacked_amount) AS total
+          FROM reward_set_signers
+          WHERE cycle_number = ${cycleNumber}
+        ),
+        total_weight AS (
+          SELECT SUM(signer_weight) AS total
+          FROM reward_set_signers
+          WHERE cycle_number = ${cycleNumber}
+        )
+        UPDATE reward_set_signers
+        SET signer_stacked_amount_percentage = signer_stacked_amount / (SELECT total FROM total_stacked_amount),
+          signer_stacked_amount_rank = (
+            SELECT RANK() OVER (ORDER BY signer_stacked_amount / (SELECT total FROM total_stacked_amount) DESC)
+          ),
+          signer_weight_percentage = signer_weight / (SELECT total FROM total_weight)
+        WHERE cycle_number = ${cycleNumber}
+      `;
     }
     return { rowsDeleted: deleteRows.count, rowsInserted: insertCount };
   }

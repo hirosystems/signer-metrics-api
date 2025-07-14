@@ -624,6 +624,8 @@ export class PgStore extends BasePgStore {
   async getSignersForCycle({
     sql,
     cycleNumber,
+    limit,
+    offset,
     fromDate,
     toDate,
   }: {
@@ -634,8 +636,47 @@ export class PgStore extends BasePgStore {
     fromDate?: Date;
     toDate?: Date;
   }) {
-    // TODO: add pagination
     // TODO: joins against the block_signer_signatures table to determine mined_blocks_* values
+
+    // If no date range is provided, return the pre-calculated signer data for the given cycle number.
+    if (fromDate === undefined && toDate === undefined) {
+      return await sql<
+        {
+          signer_key: string;
+          slot_index: number;
+          weight: number;
+          weight_percentage: number;
+          stacked_amount: string;
+          stacked_amount_percentage: number;
+          stacked_amount_rank: number;
+          proposals_accepted_count: number;
+          proposals_rejected_count: number;
+          proposals_missed_count: number;
+          average_response_time_ms: number;
+          last_block_response_time: Date | null;
+          last_metadata_server_version: string | null;
+        }[]
+      >`
+        SELECT
+          signer_key,
+          slot_index,
+          signer_weight AS weight,
+          signer_stacked_amount AS stacked_amount,
+          signer_stacked_amount_percentage AS stacked_amount_percentage,
+          signer_stacked_amount_rank AS stacked_amount_rank,
+          proposals_accepted_count,
+          proposals_rejected_count,
+          proposals_missed_count,
+          average_response_time_ms,
+          last_block_response_time,
+          last_metadata_server_version
+        FROM reward_set_signers
+        WHERE cycle_number = ${cycleNumber}
+        ORDER BY signer_stacked_amount DESC, signer_key ASC
+        OFFSET ${offset}
+        LIMIT ${limit}
+      `;
+    }
 
     // Get the list of signers for a given cycle number via signer_key in the reward_set_signers table,
     // where cycle_number equals the given cycle number. Then get all block proposals from the block_proposals
@@ -647,7 +688,7 @@ export class PgStore extends BasePgStore {
     //  * Number of block_proposal entries that have an associated accepted=false block_response entry.
     //  * Number of block_proposal entries that are missing an associated block_response entry.
     //  * The average time duration between block_proposal.received_at and block_response.received_at.
-
+    // TODO: add pagination
     const fromFilter = fromDate ? sql`AND bp.received_at >= ${fromDate}` : sql``;
     const toFilter = toDate ? sql`AND bp.received_at < ${toDate}` : sql``;
 
