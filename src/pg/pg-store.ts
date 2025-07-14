@@ -847,104 +847,21 @@ export class PgStore extends BasePgStore {
         last_metadata_server_version: string | null;
       }[]
     >`
-      WITH signer_data AS (
-        -- Fetch the specific signer for the given cycle
-        SELECT
-          rss.signer_key,
-          rss.slot_index,
-          rss.signer_weight,
-          rss.signer_stacked_amount
-        FROM reward_set_signers rss
-        WHERE rss.cycle_number = ${cycleNumber}
-          AND rss.signer_key = ${normalizeHexString(signerId)}
-      ),
-      proposal_data AS (
-        -- Select all proposals for the given cycle
-        SELECT
-          bp.block_hash,
-          bp.block_height,
-          bp.received_at AS proposal_received_at
-        FROM block_proposals bp
-        WHERE bp.reward_cycle = ${cycleNumber}
-      ),
-      response_data AS (
-        -- Select all responses for the proposals in the given cycle
-        SELECT
-          br.signer_key,
-          br.signer_sighash,
-          br.accepted,
-          br.received_at,
-          br.metadata_server_version,
-          br.id
-        FROM block_responses br
-        JOIN proposal_data pd ON br.signer_sighash = pd.block_hash
-        WHERE br.signer_key = ${normalizeHexString(signerId)} -- Filter for the specific signer
-      ),
-      latest_response_data AS (
-        -- Find the latest response time and corresponding metadata_server_version for the specific signer
-        SELECT DISTINCT ON (signer_key)
-          signer_key,
-          received_at AS last_block_response_time,
-          metadata_server_version
-        FROM response_data
-        ORDER BY signer_key, received_at DESC
-      ),
-      signer_proposal_data AS (
-        -- Cross join the specific signer with proposals and left join filtered responses
-        SELECT
-          sd.signer_key,
-          pd.block_hash,
-          pd.proposal_received_at,
-          rd.accepted,
-          rd.received_at AS response_received_at,
-          rd.metadata_server_version,
-          EXTRACT(EPOCH FROM (rd.received_at - pd.proposal_received_at)) * 1000 AS response_time_ms
-        FROM signer_data sd
-        CROSS JOIN proposal_data pd
-        LEFT JOIN response_data rd
-          ON pd.block_hash = rd.signer_sighash
-          AND sd.signer_key = rd.signer_key -- Match signers with their corresponding responses
-      ),
-      aggregated_data AS (
-        -- Aggregate the proposal and response data for the specific signer
-        SELECT
-          spd.signer_key,
-          COUNT(CASE WHEN spd.accepted = true THEN 1 END)::integer AS proposals_accepted_count,
-          COUNT(CASE WHEN spd.accepted = false THEN 1 END)::integer AS proposals_rejected_count,
-          COUNT(CASE WHEN spd.accepted IS NULL THEN 1 END)::integer AS proposals_missed_count,
-          ROUND(AVG(spd.response_time_ms), 3)::float8 AS average_response_time_ms
-        FROM signer_proposal_data spd
-        GROUP BY spd.signer_key
-      ),
-      signer_rank AS (
-        -- Calculate the rank of the signer based on stacked amount
-        SELECT
-          signer_key,
-          RANK() OVER (ORDER BY signer_stacked_amount DESC) AS stacked_amount_rank
-        FROM reward_set_signers
-        WHERE cycle_number = ${cycleNumber}
-      )
       SELECT
-        sd.signer_key,
-        sd.slot_index,
-        sd.signer_weight AS weight,
-        sd.signer_stacked_amount AS stacked_amount,
-        ROUND(sd.signer_weight * 100.0 / (SELECT SUM(signer_weight) FROM reward_set_signers WHERE cycle_number = ${cycleNumber}), 3)::float8 AS weight_percentage,
-        ROUND(sd.signer_stacked_amount * 100.0 / (SELECT SUM(signer_stacked_amount) FROM reward_set_signers WHERE cycle_number = ${cycleNumber}), 3)::float8 AS stacked_amount_percentage,
-        sr.stacked_amount_rank,
-        ad.proposals_accepted_count,
-        ad.proposals_rejected_count,
-        ad.proposals_missed_count,
-        COALESCE(ad.average_response_time_ms, 0) AS average_response_time_ms,
-        COALESCE(lrd.last_block_response_time, NULL) AS last_block_response_time,
-        COALESCE(lrd.metadata_server_version, NULL) AS last_metadata_server_version
-      FROM signer_data sd
-      LEFT JOIN aggregated_data ad
-        ON sd.signer_key = ad.signer_key
-      LEFT JOIN signer_rank sr
-        ON sd.signer_key = sr.signer_key
-      LEFT JOIN latest_response_data lrd
-        ON sd.signer_key = lrd.signer_key
+        signer_key,
+        slot_index,
+        signer_weight AS weight,
+        signer_stacked_amount AS stacked_amount,
+        signer_stacked_amount_percentage AS stacked_amount_percentage,
+        signer_stacked_amount_rank AS stacked_amount_rank,
+        proposals_accepted_count,
+        proposals_rejected_count,
+        proposals_missed_count,
+        average_response_time_ms,
+        last_block_response_time,
+        last_metadata_server_version
+      FROM reward_set_signers
+      WHERE cycle_number = ${cycleNumber} AND signer_key = ${normalizeHexString(signerId)}
     `;
     return dbRewardSetSigner[0];
   }
