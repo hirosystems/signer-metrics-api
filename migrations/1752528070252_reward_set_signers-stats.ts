@@ -33,14 +33,17 @@ export function up(pgm: MigrationBuilder): void {
     },
     signer_stacked_amount_percentage: {
       type: 'float',
+      default: 0,
       notNull: true,
     },
     signer_stacked_amount_rank: {
       type: 'integer',
+      default: 0,
       notNull: true,
     },
     signer_weight_percentage: {
       type: 'float',
+      default: 0,
       notNull: true,
     },
   });

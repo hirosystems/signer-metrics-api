@@ -264,7 +264,7 @@ export class PgWriteStore extends BasePgStoreModule {
     // The `proposals_missed_count` will be updated once a block is confirmed.
     await sql`
       WITH proposal_data AS (
-        SELECT reward_cycle, received_at
+        SELECT reward_cycle, EXTRACT(EPOCH FROM received_at) * 1000 AS received_at
         FROM block_proposals
         WHERE block_hash = ${blockHash}
       )
@@ -274,7 +274,7 @@ export class PgWriteStore extends BasePgStoreModule {
         proposals_accepted_count = proposals_accepted_count + ${accepted ? 1 : 0},
         proposals_rejected_count = proposals_rejected_count + ${accepted ? 0 : 1},
         average_response_time_ms = (
-          (average_response_time_ms * (proposals_accepted_count + proposals_rejected_count) + (${received_at} - (SELECT received_at FROM proposal_data))) /
+          (average_response_time_ms * (proposals_accepted_count + proposals_rejected_count) + (${receivedAt} - (SELECT received_at FROM proposal_data))) /
           (proposals_accepted_count + proposals_rejected_count + 1)
         )
       WHERE signer_key = ${dbBlockResponse.signer_key}
