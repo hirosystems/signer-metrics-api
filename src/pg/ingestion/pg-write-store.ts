@@ -229,15 +229,18 @@ export class PgWriteStore extends BasePgStoreModule {
     ) {
       this.logger.error(messageData, `Unexpected BlockResponse type`);
     }
+    const received_at = unixTimeMillisecondsToISO(receivedAt);
+    const metadata_server_version = messageData.blockResponse.metadata?.server_version ?? '';
+    const accepted = messageData.blockResponse.type === 'accepted';
 
     const blockHash = normalizeHexString(messageData.blockResponse.signerSignatureHash);
     const signerKey = normalizeHexString(signerPubkey);
     const dbBlockResponse: DbBlockResponse = {
-      received_at: unixTimeMillisecondsToISO(receivedAt),
+      received_at,
       signer_key: signerKey,
-      accepted: messageData.blockResponse.type === 'accepted',
+      accepted,
       signer_sighash: blockHash,
-      metadata_server_version: messageData.blockResponse.metadata?.server_version ?? '',
+      metadata_server_version,
       signature: normalizeHexString(messageData.blockResponse.signature),
       reason_string: messageData.blockResponse.reason ?? null,
       reason_code: messageData.blockResponse.reasonCode?.rejectCode ?? null,
@@ -255,6 +258,29 @@ export class PgWriteStore extends BasePgStoreModule {
       );
       return { applied: false };
     }
+
+    // Update the `reward_set_signers` table with the last response time, average response time,
+    // metadata server version, and proposal acceptance/rejection counts for this signer.
+    // The `proposals_missed_count` will be updated once a block is confirmed.
+    await sql`
+      WITH proposal_data AS (
+        SELECT reward_cycle, received_at
+        FROM block_proposals
+        WHERE block_hash = ${blockHash}
+      )
+      UPDATE reward_set_signers
+      SET last_response_time = ${received_at},
+        last_response_metadata_server_version = ${metadata_server_version},
+        proposals_accepted_count = proposals_accepted_count + ${accepted ? 1 : 0},
+        proposals_rejected_count = proposals_rejected_count + ${accepted ? 0 : 1},
+        average_response_time_ms = (
+          (average_response_time_ms * (proposals_accepted_count + proposals_rejected_count) + (${received_at} - (SELECT received_at FROM proposal_data))) /
+          (proposals_accepted_count + proposals_rejected_count + 1)
+        )
+      WHERE signer_key = ${dbBlockResponse.signer_key}
+        AND cycle_number = (SELECT reward_cycle FROM proposal_data)
+    `;
+
     this.logger.info(
       `Apply block_response signer=${dbBlockResponse.signer_key}, hash=${dbBlockResponse.signer_sighash}`
     );
@@ -318,8 +344,10 @@ export class PgWriteStore extends BasePgStoreModule {
         `Skipping apply for pre-nakamoto block ${dbBlock.block_height} ${dbBlock.block_hash}`
       );
     } else {
-      // After the block is inserted, calculate the reward_cycle_number, then check if the reward_set_signers
-      // table contains any rows for the calculated cycle_number.
+      // After the block is inserted, calculate the reward_cycle_number, then check if the
+      // reward_set_signers table contains any rows for the calculated cycle_number. If there are
+      // any signers that are not in the block_responses table for this block, update their
+      // `proposals_missed_count`.
       // TODO: add unique constraint here
       const result = await sql<{ cycle_number: number | null; reward_set_exists: boolean }[]>`
         WITH inserted AS (
@@ -330,6 +358,14 @@ export class PgWriteStore extends BasePgStoreModule {
           SELECT FLOOR((inserted.burn_block_height - ct.first_burnchain_block_height) / ct.reward_cycle_length) AS cycle_number
           FROM inserted, chain_tip AS ct
           LIMIT 1
+        ),
+        signer_miss_update AS (
+          UPDATE reward_set_signers
+          SET proposals_missed_count = proposals_missed_count + 1
+          WHERE cycle_number = (SELECT cycle_number FROM cycle_number)
+            AND signer_key NOT IN (
+              SELECT signer_key FROM block_responses WHERE signer_sighash = ${dbBlock.block_hash}
+            )
         )
         SELECT 
           cn.cycle_number,
