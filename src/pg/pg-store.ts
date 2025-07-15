@@ -53,6 +53,7 @@ export class PgStore extends BasePgStore {
     if (opts?.skipMigrations !== true) {
       while (true) {
         try {
+          logger.info('Running migrations, this may take a while...');
           await runMigrations(MIGRATIONS_DIR, 'up', pgConfig);
           break;
         } catch (error) {
