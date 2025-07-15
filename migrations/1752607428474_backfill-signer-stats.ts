@@ -75,5 +75,23 @@ export function up(pgm: MigrationBuilder): void {
       ) agg
     WHERE rss.signer_key = agg.signer_key AND rss.cycle_number = agg.cycle_number
   `);
+
+  // Drop old unused table that was not dropped in a previous migration.
   pgm.dropTable('reward_set_signers_old-no-slot-index');
+}
+
+export function down(pgm: MigrationBuilder): void {
+  pgm.sql(`
+    UPDATE reward_set_signers
+    SET
+      last_response_time = NULL,
+      last_response_metadata_server_version = NULL,
+      proposals_accepted_count = 0,
+      proposals_rejected_count = 0,
+      proposals_missed_count = 0,
+      average_response_time_ms = 0,
+      signer_stacked_amount_percentage = 0,
+      signer_stacked_amount_rank = 0,
+      signer_weight_percentage = 0
+  `);
 }
