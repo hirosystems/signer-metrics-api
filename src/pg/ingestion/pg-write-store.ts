@@ -467,7 +467,7 @@ export class PgWriteStore extends BasePgStoreModule {
           WHERE cycle_number = ${cycleNumber}
         ),
         signer_ranks AS (
-          SELECT signer_key, RANK() OVER (ORDER BY signer_stacked_amount DESC) AS rank
+          SELECT signer_key, RANK() OVER (ORDER BY signer_stacked_amount DESC, signer_key ASC) AS rank
           FROM reward_set_signers
           WHERE cycle_number = ${cycleNumber}
         )
