@@ -628,11 +628,14 @@ export class PgStore extends BasePgStore {
     offset,
     fromDate,
     toDate,
+    signerKey,
   }: {
     sql: PgSqlClient;
     cycleNumber: number;
     limit: number;
     offset: number;
+    signerKey?: string;
+    // TODO: Do we need to support date ranges?
     fromDate?: Date;
     toDate?: Date;
   }) {
@@ -671,6 +674,7 @@ export class PgStore extends BasePgStore {
           last_response_metadata_server_version AS last_metadata_server_version
         FROM reward_set_signers
         WHERE cycle_number = ${cycleNumber}
+        ${signerKey ? sql`AND signer_key = ${normalizeHexString(signerKey)}` : sql``}
         ORDER BY signer_stacked_amount DESC, signer_key ASC
         OFFSET ${offset}
         LIMIT ${limit}
@@ -814,56 +818,22 @@ export class PgStore extends BasePgStore {
 
   async getCurrentCycleSignersWeightPercentage() {
     return await this.sql<{ signer_key: string; weight: number }[]>`
-      WITH current_cycle AS (
-        SELECT MAX(cycle_number) AS cycle_number
-        FROM reward_set_signers
-      ),
-      total_weight AS (
-        SELECT SUM(signer_weight) AS total
-        FROM reward_set_signers
-        WHERE cycle_number = (SELECT cycle_number FROM current_cycle)
-      )
-      SELECT signer_key, ROUND((signer_weight::numeric / (SELECT total FROM total_weight)::numeric) * 100.0, 3)::float AS weight
+      SELECT signer_key, ROUND(signer_weight_percentage::numeric * 100.0, 3)::float AS weight
       FROM reward_set_signers
-      WHERE cycle_number = (SELECT cycle_number FROM current_cycle)
+      WHERE cycle_number = (SELECT MAX(cycle_number) FROM reward_set_signers)
+      ORDER BY signer_weight_percentage DESC, signer_key ASC
     `;
   }
 
   async getSignerForCycle(cycleNumber: number, signerId: string) {
-    const dbRewardSetSigner = await this.sql<
-      {
-        signer_key: string;
-        slot_index: number;
-        weight: number;
-        weight_percentage: number;
-        stacked_amount: string;
-        stacked_amount_percentage: number;
-        stacked_amount_rank: number;
-        proposals_accepted_count: number;
-        proposals_rejected_count: number;
-        proposals_missed_count: number;
-        average_response_time_ms: number;
-        last_block_response_time: Date | null;
-        last_metadata_server_version: string | null;
-      }[]
-    >`
-      SELECT
-        signer_key,
-        slot_index,
-        signer_weight AS weight,
-        signer_stacked_amount AS stacked_amount,
-        signer_stacked_amount_percentage AS stacked_amount_percentage,
-        signer_stacked_amount_rank AS stacked_amount_rank,
-        proposals_accepted_count,
-        proposals_rejected_count,
-        proposals_missed_count,
-        average_response_time_ms,
-        last_block_response_time,
-        last_metadata_server_version
-      FROM reward_set_signers
-      WHERE cycle_number = ${cycleNumber} AND signer_key = ${normalizeHexString(signerId)}
-    `;
-    return dbRewardSetSigner[0];
+    const dbRewardSetSigner = await this.getSignersForCycle({
+      sql: this.sql,
+      cycleNumber,
+      signerKey: signerId,
+      limit: 1,
+      offset: 0,
+    });
+    return dbRewardSetSigner.length > 0 ? dbRewardSetSigner[0] : null;
   }
 
   async getRecentSignerMetrics(args: { sql: PgSqlClient; blockRanges: number[] }) {

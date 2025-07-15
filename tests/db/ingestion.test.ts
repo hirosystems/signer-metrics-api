@@ -129,4 +129,39 @@ describe('End-to-end ingestion tests', () => {
     expect(signerData[2].weight).toBe(1);
     expect(signerData[2].weight_percentage).toBe(12.5);
   });
+
+  test('validate cycle single signer data', async () => {
+    const signerData = await db.getSignerForCycle(
+      6,
+      '0x028efa20fa5706567008ebaf48f7ae891342eeb944d96392f719c505c89f84ed8d'
+    );
+    expect(signerData).toBeDefined();
+    expect(signerData?.slot_index).toBe(1);
+    expect(signerData?.stacked_amount).toBe('4125240000000000');
+    expect(signerData?.stacked_amount_percentage).toBe(50);
+    expect(signerData?.stacked_amount_rank).toBe(1);
+    expect(signerData?.weight).toBe(4);
+    expect(signerData?.weight_percentage).toBe(50);
+    expect(signerData?.signer_key).toBe(
+      '0x028efa20fa5706567008ebaf48f7ae891342eeb944d96392f719c505c89f84ed8d'
+    );
+  });
+
+  test('validate current cycle signer weight percentages', async () => {
+    const signerWeightPercentage = await db.getCurrentCycleSignersWeightPercentage();
+    expect(signerWeightPercentage).toBeDefined();
+    expect(signerWeightPercentage.length).toBe(3);
+    expect(signerWeightPercentage[0].signer_key).toBe(
+      '0x028efa20fa5706567008ebaf48f7ae891342eeb944d96392f719c505c89f84ed8d'
+    );
+    expect(signerWeightPercentage[0].weight).toBe(50);
+    expect(signerWeightPercentage[1].signer_key).toBe(
+      '0x023f19d77c842b675bd8c858e9ac8b0ca2efa566f17accf8ef9ceb5a992dc67836'
+    );
+    expect(signerWeightPercentage[1].weight).toBe(37.5);
+    expect(signerWeightPercentage[2].signer_key).toBe(
+      '0x029fb154a570a1645af3dd43c3c668a979b59d21a46dd717fd799b13be3b2a0dc7'
+    );
+    expect(signerWeightPercentage[2].weight).toBe(12.5);
+  });
 });
