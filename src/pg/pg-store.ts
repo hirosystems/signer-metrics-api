@@ -624,18 +624,62 @@ export class PgStore extends BasePgStore {
   async getSignersForCycle({
     sql,
     cycleNumber,
+    limit,
+    offset,
     fromDate,
     toDate,
+    signerKey,
   }: {
     sql: PgSqlClient;
     cycleNumber: number;
     limit: number;
     offset: number;
+    signerKey?: string;
+    // TODO: Do we need to support date ranges?
     fromDate?: Date;
     toDate?: Date;
   }) {
-    // TODO: add pagination
-    // TODO: joins against the block_signer_signatures table to determine mined_blocks_* values
+    // If no date range is provided, return the pre-calculated signer data for the given cycle number.
+    if (fromDate === undefined && toDate === undefined) {
+      return await sql<
+        {
+          signer_key: string;
+          slot_index: number;
+          weight: number;
+          weight_percentage: number;
+          stacked_amount: string;
+          stacked_amount_percentage: number;
+          stacked_amount_rank: number;
+          proposals_accepted_count: number;
+          proposals_rejected_count: number;
+          proposals_missed_count: number;
+          average_response_time_ms: number;
+          last_block_response_time: Date | null;
+          last_metadata_server_version: string | null;
+        }[]
+      >`
+        SELECT
+          signer_key,
+          slot_index,
+          signer_weight AS weight,
+          ROUND(signer_weight_percentage::numeric * 100.0, 3)::float8 AS weight_percentage,
+          signer_stacked_amount AS stacked_amount,
+          ROUND(signer_stacked_amount_percentage::numeric * 100.0, 3)::float8 AS stacked_amount_percentage,
+          signer_stacked_amount_rank AS stacked_amount_rank,
+          proposals_accepted_count,
+          proposals_rejected_count,
+          proposals_missed_count,
+          average_response_time_ms,
+          last_response_time AS last_block_response_time,
+          last_response_metadata_server_version AS last_metadata_server_version
+        FROM reward_set_signers
+        WHERE cycle_number = ${cycleNumber}
+        ${signerKey ? sql`AND signer_key = ${normalizeHexString(signerKey)}` : sql``}
+        ORDER BY signer_stacked_amount DESC, signer_key ASC
+        OFFSET ${offset}
+        LIMIT ${limit}
+      `;
+    }
 
     // Get the list of signers for a given cycle number via signer_key in the reward_set_signers table,
     // where cycle_number equals the given cycle number. Then get all block proposals from the block_proposals
@@ -647,7 +691,8 @@ export class PgStore extends BasePgStore {
     //  * Number of block_proposal entries that have an associated accepted=false block_response entry.
     //  * Number of block_proposal entries that are missing an associated block_response entry.
     //  * The average time duration between block_proposal.received_at and block_response.received_at.
-
+    // TODO: add pagination
+    // TODO: joins against the block_signer_signatures table to determine mined_blocks_* values
     const fromFilter = fromDate ? sql`AND bp.received_at >= ${fromDate}` : sql``;
     const toFilter = toDate ? sql`AND bp.received_at < ${toDate}` : sql``;
 
@@ -773,139 +818,22 @@ export class PgStore extends BasePgStore {
 
   async getCurrentCycleSignersWeightPercentage() {
     return await this.sql<{ signer_key: string; weight: number }[]>`
-      WITH current_cycle AS (
-        SELECT MAX(cycle_number) AS cycle_number
-        FROM reward_set_signers
-      ),
-      total_weight AS (
-        SELECT SUM(signer_weight) AS total
-        FROM reward_set_signers
-        WHERE cycle_number = (SELECT cycle_number FROM current_cycle)
-      )
-      SELECT signer_key, ROUND((signer_weight::numeric / (SELECT total FROM total_weight)::numeric) * 100.0, 3)::float AS weight
+      SELECT signer_key, ROUND(signer_weight_percentage::numeric * 100.0, 3)::float AS weight
       FROM reward_set_signers
-      WHERE cycle_number = (SELECT cycle_number FROM current_cycle)
+      WHERE cycle_number = (SELECT MAX(cycle_number) FROM reward_set_signers)
+      ORDER BY signer_weight_percentage DESC, signer_key ASC
     `;
   }
 
   async getSignerForCycle(cycleNumber: number, signerId: string) {
-    const dbRewardSetSigner = await this.sql<
-      {
-        signer_key: string;
-        slot_index: number;
-        weight: number;
-        weight_percentage: number;
-        stacked_amount: string;
-        stacked_amount_percentage: number;
-        stacked_amount_rank: number;
-        proposals_accepted_count: number;
-        proposals_rejected_count: number;
-        proposals_missed_count: number;
-        average_response_time_ms: number;
-        last_block_response_time: Date | null;
-        last_metadata_server_version: string | null;
-      }[]
-    >`
-      WITH signer_data AS (
-        -- Fetch the specific signer for the given cycle
-        SELECT
-          rss.signer_key,
-          rss.slot_index,
-          rss.signer_weight,
-          rss.signer_stacked_amount
-        FROM reward_set_signers rss
-        WHERE rss.cycle_number = ${cycleNumber}
-          AND rss.signer_key = ${normalizeHexString(signerId)}
-      ),
-      proposal_data AS (
-        -- Select all proposals for the given cycle
-        SELECT
-          bp.block_hash,
-          bp.block_height,
-          bp.received_at AS proposal_received_at
-        FROM block_proposals bp
-        WHERE bp.reward_cycle = ${cycleNumber}
-      ),
-      response_data AS (
-        -- Select all responses for the proposals in the given cycle
-        SELECT
-          br.signer_key,
-          br.signer_sighash,
-          br.accepted,
-          br.received_at,
-          br.metadata_server_version,
-          br.id
-        FROM block_responses br
-        JOIN proposal_data pd ON br.signer_sighash = pd.block_hash
-        WHERE br.signer_key = ${normalizeHexString(signerId)} -- Filter for the specific signer
-      ),
-      latest_response_data AS (
-        -- Find the latest response time and corresponding metadata_server_version for the specific signer
-        SELECT DISTINCT ON (signer_key)
-          signer_key,
-          received_at AS last_block_response_time,
-          metadata_server_version
-        FROM response_data
-        ORDER BY signer_key, received_at DESC
-      ),
-      signer_proposal_data AS (
-        -- Cross join the specific signer with proposals and left join filtered responses
-        SELECT
-          sd.signer_key,
-          pd.block_hash,
-          pd.proposal_received_at,
-          rd.accepted,
-          rd.received_at AS response_received_at,
-          rd.metadata_server_version,
-          EXTRACT(EPOCH FROM (rd.received_at - pd.proposal_received_at)) * 1000 AS response_time_ms
-        FROM signer_data sd
-        CROSS JOIN proposal_data pd
-        LEFT JOIN response_data rd
-          ON pd.block_hash = rd.signer_sighash
-          AND sd.signer_key = rd.signer_key -- Match signers with their corresponding responses
-      ),
-      aggregated_data AS (
-        -- Aggregate the proposal and response data for the specific signer
-        SELECT
-          spd.signer_key,
-          COUNT(CASE WHEN spd.accepted = true THEN 1 END)::integer AS proposals_accepted_count,
-          COUNT(CASE WHEN spd.accepted = false THEN 1 END)::integer AS proposals_rejected_count,
-          COUNT(CASE WHEN spd.accepted IS NULL THEN 1 END)::integer AS proposals_missed_count,
-          ROUND(AVG(spd.response_time_ms), 3)::float8 AS average_response_time_ms
-        FROM signer_proposal_data spd
-        GROUP BY spd.signer_key
-      ),
-      signer_rank AS (
-        -- Calculate the rank of the signer based on stacked amount
-        SELECT
-          signer_key,
-          RANK() OVER (ORDER BY signer_stacked_amount DESC) AS stacked_amount_rank
-        FROM reward_set_signers
-        WHERE cycle_number = ${cycleNumber}
-      )
-      SELECT
-        sd.signer_key,
-        sd.slot_index,
-        sd.signer_weight AS weight,
-        sd.signer_stacked_amount AS stacked_amount,
-        ROUND(sd.signer_weight * 100.0 / (SELECT SUM(signer_weight) FROM reward_set_signers WHERE cycle_number = ${cycleNumber}), 3)::float8 AS weight_percentage,
-        ROUND(sd.signer_stacked_amount * 100.0 / (SELECT SUM(signer_stacked_amount) FROM reward_set_signers WHERE cycle_number = ${cycleNumber}), 3)::float8 AS stacked_amount_percentage,
-        sr.stacked_amount_rank,
-        ad.proposals_accepted_count,
-        ad.proposals_rejected_count,
-        ad.proposals_missed_count,
-        COALESCE(ad.average_response_time_ms, 0) AS average_response_time_ms,
-        COALESCE(lrd.last_block_response_time, NULL) AS last_block_response_time,
-        COALESCE(lrd.metadata_server_version, NULL) AS last_metadata_server_version
-      FROM signer_data sd
-      LEFT JOIN aggregated_data ad
-        ON sd.signer_key = ad.signer_key
-      LEFT JOIN signer_rank sr
-        ON sd.signer_key = sr.signer_key
-      LEFT JOIN latest_response_data lrd
-        ON sd.signer_key = lrd.signer_key
-    `;
-    return dbRewardSetSigner[0];
+    const dbRewardSetSigner = await this.getSignersForCycle({
+      sql: this.sql,
+      cycleNumber,
+      signerKey: signerId,
+      limit: 1,
+      offset: 0,
+    });
+    return dbRewardSetSigner.length > 0 ? dbRewardSetSigner[0] : null;
   }
 
   async getRecentSignerMetrics(args: { sql: PgSqlClient; blockRanges: number[] }) {
