@@ -1,3 +1,10 @@
+## [0.13.5](https://github.com/hirosystems/signer-metrics-api/compare/v0.13.4...v0.13.5) (2025-07-15)
+
+
+### Bug Fixes
+
+* calculate signer cycle stats as block and signer messages arrive ([#88](https://github.com/hirosystems/signer-metrics-api/issues/88)) ([60f0976](https://github.com/hirosystems/signer-metrics-api/commit/60f0976cb11d2ccf6fad5e6a18dbb87ee313de54))
+
 ## [0.13.4](https://github.com/hirosystems/signer-metrics-api/compare/v0.13.3...v0.13.4) (2025-07-02)
 
 
