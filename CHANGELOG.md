@@ -1,3 +1,10 @@
+## [0.13.6](https://github.com/hirosystems/signer-metrics-api/compare/v0.13.5...v0.13.6) (2025-07-15)
+
+
+### Bug Fixes
+
+* backfill cycle signer stats for previous cycles ([#89](https://github.com/hirosystems/signer-metrics-api/issues/89)) ([9160da6](https://github.com/hirosystems/signer-metrics-api/commit/9160da6b0a3ffa3b0c7b656c052d014e32c6b33b))
+
 ## [0.13.5](https://github.com/hirosystems/signer-metrics-api/compare/v0.13.4...v0.13.5) (2025-07-15)
 
 
