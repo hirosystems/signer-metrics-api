@@ -636,8 +636,6 @@ export class PgStore extends BasePgStore {
     fromDate?: Date;
     toDate?: Date;
   }) {
-    // TODO: joins against the block_signer_signatures table to determine mined_blocks_* values
-
     // If no date range is provided, return the pre-calculated signer data for the given cycle number.
     if (fromDate === undefined && toDate === undefined) {
       return await sql<
@@ -661,15 +659,16 @@ export class PgStore extends BasePgStore {
           signer_key,
           slot_index,
           signer_weight AS weight,
+          ROUND(signer_weight_percentage::numeric * 100.0, 3)::float8 AS weight_percentage,
           signer_stacked_amount AS stacked_amount,
-          signer_stacked_amount_percentage AS stacked_amount_percentage,
+          ROUND(signer_stacked_amount_percentage::numeric * 100.0, 3)::float8 AS stacked_amount_percentage,
           signer_stacked_amount_rank AS stacked_amount_rank,
           proposals_accepted_count,
           proposals_rejected_count,
           proposals_missed_count,
           average_response_time_ms,
-          last_block_response_time,
-          last_metadata_server_version
+          last_response_time AS last_block_response_time,
+          last_response_metadata_server_version AS last_metadata_server_version
         FROM reward_set_signers
         WHERE cycle_number = ${cycleNumber}
         ORDER BY signer_stacked_amount DESC, signer_key ASC
@@ -689,6 +688,7 @@ export class PgStore extends BasePgStore {
     //  * Number of block_proposal entries that are missing an associated block_response entry.
     //  * The average time duration between block_proposal.received_at and block_response.received_at.
     // TODO: add pagination
+    // TODO: joins against the block_signer_signatures table to determine mined_blocks_* values
     const fromFilter = fromDate ? sql`AND bp.received_at >= ${fromDate}` : sql``;
     const toFilter = toDate ? sql`AND bp.received_at < ${toDate}` : sql``;
 

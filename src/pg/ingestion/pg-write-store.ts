@@ -465,13 +465,16 @@ export class PgWriteStore extends BasePgStoreModule {
           SELECT SUM(signer_weight) AS total
           FROM reward_set_signers
           WHERE cycle_number = ${cycleNumber}
+        ),
+        signer_ranks AS (
+          SELECT signer_key, RANK() OVER (ORDER BY signer_stacked_amount DESC) AS rank
+          FROM reward_set_signers
+          WHERE cycle_number = ${cycleNumber}
         )
         UPDATE reward_set_signers
-        SET signer_stacked_amount_percentage = signer_stacked_amount / (SELECT total FROM total_stacked_amount),
-          signer_stacked_amount_rank = (
-            SELECT RANK() OVER (ORDER BY signer_stacked_amount / (SELECT total FROM total_stacked_amount) DESC)
-          ),
-          signer_weight_percentage = signer_weight / (SELECT total FROM total_weight)
+        SET signer_stacked_amount_percentage = signer_stacked_amount::float8 / (SELECT total FROM total_stacked_amount)::float8,
+          signer_stacked_amount_rank = (SELECT rank FROM signer_ranks WHERE signer_key = reward_set_signers.signer_key),
+          signer_weight_percentage = signer_weight::float8 / (SELECT total FROM total_weight)::float8
         WHERE cycle_number = ${cycleNumber}
       `;
     }
