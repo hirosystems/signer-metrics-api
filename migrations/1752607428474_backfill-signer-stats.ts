@@ -6,25 +6,25 @@ export const shorthands: ColumnDefinitions | undefined = undefined;
 export function up(pgm: MigrationBuilder): void {
   pgm.sql(`
     UPDATE reward_set_signers rss
-    SET 
-      signer_stacked_amount_percentage = (rss.signer_stacked_amount::numeric / total.total_stacked) * 100,
-      signer_weight_percentage = (rss.signer_weight::float / total.total_weight) * 100,
+    SET
+      signer_stacked_amount_percentage = (rss.signer_stacked_amount::numeric / total.total_stacked),
+      signer_weight_percentage = (rss.signer_weight::float / total.total_weight),
       signer_stacked_amount_rank = ranked.rank
-    FROM 
+    FROM
       (SELECT cycle_number, SUM(signer_stacked_amount::numeric) as total_stacked, SUM(signer_weight) as total_weight FROM reward_set_signers GROUP BY cycle_number) total,
-      (SELECT signer_key, cycle_number, RANK() OVER (PARTITION BY cycle_number ORDER BY signer_stacked_amount::numeric DESC) as rank FROM reward_set_signers) ranked
+      (SELECT signer_key, cycle_number, RANK() OVER (PARTITION BY cycle_number ORDER BY signer_stacked_amount::numeric DESC, signer_key ASC) as rank FROM reward_set_signers) ranked
     WHERE rss.cycle_number = total.cycle_number AND rss.cycle_number = ranked.cycle_number AND rss.signer_key = ranked.signer_key
   `);
   pgm.sql(`
     UPDATE reward_set_signers rss
-    SET 
+    SET
       proposals_accepted_count = COALESCE(agg.accepted_count, 0),
       proposals_rejected_count = COALESCE(agg.rejected_count, 0),
       proposals_missed_count = COALESCE(agg.missed_count, 0),
       average_response_time_ms = COALESCE(agg.avg_ms, 0),
       last_response_time = agg.last_time,
       last_response_metadata_server_version = agg.last_version
-    FROM 
+    FROM
       (
         WITH signer_proposal_data AS (
           SELECT
@@ -52,7 +52,7 @@ export function up(pgm: MigrationBuilder): void {
           GROUP BY signer_key, cycle_number
         ),
         latest_response AS (
-          SELECT 
+          SELECT
             signer_key,
             cycle_number,
             MAX(response_received_at) AS last_time,
@@ -61,7 +61,7 @@ export function up(pgm: MigrationBuilder): void {
           WHERE response_received_at IS NOT NULL
           GROUP BY signer_key, cycle_number
         )
-        SELECT 
+        SELECT
           agg.signer_key,
           agg.cycle_number,
           agg.accepted_count,
