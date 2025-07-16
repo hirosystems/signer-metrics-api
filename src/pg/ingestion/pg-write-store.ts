@@ -43,7 +43,8 @@ export class PgWriteStore extends BasePgStoreModule {
   }
 
   async updateLastIngestedRedisMsgId(sql: PgSqlClient, msgId: string): Promise<void> {
-    await sql`UPDATE chain_tip SET last_redis_msg_id = ${msgId}`;
+    const msgSequenceId = msgId.split('-')[0];
+    await sql`UPDATE chain_tip SET last_redis_msg_id = ${msgSequenceId}`;
   }
 
   async applyStackerDbChunk(
