@@ -1,3 +1,10 @@
+## [0.14.0](https://github.com/hirosystems/signer-metrics-api/compare/v0.13.6...v0.14.0) (2025-08-21)
+
+
+### Features
+
+* add chain tip block height prom metric ([#91](https://github.com/hirosystems/signer-metrics-api/issues/91)) ([49ba3e9](https://github.com/hirosystems/signer-metrics-api/commit/49ba3e9dcb8308165cb286942acfb4228eb2c3f6))
+
 ## [0.13.6](https://github.com/hirosystems/signer-metrics-api/compare/v0.13.5...v0.13.6) (2025-07-15)
 
 
