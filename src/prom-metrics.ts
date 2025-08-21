@@ -93,4 +93,14 @@ export function configureSignerMetrics(db: PgStore) {
       }
     },
   });
+
+  new Gauge({
+    name: metricsPrefix + 'chain_tip_block_height',
+    help: 'Height of the chain tip block',
+    async collect() {
+      const blockHeight = await db.getChainTipBlockHeight();
+      this.reset();
+      this.set(blockHeight);
+    },
+  });
 }
