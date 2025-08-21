@@ -93,4 +93,14 @@ export function configureSignerMetrics(db: PgStore) {
       }
     },
   });
+
+  new Gauge({
+    name: metricsPrefix + 'stacks_block_height',
+    help: 'Last indexed stacks block height',
+    async collect() {
+      const blockHeight = await db.getChainTipBlockHeight();
+      this.reset();
+      this.set(blockHeight);
+    },
+  });
 }
