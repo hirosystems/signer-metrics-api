@@ -95,8 +95,8 @@ export function configureSignerMetrics(db: PgStore) {
   });
 
   new Gauge({
-    name: metricsPrefix + 'chain_tip_block_height',
-    help: 'Height of the chain tip block',
+    name: metricsPrefix + 'stacks_block_height',
+    help: 'Last indexed stacks block height',
     async collect() {
       const blockHeight = await db.getChainTipBlockHeight();
       this.reset();
