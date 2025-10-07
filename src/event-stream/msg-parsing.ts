@@ -102,6 +102,11 @@ export interface StateMachineUpdate extends ChunkMetadata {
   // local_supported_signer_protocol_version: u64,
 }
 
+// https://github.com/stacks-network/stacks-core/blob/develop/libsigner/src/v0/messages.rs#L191
+export interface BlockPreCommitChunkType extends ChunkMetadata {
+  messageType: 'BlockPreCommit';
+}
+
 export type ParsedStackerDbChunk =
   | BlockProposalChunkType
   | BlockResponseChunkType
@@ -109,7 +114,8 @@ export type ParsedStackerDbChunk =
   | MockProposalChunkType
   | MockSignatureChunkType
   | MockBlockChunkType
-  | StateMachineUpdate;
+  | StateMachineUpdate
+  | BlockPreCommitChunkType;
 
 export function parseStackerDbChunk(chunk: StackerDbChunk): ParsedStackerDbChunk[] {
   return chunk.modified_slots.flatMap(msg => {
@@ -144,6 +150,7 @@ enum SignerMessageTypePrefix {
   MockSignature = 4,
   MockBlock = 5,
   StateMachineUpdate = 6,
+  BlockPreCommit = 7,
 }
 
 // https://github.com/stacks-network/stacks-core/blob/cd702e7dfba71456e4983cf530d5b174e34507dc/libsigner/src/v0/messages.rs#L206
@@ -185,6 +192,10 @@ function parseSignerMessage(msg: Buffer) {
     case SignerMessageTypePrefix.StateMachineUpdate:
       return {
         messageType: 'StateMachineUpdate',
+      } as const;
+    case SignerMessageTypePrefix.BlockPreCommit:
+      return {
+        messageType: 'BlockPreCommit',
       } as const;
     default:
       throw new Error(`Unknown message type prefix: ${messageType}`);
