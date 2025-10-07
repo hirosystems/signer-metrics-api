@@ -1,3 +1,10 @@
+## [0.14.1](https://github.com/hirosystems/signer-metrics-api/compare/v0.14.0...v0.14.1) (2025-10-07)
+
+
+### Bug Fixes
+
+* detect and ignore BlockPreCommit messages ([#92](https://github.com/hirosystems/signer-metrics-api/issues/92)) ([42ef4bd](https://github.com/hirosystems/signer-metrics-api/commit/42ef4bd79d27aebaf65cf9074ed98aa704b5d1c5))
+
 ## [0.14.0](https://github.com/hirosystems/signer-metrics-api/compare/v0.13.6...v0.14.0) (2025-08-21)
 
 
