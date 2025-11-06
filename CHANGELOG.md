@@ -1,3 +1,10 @@
+## [0.14.2](https://github.com/hirosystems/signer-metrics-api/compare/v0.14.1...v0.14.2) (2025-11-06)
+
+
+### Bug Fixes
+
+* upgrade @stacks/transactions ([#93](https://github.com/hirosystems/signer-metrics-api/issues/93)) ([3dad22b](https://github.com/hirosystems/signer-metrics-api/commit/3dad22b8dc6e6b2f2fe515b9cb2a067b4c969da5))
+
 ## [0.14.1](https://github.com/hirosystems/signer-metrics-api/compare/v0.14.0...v0.14.1) (2025-10-07)
 
 
