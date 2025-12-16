@@ -111,12 +111,12 @@ export class PgStore extends BasePgStore {
     // they differ from the existing values. Return true if the row was updated, false otherwise.
     // Should only update the row if the values are null (i.e. the first time the values are set).
     const updateResult = await this.sql`
-      UPDATE chain_tip 
-      SET 
+      UPDATE chain_tip
+      SET
         first_burnchain_block_height = ${poxInfo.first_burnchain_block_height},
         reward_cycle_length = ${poxInfo.reward_cycle_length}
       WHERE
-        first_burnchain_block_height IS DISTINCT FROM ${poxInfo.first_burnchain_block_height} 
+        first_burnchain_block_height IS DISTINCT FROM ${poxInfo.first_burnchain_block_height}
         OR reward_cycle_length IS DISTINCT FROM ${poxInfo.reward_cycle_length}
     `;
     return { rowUpdated: updateResult.count > 0 };
@@ -406,8 +406,13 @@ export class PgStore extends BasePgStore {
       }[]
     >`
       WITH latest_blocks AS (
-        SELECT * FROM blocks
-        ORDER BY block_height DESC
+        SELECT
+          b.*,
+          ct.block_height AS chain_tip_block_height,
+          (b.burn_block_height - ct.first_burnchain_block_height) / ct.reward_cycle_length AS cycle_number
+        FROM blocks b
+        CROSS JOIN chain_tip ct
+        ORDER BY b.block_height DESC
         LIMIT ${limit}
         OFFSET ${offset}
       ),
@@ -419,7 +424,7 @@ export class PgStore extends BasePgStore {
           lb.block_hash,
           lb.index_block_hash,
           lb.burn_block_height,
-          bp.reward_cycle as cycle_number,
+          lb.cycle_number,
           bp.received_at AS block_proposal_time_ms,
           rs.signer_key,
           COALESCE(rs.signer_weight, 0) AS signer_weight,
@@ -433,7 +438,7 @@ export class PgStore extends BasePgStore {
           EXTRACT(EPOCH FROM (fbr.received_at - bp.received_at)) * 1000 AS response_time_ms
         FROM latest_blocks lb
         LEFT JOIN block_proposals bp ON lb.block_hash = bp.block_hash
-        LEFT JOIN reward_set_signers rs ON bp.reward_cycle = rs.cycle_number
+        LEFT JOIN reward_set_signers rs ON lb.cycle_number = rs.cycle_number
         LEFT JOIN block_signer_signatures bss ON lb.block_height = bss.block_height AND rs.signer_key = bss.signer_key
         LEFT JOIN block_responses fbr ON fbr.signer_key = rs.signer_key AND fbr.signer_sighash = lb.block_hash
       ),
@@ -466,7 +471,8 @@ export class PgStore extends BasePgStore {
           lb.burn_block_height,
           lb.tenure_height,
           EXTRACT(EPOCH FROM lb.block_time)::integer AS block_time,
-          bsa.cycle_number,
+          lb.cycle_number,
+          lb.chain_tip_block_height,
           (EXTRACT(EPOCH FROM bsa.block_proposal_time_ms) * 1000)::bigint AS block_proposal_time_ms,
           bsa.total_signer_count::integer,
           bsa.signer_accepted_mined_count::integer,
@@ -481,11 +487,9 @@ export class PgStore extends BasePgStore {
           bsa.accepted_mined_weight::integer,
           bsa.accepted_excluded_weight::integer,
           bsa.rejected_weight::integer,
-          bsa.missing_weight::integer,
-          ct.block_height AS chain_tip_block_height
+          bsa.missing_weight::integer
       FROM latest_blocks lb
       JOIN signer_state_aggregation bsa ON lb.id = bsa.block_id
-      CROSS JOIN chain_tip ct
       ORDER BY lb.block_height DESC
     `;
     return result;
