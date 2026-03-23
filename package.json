@@ -62,7 +62,7 @@
     "@sinclair/typebox": "^0.28.17",
     "@stacks/api-toolkit": "^1.12.2",
     "@stacks/node-publisher-client": "^2.0.1",
-    "@stacks/transactions": "^7.3.1",
+    "@stacks/transactions": "^7.4.0",
     "@types/node": "^22.10.5",
     "bignumber.js": "^9.1.2",
     "date-fns": "^4.1.0",
