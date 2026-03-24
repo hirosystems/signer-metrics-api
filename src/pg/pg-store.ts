@@ -6,7 +6,7 @@ import {
   connectPostgres,
   logger,
   runMigrations,
-} from '@hirosystems/api-toolkit';
+} from '@stacks/api-toolkit';
 import * as path from 'path';
 import { PgWriteStore } from './ingestion/pg-write-store';
 import { BlockIdParam, normalizeHexString, sleep } from '../helpers';

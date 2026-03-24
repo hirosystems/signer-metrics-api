@@ -3,7 +3,7 @@ import * as fs from 'node:fs';
 import * as readline from 'node:readline/promises';
 import * as zlib from 'node:zlib';
 import { EventStreamHandler } from '../../src/event-stream/event-stream';
-import { onceWhen } from '@hirosystems/api-toolkit';
+import { onceWhen } from '@stacks/api-toolkit';
 
 describe('End-to-end ingestion tests', () => {
   let snpObserverUrl: string;

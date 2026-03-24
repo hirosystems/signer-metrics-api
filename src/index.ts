@@ -2,7 +2,7 @@ import { PgStore } from './pg/pg-store';
 import { buildApiServer, buildPromServer } from './api/init';
 import { ENV } from './env';
 import { isProdEnv } from './helpers';
-import { buildProfilerServer, logger, registerShutdownConfig } from '@hirosystems/api-toolkit';
+import { buildProfilerServer, logger, registerShutdownConfig } from '@stacks/api-toolkit';
 import { EventStreamHandler } from './event-stream/event-stream';
 import { startPoxInfoUpdater } from './stacks-core-rpc/pox-info-updater';
 import { StackerSetUpdator } from './stacks-core-rpc/stacker-set-updater';

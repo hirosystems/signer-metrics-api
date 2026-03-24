@@ -3,7 +3,7 @@ import { Namespace, Server } from 'socket.io';
 import { FastifyPluginAsync } from 'fastify';
 import { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import { SignerMessagesEventPayload } from '../../pg/types';
-import { logger } from '@hirosystems/api-toolkit';
+import { logger } from '@stacks/api-toolkit';
 import { parseDbBlockProposalData } from './block-proposals';
 import { BlockProposalsEntry } from '../schemas';
 
