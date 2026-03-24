@@ -61,7 +61,7 @@
     "@noble/secp256k1": "^2.2.3",
     "@sinclair/typebox": "^0.28.17",
     "@stacks/api-toolkit": "^1.12.2",
-    "@stacks/node-publisher-client": "^2.0.1",
+    "@stacks/node-publisher-client": "^2.0.5",
     "@stacks/transactions": "^7.4.0",
     "@types/node": "^22.10.5",
     "bignumber.js": "^9.1.2",
