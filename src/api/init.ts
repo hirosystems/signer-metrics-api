@@ -7,7 +7,7 @@ import { StatusRoutes } from './routes/status';
 import FastifyMetrics, { IFastifyMetrics } from 'fastify-metrics';
 import { Server } from 'http';
 import { isProdEnv } from '../helpers';
-import { PINO_LOGGER_CONFIG } from '@hirosystems/api-toolkit';
+import { PINO_LOGGER_CONFIG } from '@stacks/api-toolkit';
 import { CycleRoutes } from './routes/cycle';
 import { BlockRoutes } from './routes/blocks';
 import { BlockProposalsRoutes } from './routes/block-proposals';

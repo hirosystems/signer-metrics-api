@@ -1,6 +1,6 @@
 import * as WorkerThreads from 'node:worker_threads';
 import * as path from 'node:path';
-import { waiter, Waiter, logger as defaultLogger } from '@hirosystems/api-toolkit';
+import { waiter, Waiter, logger as defaultLogger } from '@stacks/api-toolkit';
 import { ParsedNakamotoBlock, ParsedStackerDbChunk } from './msg-parsing';
 import {
   NakamotoBlockMsgReply,

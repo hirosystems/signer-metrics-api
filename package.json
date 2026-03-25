@@ -1,9 +1,9 @@
 {
-  "name": "@hirosystems/signer-metrics-api",
+  "name": "@stx-labs/signer-metrics-api",
   "description": "A microservice that indexes signer data from the Stacks blockchain and exposes it via JSON REST API endpoints",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "main": "index.js",
-  "author": "Hiro Systems PBC <engineering@hiro.so> (https://hiro.so)",
+  "author": "Stacks Labs",
   "license": "GPL-3.0",
   "scripts": {
     "build": "rimraf ./dist && tsc --project tsconfig.build.json",
@@ -61,7 +61,7 @@
     "@noble/secp256k1": "^2.2.3",
     "@sinclair/typebox": "^0.28.17",
     "@stacks/api-toolkit": "^1.12.2",
-    "@stacks/node-publisher-client": "^2.0.1",
+    "@stacks/node-publisher-client": "^2.0.5",
     "@stacks/transactions": "^7.4.0",
     "@types/node": "^22.10.5",
     "bignumber.js": "^9.1.2",

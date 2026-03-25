@@ -105,8 +105,8 @@ jobs:
     permissions:
       packages: write
     runs-on: ubuntu-latest
-    needs:
-      - test
+    # needs:
+    #   - test
     steps:
       - uses: actions/checkout@v6
         with:

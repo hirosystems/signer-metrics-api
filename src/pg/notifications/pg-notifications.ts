@@ -4,7 +4,7 @@ import {
   batchIterate,
   logger as defaultLogger,
   PgSqlClient,
-} from '@hirosystems/api-toolkit';
+} from '@stacks/api-toolkit';
 import { EventEmitter } from 'node:events';
 import { DbWriteEvents } from '../ingestion/pg-write-store';
 import { SignerMessagesEventPayload } from '../types';

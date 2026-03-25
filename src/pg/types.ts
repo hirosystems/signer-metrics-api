@@ -1,4 +1,4 @@
-import { PgNumeric, PgBytea } from '@hirosystems/api-toolkit';
+import { PgNumeric, PgBytea } from '@stacks/api-toolkit';
 
 export type DbBlock = {
   block_height: number;

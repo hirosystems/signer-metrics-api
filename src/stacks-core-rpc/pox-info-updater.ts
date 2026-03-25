@@ -1,4 +1,4 @@
-import { logger } from '@hirosystems/api-toolkit';
+import { logger } from '@stacks/api-toolkit';
 import { PgStore } from '../pg/pg-store';
 import { sleep } from '../helpers';
 import { fetchRpcPoxInfo, getStacksNodeUrl } from './stacks-core-rpc-client';
