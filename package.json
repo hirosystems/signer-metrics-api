@@ -2,6 +2,9 @@
   "name": "@stx-labs/signer-metrics-api",
   "description": "A microservice that indexes signer data from the Stacks blockchain and exposes it via JSON REST API endpoints",
   "version": "1.0.2",
+  "engines": {
+    "node": ">=24"
+  },
   "main": "index.js",
   "author": "Stacks Labs",
   "license": "GPL-3.0",
@@ -63,7 +66,7 @@
     "@stacks/api-toolkit": "^1.12.2",
     "@stacks/node-publisher-client": "^2.0.5",
     "@stacks/transactions": "^7.4.0",
-    "@types/node": "^22.10.5",
+    "@types/node": "^24.0.0",
     "bignumber.js": "^9.1.2",
     "date-fns": "^4.1.0",
     "env-schema": "^6.0.0",
