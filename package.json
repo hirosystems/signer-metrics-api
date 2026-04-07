@@ -26,17 +26,13 @@
     "lint:fix": "eslint . --fix",
     "vendor-secp256k1": "mkdir -p src/vendored/@noble/secp256k1 && cp node_modules/@noble/secp256k1/index.ts src/vendored/@noble/secp256k1/index.ts",
     "generate:openapi": "rimraf ./tmp && node -r ts-node/register ./util/openapi-generator.ts",
-    "generate:docs": "redocly build-docs ./tmp/openapi.yaml --output ./tmp/index.html",
-    "generate:git-info": "rimraf .git-info && node_modules/.bin/api-toolkit-git-info",
-    "generate:vercel": "npm run generate:git-info && npm run generate:openapi && npm run generate:docs",
-    "generate:client:typescript": "swagger-codegen generate -i ./tmp/openapi.yaml -l typescript-fetch -o ./client/typescript -c ./client/typescript.json"
+    "generate:git-info": "rimraf .git-info && node_modules/.bin/api-toolkit-git-info"
   },
   "prettier": "@stacks/prettier-config",
   "devDependencies": {
     "@commitlint/cli": "^17.4.2",
     "@commitlint/config-conventional": "^17.4.2",
     "@eslint/js": "^9.14.0",
-    "@redocly/cli": "^1.25.11",
     "@stacks/prettier-config": "^0.0.10",
     "@types/dockerode": "^3.3.31",
     "@types/eslint__js": "^8.42.3",
@@ -46,7 +42,6 @@
     "eslint": "^9.14.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.2.1",
-    "husky": "^8.0.3",
     "jest": "^29.7.0",
     "prettier": "3.3.3",
     "rimraf": "^6.0.1",
@@ -74,8 +69,6 @@
     "fastify-metrics": "^12.1.0",
     "node-pg-migrate": "^6.2.2",
     "p-queue": "^6.6.2",
-    "pino": "^9.5.0",
-    "postgres": "^3.4.5",
     "socket.io": "^4.8.1"
   }
 }
