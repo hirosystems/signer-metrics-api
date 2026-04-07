@@ -1,7 +1,7 @@
 import * as crypto from 'node:crypto';
-import * as secp from '../vendored/@noble/secp256k1';
-import { BufferCursor } from './buffer-cursor';
-import { BufferWriter } from './buffer-writer';
+import * as secp from '../vendored/@noble/secp256k1/index.js';
+import { BufferCursor } from './buffer-cursor.js';
+import { BufferWriter } from './buffer-writer.js';
 import { BytesReader, deserializeTransaction } from '@stacks/transactions';
 import {
   NewBlockMessage,

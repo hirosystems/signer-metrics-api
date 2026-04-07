@@ -2,10 +2,10 @@ import { Server as HttpServer } from 'http';
 import { Namespace, Server } from 'socket.io';
 import { FastifyPluginAsync } from 'fastify';
 import { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
-import { SignerMessagesEventPayload } from '../../pg/types';
+import { SignerMessagesEventPayload } from '../../pg/types.js';
 import { logger } from '@stacks/api-toolkit';
-import { parseDbBlockProposalData } from './block-proposals';
-import { BlockProposalsEntry } from '../schemas';
+import { parseDbBlockProposalData } from './block-proposals.js';
+import { BlockProposalsEntry } from '../schemas.js';
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface ClientToServerEvents {}

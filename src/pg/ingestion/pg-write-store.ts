@@ -13,8 +13,12 @@ import {
   DbBlockSignerSignature,
   DbRewardSetSigner,
   SignerMessagesEventPayload,
-} from '../types';
-import { normalizeHexString, unixTimeMillisecondsToISO, unixTimeSecondsToISO } from '../../helpers';
+} from '../types.js';
+import {
+  normalizeHexString,
+  unixTimeMillisecondsToISO,
+  unixTimeSecondsToISO,
+} from '../../helpers.js';
 import { EventEmitter } from 'node:events';
 import {
   BlockProposalChunkType,
@@ -23,7 +27,7 @@ import {
   ParsedNakamotoBlock,
   ParsedRewardSet,
   ParsedStackerDbChunk,
-} from '../../event-stream/msg-parsing';
+} from '../../event-stream/msg-parsing.js';
 
 export type DbWriteEvents = EventEmitter<{
   missingStackerSet: [{ cycleNumber: number }];

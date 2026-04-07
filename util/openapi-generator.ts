@@ -1,16 +1,16 @@
 import * as dotenv from 'dotenv';
-
-// First load default.env to prevent envSchema from throwing errors
-const defaultParsed = dotenv.config({ path: `${__dirname}/default.env` }).parsed;
-dotenv.populate(process.env as Record<string, string>, defaultParsed as Record<string, string>);
-
 import Fastify from 'fastify';
 import { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
-import { Api } from '../src/api/init';
-import FastifySwagger from '@fastify/swagger';
-import { mkdirSync, writeFileSync } from 'fs';
-import { OpenApiSchemaOptions } from '../src/api/schemas';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { Api } from '../src/api/init.js';
+import FastifySwagger from '@fastify/swagger';
+import { OpenApiSchemaOptions } from '../src/api/schemas.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const defaultParsed = dotenv.config({ path: path.join(__dirname, 'default.env') }).parsed;
+dotenv.populate(process.env as Record<string, string>, defaultParsed as Record<string, string>);
 
 /**
  * Generates `openapi.yaml` based on current Swagger definitions.

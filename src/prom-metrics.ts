@@ -1,6 +1,6 @@
 import { Gauge } from 'prom-client';
-import { ENV } from './env';
-import { PgStore } from './pg/pg-store';
+import { ENV } from './env.js';
+import { PgStore } from './pg/pg-store.js';
 
 export function configureSignerMetrics(db: PgStore) {
   // Getter for block periods so that the env var can be updated

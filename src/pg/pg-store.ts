@@ -1,4 +1,4 @@
-import { ENV } from '../env';
+import { ENV } from '../env.js';
 import {
   BasePgStore,
   PgConnectionArgs,
@@ -7,14 +7,18 @@ import {
   logger,
   runMigrations,
 } from '@stacks/api-toolkit';
-import * as path from 'path';
-import { PgWriteStore } from './ingestion/pg-write-store';
-import { BlockIdParam, normalizeHexString, sleep } from '../helpers';
+import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { PgWriteStore } from './ingestion/pg-write-store.js';
+import { BlockIdParam, normalizeHexString, sleep } from '../helpers.js';
 import { Fragment } from 'postgres';
-import { DbBlockProposalQueryResponse, DbChainTip } from './types';
-import { NotificationPgStore } from './notifications/pg-notifications';
+import { DbBlockProposalQueryResponse, DbChainTip } from './types.js';
+import { NotificationPgStore } from './notifications/pg-notifications.js';
 
-export const MIGRATIONS_DIR = path.join(__dirname, '../../migrations');
+export const MIGRATIONS_DIR = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../../migrations'
+);
 
 /**
  * Connects and queries the Signer Metrics API's local postgres DB.

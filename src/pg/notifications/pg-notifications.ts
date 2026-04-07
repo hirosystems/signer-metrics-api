@@ -6,8 +6,8 @@ import {
   PgSqlClient,
 } from '@stacks/api-toolkit';
 import { EventEmitter } from 'node:events';
-import { DbWriteEvents } from '../ingestion/pg-write-store';
-import { SignerMessagesEventPayload } from '../types';
+import { DbWriteEvents } from '../ingestion/pg-write-store.js';
+import { SignerMessagesEventPayload } from '../types.js';
 
 export type DbListenEvents = EventEmitter<{
   signerMessages: [SignerMessagesEventPayload];

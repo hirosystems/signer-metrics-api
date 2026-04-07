@@ -1,4 +1,4 @@
-import { ENV } from '../env';
+import { ENV } from '../env.js';
 
 export function getStacksNodeUrl(): string {
   return `http://${ENV.STACKS_NODE_RPC_HOST}:${ENV.STACKS_NODE_RPC_PORT}`;

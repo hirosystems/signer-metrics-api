@@ -1,7 +1,13 @@
-import { createDefaultPreset, type JestConfigWithTsJest } from 'ts-jest';
+const { createDefaultPreset } = require('ts-jest');
 
-const transform = { ...createDefaultPreset().transform };
-const jestConfig: JestConfigWithTsJest = {
+const transform = {
+  ...createDefaultPreset({
+    tsconfig: '<rootDir>/tsconfig.tests.json',
+  }).transform,
+};
+
+/** @type {import('jest').Config} */
+module.exports = {
   testEnvironment: 'node',
   coverageProvider: 'v8',
   collectCoverageFrom: ['src/**/*.ts', 'migrations/*.ts'],
@@ -22,5 +28,3 @@ const jestConfig: JestConfigWithTsJest = {
     },
   ],
 };
-
-export default jestConfig;

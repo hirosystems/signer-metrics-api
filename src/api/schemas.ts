@@ -1,7 +1,7 @@
 import { SwaggerOptions } from '@fastify/swagger';
 import { has0xPrefix, SERVER_VERSION } from '@stacks/api-toolkit';
 import { Static, Type } from '@sinclair/typebox';
-import { BlockIdParam } from '../helpers';
+import { BlockIdParam } from '../helpers.js';
 
 export const OpenApiSchemaOptions: SwaggerOptions = {
   openapi: {

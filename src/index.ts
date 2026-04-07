@@ -1,12 +1,12 @@
-import { PgStore } from './pg/pg-store';
-import { buildApiServer, buildPromServer } from './api/init';
-import { ENV } from './env';
-import { isProdEnv } from './helpers';
+import { PgStore } from './pg/pg-store.js';
+import { buildApiServer, buildPromServer } from './api/init.js';
+import { ENV } from './env.js';
+import { isProdEnv } from './helpers.js';
 import { buildProfilerServer, logger, registerShutdownConfig } from '@stacks/api-toolkit';
-import { EventStreamHandler } from './event-stream/event-stream';
-import { startPoxInfoUpdater } from './stacks-core-rpc/pox-info-updater';
-import { StackerSetUpdator } from './stacks-core-rpc/stacker-set-updater';
-import { configureSignerMetrics } from './prom-metrics';
+import { EventStreamHandler } from './event-stream/event-stream.js';
+import { startPoxInfoUpdater } from './stacks-core-rpc/pox-info-updater.js';
+import { StackerSetUpdator } from './stacks-core-rpc/stacker-set-updater.js';
+import { configureSignerMetrics } from './prom-metrics.js';
 
 /**
  * Initializes background services. Only for `default` and `writeonly` run modes.

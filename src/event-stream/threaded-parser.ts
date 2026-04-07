@@ -1,7 +1,7 @@
 import * as WorkerThreads from 'node:worker_threads';
 import * as path from 'node:path';
 import { waiter, Waiter, logger as defaultLogger } from '@stacks/api-toolkit';
-import { ParsedNakamotoBlock, ParsedStackerDbChunk } from './msg-parsing';
+import { ParsedNakamotoBlock, ParsedStackerDbChunk } from './msg-parsing.js';
 import {
   NakamotoBlockMsgReply,
   NakamotoBlockMsgRequest,
@@ -10,7 +10,7 @@ import {
   ThreadedParserMsgReply,
   ThreadedParserMsgType,
   workerFile,
-} from './threaded-parser-worker';
+} from './threaded-parser-worker.js';
 import { NewBlockMessage, StackerDbChunksMessage } from '@stacks/node-publisher-client';
 
 export class ThreadedParser {
@@ -27,10 +27,10 @@ export class ThreadedParser {
     if (path.extname(workerFile) === '.ts') {
       if (process.env.NODE_ENV !== 'test') {
         throw new Error(
-          'Worker threads are being created with ts-node outside of a test environment'
+          'Worker threads are being created with tsx against .ts sources outside of a test environment'
         );
       }
-      workerOpt.execArgv = ['-r', 'ts-node/register/transpile-only'];
+      workerOpt.execArgv = ['--import', 'tsx'];
     }
     this.worker = new WorkerThreads.Worker(workerFile, workerOpt);
     this.worker.on('error', err => {

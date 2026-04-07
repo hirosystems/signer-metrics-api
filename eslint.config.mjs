@@ -13,13 +13,22 @@ export default tseslint.config(
   {
     languageOptions: {
       parserOptions: {
-        projectService: { allowDefaultProject: ['eslint.config.mjs', 'jest.config.ts'] },
+        projectService: {
+          allowDefaultProject: ['eslint.config.mjs', 'jest.config.cjs'],
+        },
         tsconfigRootDir: import.meta.dirname,
       },
     },
   },
   {
-    ignores: ['dist/**', 'coverage/**', 'testing/**', 'chunk-parser/**', 'src/vendored/**'],
+    ignores: [
+      'dist/**',
+      'coverage/**',
+      'testing/**',
+      'chunk-parser/**',
+      'src/vendored/**',
+      'jest.config.cjs',
+    ],
   },
   {
     rules: {

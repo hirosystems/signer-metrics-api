@@ -5,13 +5,8 @@
       "type": "node",
       "request": "launch",
       "name": "Run",
-      "runtimeArgs": [
-        "-r",
-        "ts-node/register"
-      ],
-      "args": [
-        "${workspaceFolder}/src/index.ts"
-      ],
+      "runtimeExecutable": "tsx",
+      "args": ["${workspaceFolder}/src/index.ts"],
       "outputCapture": "std",
       "internalConsoleOptions": "openOnSessionStart",
       "env": {
@@ -36,7 +31,7 @@
       "type": "node",
       "request": "launch",
       "name": "Generate OpenAPI spec",
-      "runtimeArgs": ["-r", "ts-node/register"],
+      "runtimeExecutable": "tsx",
       "args": ["${workspaceFolder}/util/openapi-generator.ts"],
       "outputCapture": "std",
       "internalConsoleOptions": "openOnSessionStart",
@@ -116,7 +111,7 @@
       "skipFiles": ["<node_internals>/**"],
       "console": "integratedTerminal",
       "env": {
-        "TS_NODE_PROJECT": "${workspaceFolder}/tsconfig.json"
+        "TS_NODE_PROJECT": "${workspaceFolder}/tsconfig.app.json"
       }
     }
   ]

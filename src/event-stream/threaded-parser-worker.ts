@@ -1,13 +1,14 @@
 import * as WorkerThreads from 'node:worker_threads';
+import { fileURLToPath } from 'node:url';
 import {
   ParsedNakamotoBlock,
   ParsedStackerDbChunk,
   parseNakamotoBlockMsg,
   parseStackerDbChunk,
-} from './msg-parsing';
+} from './msg-parsing.js';
 import { NewBlockMessage, StackerDbChunksMessage } from '@stacks/node-publisher-client';
 
-export const workerFile = __filename;
+export const workerFile = fileURLToPath(import.meta.url);
 
 export enum ThreadedParserMsgType {
   NakamotoBlock = 'NakamotoBlock',
