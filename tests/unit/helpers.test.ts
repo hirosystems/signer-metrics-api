@@ -1,5 +1,5 @@
 import { sleep } from '../../src/helpers.ts';
-import * as events from 'node:events';
+import EventEmitter from 'node:events';
 import { describe, test } from 'node:test';
 import * as assert from 'node:assert';
 
@@ -8,7 +8,7 @@ describe('Helper tests', () => {
     const controller = new AbortController();
     const { signal } = controller;
 
-    const countListeners = () => events.getEventListeners(signal, 'abort').length;
+    const countListeners = () => EventEmitter.getEventListeners(signal, 'abort').length;
 
     // Ensure the initial listener count is zero
     assert.equal(countListeners(), 0);
@@ -35,7 +35,7 @@ describe('Helper tests', () => {
     const controller = new AbortController();
     const { signal } = controller;
 
-    const countListeners = () => events.getEventListeners(signal, 'abort').length;
+    const countListeners = () => EventEmitter.getEventListeners(signal, 'abort').length;
 
     // Ensure the initial listener count is zero
     assert.equal(countListeners(), 0);

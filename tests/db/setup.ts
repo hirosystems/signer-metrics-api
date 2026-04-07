@@ -1,16 +1,21 @@
 import type { DockerTestContainerConfig } from '@stacks/api-test-toolkit';
 import { dockerTestUp, dockerTestDown } from '@stacks/api-test-toolkit';
 
+process.env.STACKS_NODE_RPC_HOST = '127.0.0.1';
+process.env.STACKS_NODE_RPC_PORT = '20443';
+process.env.REDIS_URL = 'redis://127.0.0.1:6379';
+process.env.PGHOST = 'localhost';
+process.env.PGPORT = '5432';
+process.env.PGUSER = 'test';
+process.env.PGPASSWORD = 'test';
+process.env.PGDATABASE = 'testdb';
+
 function defaultContainers(): DockerTestContainerConfig[] {
   const postgres: DockerTestContainerConfig = {
     image: 'postgres:17',
     name: `signer-metrics-api-test-postgres`,
     ports: [{ host: 5432, container: 5432 }],
-    env: [
-      'POSTGRES_USER=test',
-      'POSTGRES_PASSWORD=test',
-      'POSTGRES_DB=testdb',
-    ],
+    env: ['POSTGRES_USER=test', 'POSTGRES_PASSWORD=test', 'POSTGRES_DB=testdb'],
     // waitPort: 5432,
     healthcheck: 'pg_isready -U postgres',
   };

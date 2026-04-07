@@ -10,10 +10,11 @@ import { NewBlockMessage, StackerDbChunksMessage } from '@stacks/node-publisher-
 
 export const workerFile = fileURLToPath(import.meta.url);
 
-export enum ThreadedParserMsgType {
-  NakamotoBlock = 'NakamotoBlock',
-  StackerDbChunk = 'StackerDbChunk',
-}
+export const ThreadedParserMsgType = {
+  NakamotoBlock: 'NakamotoBlock',
+  StackerDbChunk: 'StackerDbChunk',
+} as const;
+export type ThreadedParserMsgType = (typeof ThreadedParserMsgType)[keyof typeof ThreadedParserMsgType];
 
 interface ThreadMsg {
   type: ThreadedParserMsgType;
@@ -21,25 +22,25 @@ interface ThreadMsg {
 }
 
 export interface NakamotoBlockMsgRequest extends ThreadMsg {
-  type: ThreadedParserMsgType.NakamotoBlock;
+  type: typeof ThreadedParserMsgType.NakamotoBlock;
   msgId: number;
   block: NewBlockMessage;
 }
 
 export interface NakamotoBlockMsgReply extends ThreadMsg {
-  type: ThreadedParserMsgType.NakamotoBlock;
+  type: typeof ThreadedParserMsgType.NakamotoBlock;
   msgId: number;
   block: ParsedNakamotoBlock;
 }
 
 export interface StackerDbChunkMsgRequest extends ThreadMsg {
-  type: ThreadedParserMsgType.StackerDbChunk;
+  type: typeof ThreadedParserMsgType.StackerDbChunk;
   msgId: number;
   chunk: StackerDbChunksMessage;
 }
 
 export interface StackerDbChunkMsgReply extends ThreadMsg {
-  type: ThreadedParserMsgType.StackerDbChunk;
+  type: typeof ThreadedParserMsgType.StackerDbChunk;
   msgId: number;
   chunk: ParsedStackerDbChunk[];
 }
