@@ -47,12 +47,13 @@ jobs:
         run: npm ci --audit=false
 
       - name: Run tests
-        run: npm run test -- --coverage
+        run: npm run test:coverage
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/lcov.info
 
   version:
     runs-on: ubuntu-latest

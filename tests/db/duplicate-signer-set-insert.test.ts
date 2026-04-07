@@ -1,16 +1,18 @@
 import * as fs from 'node:fs';
-import { PgStore } from '../../src/pg/pg-store';
-import { RpcStackerSetResponse } from '../../src/stacks-core-rpc/stacks-core-rpc-client';
-import { rpcStackerSetToDbRewardSetSigners } from '../../src/stacks-core-rpc/stacker-set-updater';
+import * as assert from 'node:assert';
+import { describe, test, before, after } from 'node:test';
+import { PgStore } from '../../src/pg/pg-store.ts';
+import { RpcStackerSetResponse } from '../../src/stacks-core-rpc/stacks-core-rpc-client.ts';
+import { rpcStackerSetToDbRewardSetSigners } from '../../src/stacks-core-rpc/stacker-set-updater.ts';
 
 describe('Duplicate signer set insert', () => {
   let db: PgStore;
 
-  beforeAll(async () => {
+  before(async () => {
     db = await PgStore.connect();
   });
 
-  afterAll(async () => {
+  after(async () => {
     await db.close();
   });
 
@@ -22,10 +24,8 @@ describe('Duplicate signer set insert', () => {
       db.sql,
       rpcStackerSetToDbRewardSetSigners(stackerSetDump, 72)
     );
-    expect(insertResult).toEqual({
-      rowsDeleted: 0,
-      rowsInserted: 11,
-    });
+    assert.equal(insertResult.rowsDeleted, 0);
+    assert.equal(insertResult.rowsInserted, 11);
   });
 
   test('Overwrite signer set', async () => {
@@ -36,9 +36,7 @@ describe('Duplicate signer set insert', () => {
       db.sql,
       rpcStackerSetToDbRewardSetSigners(stackerSetDump, 72)
     );
-    expect(insertResult).toEqual({
-      rowsDeleted: 11,
-      rowsInserted: 11,
-    });
+    assert.equal(insertResult.rowsDeleted, 11);
+    assert.equal(insertResult.rowsInserted, 11);
   });
 });

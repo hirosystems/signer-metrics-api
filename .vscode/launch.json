@@ -43,32 +43,27 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Jest: unit tests",
-      "program": "${workspaceFolder}/node_modules/jest/bin/jest",
+      "name": "Unit tests",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--import", "tsx", "--test", "--test-timeout=3600000"],
       "args": [
-        "--testTimeout=3600000",
-        "--runInBand",
-        "--no-cache",
-        "--selectProjects",
-        "unit-tests",
+        "${workspaceFolder}/tests/unit/helpers.test.ts",
+        "${workspaceFolder}/tests/unit/chunk-parsing.test.ts"
       ],
+      "cwd": "${workspaceFolder}",
       "outputCapture": "std",
       "console": "internalConsole",
+      "env": { "NODE_ENV": "test" }
     },
     {
       "type": "node",
       "request": "launch",
-      "name": "Jest: db tests",
-      "program": "${workspaceFolder}/node_modules/jest/bin/jest",
-      "args": [
-        "--testTimeout=3600000",
-        "--runInBand",
-        "--no-cache",
-        "--selectProjects",
-        "db-tests",
-      ],
+      "name": "DB tests (Docker)",
+      "runtimeExecutable": "tsx",
+      "args": ["${workspaceFolder}/tests/db/run-db-tests.ts"],
+      "cwd": "${workspaceFolder}",
       "outputCapture": "std",
-      "console": "internalConsole",
+      "console": "internalConsole"
     },
     {
       "name": "Chunk parser prototyping",
@@ -104,9 +99,9 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Debug Current TS File (ts-node)",
-      "runtimeExecutable": "ts-node",
-      "args": ["--transpile-only", "${file}"],
+      "name": "Debug Current TS File (tsx)",
+      "runtimeExecutable": "tsx",
+      "args": ["${file}"],
       "cwd": "${fileDirname}",
       "skipFiles": ["<node_internals>/**"],
       "console": "integratedTerminal",
