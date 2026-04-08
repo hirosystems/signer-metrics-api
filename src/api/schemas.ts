@@ -1,14 +1,29 @@
 import { SwaggerOptions } from '@fastify/swagger';
-import { has0xPrefix, SERVER_VERSION } from '@stacks/api-toolkit';
+import { has0xPrefix, isProdEnv, SERVER_VERSION } from '@stacks/api-toolkit';
 import { Static, Type } from '@sinclair/typebox';
-import { BlockIdParam } from '../helpers';
+import { BlockIdParam } from '../helpers.js';
+import { dirname, resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const openApiVersion = (() => {
+  if (isProdEnv) return SERVER_VERSION.tag;
+  try {
+    const packageJsonPath = resolve(__dirname, '../../package.json');
+    return (JSON.parse(readFileSync(packageJsonPath, 'utf-8')) as { version: string }).version;
+  } catch (error) {
+    return SERVER_VERSION.tag;
+  }
+})();
 
 export const OpenApiSchemaOptions: SwaggerOptions = {
   openapi: {
     info: {
       title: 'Signer Metrics API',
       description: 'Welcome to the API reference overview for the Signer Metrics API.',
-      version: SERVER_VERSION.tag,
+      version: openApiVersion,
     },
     externalDocs: {
       url: 'https://github.com/hirosystems/signer-metrics-api',

@@ -1,9 +1,9 @@
-import { PgStore } from '../pg/pg-store';
+import { PgStore } from '../pg/pg-store.js';
 import { logger as defaultLogger, stopwatch } from '@stacks/api-toolkit';
-import { ENV } from '../env';
-import { ParsedNakamotoBlock, ParsedStackerDbChunk } from './msg-parsing';
-import { SignerMessagesEventPayload } from '../pg/types';
-import { ThreadedParser } from './threaded-parser';
+import { ENV } from '../env.js';
+import { ParsedNakamotoBlock, ParsedStackerDbChunk } from './msg-parsing.js';
+import { SignerMessagesEventPayload } from '../pg/types.js';
+import { ThreadedParser } from './threaded-parser.js';
 import { SERVER_VERSION } from '@stacks/api-toolkit';
 import { EventEmitter } from 'node:events';
 import { Message, MessagePath, StacksMessageStream } from '@stacks/node-publisher-client';

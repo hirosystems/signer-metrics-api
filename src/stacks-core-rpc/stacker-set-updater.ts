@@ -1,9 +1,9 @@
-import { PgStore } from '../pg/pg-store';
+import { PgStore } from '../pg/pg-store.js';
 import PQueue from 'p-queue';
-import { fetchStackerSet, RpcStackerSetResponse } from './stacks-core-rpc-client';
-import { sleep } from '../helpers';
+import { fetchStackerSet, RpcStackerSetResponse } from './stacks-core-rpc-client.js';
+import { sleep } from '../helpers.js';
 import { logger } from '@stacks/api-toolkit';
-import { DbRewardSetSigner } from '../pg/types';
+import { DbRewardSetSigner } from '../pg/types.js';
 
 // TODO: make this configurable
 // How long to wait between retries when fetching fails

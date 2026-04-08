@@ -1,7 +1,7 @@
 import { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import { FastifyPluginCallback } from 'fastify';
 import { Server } from 'http';
-import { ApiStatusResponse } from '../schemas';
+import { ApiStatusResponse } from '../schemas.js';
 import { SERVER_VERSION } from '@stacks/api-toolkit';
 
 export const StatusRoutes: FastifyPluginCallback<

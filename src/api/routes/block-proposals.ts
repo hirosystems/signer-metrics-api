@@ -9,9 +9,9 @@ import {
   BlockProposalsEntrySchema,
   BlockProposalSignerData,
   BlockProposalsResponseSchema,
-} from '../schemas';
-import { NotFoundError } from '../errors';
-import { DbBlockProposalQueryResponse } from '../../pg/types';
+} from '../schemas.js';
+import { NotFoundError } from '../errors.js';
+import { DbBlockProposalQueryResponse } from '../../pg/types.js';
 
 export const BlockProposalsRoutes: FastifyPluginCallback<
   Record<never, never>,

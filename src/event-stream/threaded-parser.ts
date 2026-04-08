@@ -1,7 +1,12 @@
 import * as WorkerThreads from 'node:worker_threads';
 import * as path from 'node:path';
 import { waiter, Waiter, logger as defaultLogger } from '@stacks/api-toolkit';
-import { ParsedNakamotoBlock, ParsedStackerDbChunk } from './msg-parsing';
+import {
+  ParsedNakamotoBlock,
+  ParsedStackerDbChunk,
+  parseNakamotoBlockMsg,
+  parseStackerDbChunk,
+} from './msg-parsing.js';
 import {
   NakamotoBlockMsgReply,
   NakamotoBlockMsgRequest,
@@ -10,11 +15,12 @@ import {
   ThreadedParserMsgReply,
   ThreadedParserMsgType,
   workerFile,
-} from './threaded-parser-worker';
+} from './threaded-parser-worker.js';
 import { NewBlockMessage, StackerDbChunksMessage } from '@stacks/node-publisher-client';
 
 export class ThreadedParser {
-  private readonly worker: WorkerThreads.Worker;
+  private readonly worker?: WorkerThreads.Worker;
+  private readonly parseInMainThread: boolean;
   private readonly msgRequests: Map<number, Waiter<ThreadedParserMsgReply>> = new Map();
   private readonly logger = defaultLogger.child({ module: 'ThreadedParser' });
   private lastMsgId = 0;
@@ -27,11 +33,13 @@ export class ThreadedParser {
     if (path.extname(workerFile) === '.ts') {
       if (process.env.NODE_ENV !== 'test') {
         throw new Error(
-          'Worker threads are being created with ts-node outside of a test environment'
+          'Worker threads are being created with tsx against .ts sources outside of a test environment'
         );
       }
-      workerOpt.execArgv = ['-r', 'ts-node/register/transpile-only'];
+      this.parseInMainThread = true;
+      return;
     }
+    this.parseInMainThread = false;
     this.worker = new WorkerThreads.Worker(workerFile, workerOpt);
     this.worker.on('error', err => {
       this.logger.error(err, 'Worker error');
@@ -51,6 +59,9 @@ export class ThreadedParser {
   }
 
   async parseNakamotoBlock(block: NewBlockMessage): Promise<ParsedNakamotoBlock> {
+    if (this.parseInMainThread) {
+      return parseNakamotoBlockMsg(block);
+    }
     const replyWaiter = waiter<NakamotoBlockMsgReply>();
     const msg: NakamotoBlockMsgRequest = {
       type: ThreadedParserMsgType.NakamotoBlock,
@@ -58,12 +69,15 @@ export class ThreadedParser {
       block,
     };
     this.msgRequests.set(msg.msgId, replyWaiter as Waiter<ThreadedParserMsgReply>);
-    this.worker.postMessage(msg);
+    this.worker?.postMessage(msg);
     const reply = await replyWaiter;
     return reply.block;
   }
 
   async parseStackerDbChunk(chunk: StackerDbChunksMessage): Promise<ParsedStackerDbChunk[]> {
+    if (this.parseInMainThread) {
+      return parseStackerDbChunk(chunk);
+    }
     const replyWaiter = waiter<StackerDbChunkMsgReply>();
     const msg: StackerDbChunkMsgRequest = {
       type: ThreadedParserMsgType.StackerDbChunk,
@@ -71,12 +85,12 @@ export class ThreadedParser {
       chunk,
     };
     this.msgRequests.set(msg.msgId, replyWaiter as Waiter<ThreadedParserMsgReply>);
-    this.worker.postMessage(msg);
+    this.worker?.postMessage(msg);
     const reply = await replyWaiter;
     return reply.chunk;
   }
 
   async close() {
-    await this.worker.terminate();
+    if (this.worker) await this.worker.terminate();
   }
 }

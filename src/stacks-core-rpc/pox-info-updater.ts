@@ -1,7 +1,7 @@
 import { logger } from '@stacks/api-toolkit';
-import { PgStore } from '../pg/pg-store';
-import { sleep } from '../helpers';
-import { fetchRpcPoxInfo, getStacksNodeUrl } from './stacks-core-rpc-client';
+import { PgStore } from '../pg/pg-store.js';
+import { sleep } from '../helpers.js';
+import { fetchRpcPoxInfo, getStacksNodeUrl } from './stacks-core-rpc-client.js';
 
 // How long to wait between PoX rpc fetches when the database already has PoX info
 const POX_INFO_UPDATE_INTERVAL_MS = 30000;

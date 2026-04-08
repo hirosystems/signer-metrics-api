@@ -6,9 +6,9 @@ import {
   CycleSignerResponse,
   CycleSignerResponseSchema,
   CycleSignersResponseSchema,
-} from '../schemas';
-import { parseTime } from '../../helpers';
-import { InvalidRequestError } from '../errors';
+} from '../schemas.js';
+import { parseTime } from '../../helpers.js';
+import { InvalidRequestError } from '../errors.js';
 
 export const CycleRoutes: FastifyPluginCallback<
   Record<never, never>,

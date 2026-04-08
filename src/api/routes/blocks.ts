@@ -9,8 +9,8 @@ import {
   BlocksResponseSchema,
   cleanBlockHeightOrHashParam,
   parseBlockParam,
-} from '../schemas';
-import { NotFoundError } from '../errors';
+} from '../schemas.js';
+import { NotFoundError } from '../errors.js';
 
 export const BlockRoutes: FastifyPluginCallback<
   Record<never, never>,

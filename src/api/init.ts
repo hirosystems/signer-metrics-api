@@ -1,17 +1,19 @@
 import Fastify, { FastifyPluginAsync, FastifyServerOptions } from 'fastify';
 import * as PromClient from 'prom-client';
 import { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
-import { PgStore } from '../pg/pg-store';
+import { PgStore } from '../pg/pg-store.js';
 import FastifyCors from '@fastify/cors';
-import { StatusRoutes } from './routes/status';
-import FastifyMetrics, { IFastifyMetrics } from 'fastify-metrics';
+import { StatusRoutes } from './routes/status.js';
+import FastifyMetricsModule from 'fastify-metrics';
+import type { IFastifyMetrics } from 'fastify-metrics';
+const FastifyMetrics = FastifyMetricsModule.default ?? FastifyMetricsModule;
 import { Server } from 'http';
-import { isProdEnv } from '../helpers';
+import { isProdEnv } from '../helpers.js';
 import { PINO_LOGGER_CONFIG } from '@stacks/api-toolkit';
-import { CycleRoutes } from './routes/cycle';
-import { BlockRoutes } from './routes/blocks';
-import { BlockProposalsRoutes } from './routes/block-proposals';
-import { SocketIORoutes } from './routes/socket-io';
+import { CycleRoutes } from './routes/cycle.js';
+import { BlockRoutes } from './routes/blocks.js';
+import { BlockProposalsRoutes } from './routes/block-proposals.js';
+import { SocketIORoutes } from './routes/socket-io.js';
 
 export const Api: FastifyPluginAsync<Record<never, never>, Server, TypeBoxTypeProvider> = async (
   fastify,
