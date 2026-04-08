@@ -1,7 +1,7 @@
 {
   "name": "@stx-labs/signer-metrics-api",
   "description": "A microservice that indexes signer data from the Stacks blockchain and exposes it via JSON REST API endpoints",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "engines": {
     "node": ">=24"
   },
@@ -19,7 +19,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "vendor-secp256k1": "mkdir -p src/vendored/@noble/secp256k1 && cp node_modules/@noble/secp256k1/index.ts src/vendored/@noble/secp256k1/index.ts",
-    "generate:openapi": "rimraf ./openapi.yaml && node --import tsx ./util/openapi-generator.ts",
+    "generate:openapi": "rimraf ./openapi.yaml && NODE_ENV=development node --import tsx ./util/openapi-generator.ts",
     "generate:git-info": "rimraf .git-info && node_modules/.bin/api-toolkit-git-info"
   },
   "prettier": "@stacks/prettier-config",

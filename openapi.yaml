@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: Signer Metrics API
   description: Welcome to the API reference overview for the Signer Metrics API.
-  version: v1.0.2
+  version: 1.0.3
 components:
   schemas: {}
 paths:
