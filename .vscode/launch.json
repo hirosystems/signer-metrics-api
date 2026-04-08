@@ -23,78 +23,44 @@
         "REDIS_URL": "redis://127.0.0.1:8379",
       },
       "killBehavior": "polite",
-      "preLaunchTask": "npm: testenv:run",
-      "postDebugTask": "npm: testenv:stop",
       "nodeVersionHint": 24
     },
     {
       "type": "node",
       "request": "launch",
-      "name": "Generate OpenAPI spec",
-      "runtimeExecutable": "tsx",
-      "args": ["${workspaceFolder}/util/openapi-generator.ts"],
-      "outputCapture": "std",
-      "internalConsoleOptions": "openOnSessionStart",
-      "env": {
-        "NODE_ENV": "development",
-        "TS_NODE_SKIP_IGNORE": "true"
-      }
-    },
-    {
-      "type": "node",
-      "request": "launch",
-      "name": "Unit tests",
+      "name": "test: unit",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["--import", "tsx", "--test", "--test-timeout=3600000"],
       "args": [
-        "${workspaceFolder}/tests/unit/helpers.test.ts",
-        "${workspaceFolder}/tests/unit/chunk-parsing.test.ts"
+        "--import",
+        "tsx",
+        "--test",
+        "--test-concurrency=1",
+        "${workspaceFolder}/tests/unit/**/*.test.ts"
       ],
-      "cwd": "${workspaceFolder}",
       "outputCapture": "std",
-      "console": "internalConsole",
-      "env": { "NODE_ENV": "test" }
-    },
-    {
-      "type": "node",
-      "request": "launch",
-      "name": "DB tests (Docker)",
-      "runtimeExecutable": "tsx",
-      "args": ["${workspaceFolder}/tests/db/run-db-tests.ts"],
-      "cwd": "${workspaceFolder}",
-      "outputCapture": "std",
-      "console": "internalConsole"
-    },
-    {
-      "type": "node",
-      "request": "launch",
-      "name": "csv-to-json",
-      "skipFiles": [
-        "<node_internals>/**"
-      ],
-      "program": "${workspaceFolder}/testing/csv-to-json.js"
-    },
-    {
-      "type": "node",
-      "request": "launch",
-      "name": "Debug Current js File",
-      "program": "${file}",
-      "cwd": "${fileDirname}",
-      "skipFiles": ["<node_internals>/**"],
-      "console": "integratedTerminal"
-    },
-    {
-      "type": "node",
-      "request": "launch",
-      "name": "Debug Current TS File (tsx)",
-      "runtimeExecutable": "tsx",
-      "args": ["${file}"],
-      "cwd": "${fileDirname}",
-      "skipFiles": ["<node_internals>/**"],
       "console": "integratedTerminal",
       "env": {
-        "TS_NODE_PROJECT": "${workspaceFolder}/tsconfig.app.json"
-      }
-    }
+        "NODE_ENV": "test"
+      },
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "test: db",
+      "runtimeExecutable": "tsx",
+      "args": [
+        "--import",
+        "tsx",
+        "--test",
+        "--test-concurrency=1",
+        "--test-global-setup=${workspaceFolder}/tests/db/setup.ts",
+        "${workspaceFolder}/tests/db/**/*.test.ts"
+      ],
+      "outputCapture": "std",
+      "console": "integratedTerminal",
+      "env": {
+        "NODE_ENV": "test"
+      },
+    },
   ]
 }
