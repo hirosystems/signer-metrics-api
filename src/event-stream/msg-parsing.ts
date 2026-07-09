@@ -1,8 +1,13 @@
 import * as crypto from 'node:crypto';
 import * as secp from '../vendored/@noble/secp256k1/index.js';
-import { BufferCursor } from './buffer-cursor.js';
-import { BufferWriter } from './buffer-writer.js';
-import { BytesReader, deserializeTransaction } from '@stacks/transactions';
+import {
+  decodeSignerMessage,
+  SignerMessageTypeID,
+  type DecodedNakamotoBlockResult,
+  type BlockResponseAccepted,
+  type BlockResponseRejected,
+  type SignerMessageBlockProposal,
+} from '@stacks/codec';
 import {
   NewBlockMessage,
   StackerDbChunksMessage,
@@ -64,46 +69,34 @@ interface ChunkMetadata {
 
 export interface BlockProposalChunkType extends ChunkMetadata {
   messageType: 'BlockProposal';
-  blockProposal: ReturnType<typeof parseBlockProposal>;
+  blockProposal: ReturnType<typeof mapBlockProposal>;
 }
 
 export interface BlockResponseChunkType extends ChunkMetadata {
   messageType: 'BlockResponse';
-  blockResponse: ReturnType<typeof parseBlockResponse>;
+  blockResponse: ReturnType<typeof mapBlockResponse>;
 }
 
 export interface BlockPushedChunkType extends ChunkMetadata {
   messageType: 'BlockPushed';
-  blockPushed: ReturnType<typeof parseBlockPushed>;
+  blockPushed: ReturnType<typeof mapNakamotoBlock>;
 }
 
 export interface MockProposalChunkType extends ChunkMetadata {
   messageType: 'MockProposal';
-  mockProposal: ReturnType<typeof parseMockProposal>;
 }
 
 export interface MockSignatureChunkType extends ChunkMetadata {
   messageType: 'MockSignature';
-  mockSignature: ReturnType<typeof parseMockSignature>;
 }
 
 export interface MockBlockChunkType extends ChunkMetadata {
   messageType: 'MockBlock';
-  mockBlock: ReturnType<typeof parseMockBlock>;
 }
 
 // https://github.com/stacks-network/stacks-core/blob/9d4cc3acd2c07d103b16750c1f3bdd6bf99a5232/libsigner/src/v0/messages.rs#L551
 export interface StateMachineUpdate extends ChunkMetadata {
   messageType: 'StateMachineUpdate';
-
-  // burn_block: ConsensusHash,
-  // burn_block_height: u64,
-  // current_miner_pkh: Hash160,
-  // parent_tenure_id: ConsensusHash,
-  // parent_tenure_last_block: StacksBlockId,
-  // parent_tenure_last_block_height: u64,
-  // active_signer_protocol_version: u64,
-  // local_supported_signer_protocol_version: u64,
 }
 
 // https://github.com/stacks-network/stacks-core/blob/develop/libsigner/src/v0/messages.rs#L191
@@ -127,7 +120,7 @@ export function parseStackerDbChunk(chunk: StackerDbChunksMessage): ParsedStacke
       contract: chunk.contract_id.name,
       pubkey: recoverChunkSlotPubkey(msg).pubkey,
       sig: msg.sig,
-      ...parseSignerMessage(Buffer.from(msg.data, 'hex')),
+      ...parseSignerMessage(msg.data),
     };
   });
 }
@@ -150,64 +143,82 @@ function recoverBlockSignerPubkeys(block: NewBlockMessage): string[] {
   );
 }
 
-enum SignerMessageTypePrefix {
-  BlockProposal = 0,
-  BlockResponse = 1,
-  BlockPushed = 2,
-  MockProposal = 3,
-  MockSignature = 4,
-  MockBlock = 5,
-  StateMachineUpdate = 6,
-  BlockPreCommit = 7,
-}
-
 // https://github.com/stacks-network/stacks-core/blob/cd702e7dfba71456e4983cf530d5b174e34507dc/libsigner/src/v0/messages.rs#L206
-function parseSignerMessage(msg: Buffer) {
-  const cursor = new BufferCursor(msg);
-  const messageType = cursor.readU8Enum(SignerMessageTypePrefix);
+function parseSignerMessage(data: string) {
+  const msg = decodeSignerMessage(data);
 
-  switch (messageType) {
-    case SignerMessageTypePrefix.BlockProposal:
+  switch (msg.type_id) {
+    case SignerMessageTypeID.BlockProposal:
       return {
         messageType: 'BlockProposal',
-        blockProposal: parseBlockProposal(cursor),
+        blockProposal: mapBlockProposal(msg.block_proposal),
       } as const;
-    case SignerMessageTypePrefix.BlockResponse:
+    case SignerMessageTypeID.BlockResponse:
       return {
         messageType: 'BlockResponse',
-        blockResponse: parseBlockResponse(cursor),
+        blockResponse: mapBlockResponse(msg.block_response),
       } as const;
-    case SignerMessageTypePrefix.BlockPushed:
+    case SignerMessageTypeID.BlockPushed:
       return {
         messageType: 'BlockPushed',
-        blockPushed: parseBlockPushed(cursor),
+        blockPushed: mapNakamotoBlock(msg.block_pushed),
       } as const;
-    case SignerMessageTypePrefix.MockProposal:
-      return {
-        messageType: 'MockProposal',
-        mockProposal: parseMockProposal(cursor),
-      } as const;
-    case SignerMessageTypePrefix.MockSignature:
-      return {
-        messageType: 'MockSignature',
-        mockSignature: parseMockSignature(cursor),
-      } as const;
-    case SignerMessageTypePrefix.MockBlock:
-      return {
-        messageType: 'MockBlock',
-        mockBlock: parseMockBlock(cursor),
-      } as const;
-    case SignerMessageTypePrefix.StateMachineUpdate:
-      return {
-        messageType: 'StateMachineUpdate',
-      } as const;
-    case SignerMessageTypePrefix.BlockPreCommit:
-      return {
-        messageType: 'BlockPreCommit',
-      } as const;
+    case SignerMessageTypeID.MockProposal:
+      return { messageType: 'MockProposal' } as const;
+    case SignerMessageTypeID.MockSignature:
+      return { messageType: 'MockSignature' } as const;
+    case SignerMessageTypeID.MockBlock:
+      return { messageType: 'MockBlock' } as const;
+    case SignerMessageTypeID.StateMachineUpdate:
+      return { messageType: 'StateMachineUpdate' } as const;
+    case SignerMessageTypeID.BlockPreCommit:
+      return { messageType: 'BlockPreCommit' } as const;
     default:
-      throw new Error(`Unknown message type prefix: ${messageType}`);
+      throw new Error(`Unknown signer message type: ${(msg as { type_id: number }).type_id}`);
   }
+}
+
+/** Map a codec-decoded Nakamoto block to the fields consumed by the ingestion layer. */
+function mapNakamotoBlock(block: DecodedNakamotoBlockResult) {
+  return {
+    blockHash: block.header.block_hash,
+    indexBlockHash: block.header.index_block_hash,
+    header: {
+      chainLength: block.header.chain_length,
+      timestamp: block.header.timestamp,
+    },
+  };
+}
+
+function mapBlockProposal(proposal: SignerMessageBlockProposal['block_proposal']) {
+  return {
+    block: mapNakamotoBlock(proposal.block),
+    burnHeight: proposal.burn_height,
+    rewardCycle: proposal.reward_cycle,
+  };
+}
+
+function mapBlockResponse(response: BlockResponseAccepted | BlockResponseRejected) {
+  if (response.response_type === 'accepted') {
+    return {
+      type: 'accepted',
+      signerSignatureHash: response.signer_signature_hash,
+      signature: response.signature,
+      metadata: { server_version: response.metadata.server_version },
+    } as const;
+  }
+  return {
+    type: 'rejected',
+    reason: response.reason,
+    reasonCode: {
+      rejectCode: response.reason_code.reject_code_name,
+      validateRejectCode: response.reason_code.validate_reject_code_name ?? null,
+    },
+    signerSignatureHash: response.signer_signature_hash,
+    chainId: response.chain_id,
+    signature: response.signature,
+    metadata: { server_version: response.metadata.server_version },
+  } as const;
 }
 
 /** Convert a u32 integer into a 4 byte big-endian buffer */
@@ -243,268 +254,4 @@ function recoverChunkSlotPubkey(slot: StackerDbChunksModifiedSlot) {
     pubkey: pubkey.toHex(),
     // pubkeyHash: crypto.hash('ripemd160', pubkey.toRawBytes(), 'hex'),
   };
-}
-
-// https://github.com/stacks-network/stacks-core/blob/cd702e7dfba71456e4983cf530d5b174e34507dc/libsigner/src/events.rs#L74
-function parseBlockProposal(cursor: BufferCursor) {
-  const block = parseNakamotoBlock(cursor);
-  const burnHeight = cursor.readU64BE();
-  const rewardCycle = cursor.readU64BE();
-  return { block, burnHeight, rewardCycle };
-}
-
-// https://github.com/stacks-network/stacks-core/blob/30acb47f0334853def757b877773ae3ec45c6ba5/stackslib/src/chainstate/stacks/transaction.rs#L682-L692
-function parseStacksTransaction(cursor: BufferCursor) {
-  const bytesReader = new BytesReader(cursor.buffer);
-  const stacksTransaction = deserializeTransaction(bytesReader);
-  cursor.buffer = cursor.buffer.subarray(bytesReader.consumed);
-  return stacksTransaction;
-}
-
-// https://github.com/stacks-network/stacks-core/blob/30acb47f0334853def757b877773ae3ec45c6ba5/stackslib/src/chainstate/nakamoto/mod.rs#L4547-L4550
-function parseNakamotoBlock(cursor: BufferCursor) {
-  const header = parseNakamotoBlockHeader(cursor);
-  const blockHash = getNakamotoBlockHash(header);
-  const indexBlockHash = getIndexBlockHash(blockHash, header.consensusHash);
-  const tx = cursor.readArray(parseStacksTransaction);
-  return { blockHash, indexBlockHash, header, tx };
-}
-
-// https://github.com/stacks-network/stacks-core/blob/a2dcd4c3ffdb625a6478bb2c0b23836bc9c72f9f/stacks-common/src/types/chainstate.rs#L268-L279
-function getIndexBlockHash(blockHash: string, consensusHash: string): string {
-  const hasher = crypto.createHash('sha512-256');
-  hasher.update(Buffer.from(blockHash, 'hex'));
-  hasher.update(Buffer.from(consensusHash, 'hex'));
-  return hasher.digest('hex');
-}
-
-// https://github.com/stacks-network/stacks-core/blob/30acb47f0334853def757b877773ae3ec45c6ba5/stackslib/src/chainstate/nakamoto/mod.rs#L696-L711
-function parseNakamotoBlockHeader(cursor: BufferCursor) {
-  const version = cursor.readU8();
-  const chainLength = cursor.readU64BE();
-  const burnSpent = cursor.readU64BE();
-  const consensusHash = cursor.readBytes(20).toString('hex');
-  const parentBlockId = cursor.readBytes(32).toString('hex');
-  const txMerkleRoot = cursor.readBytes(32).toString('hex');
-  const stateIndexRoot = cursor.readBytes(32).toString('hex');
-  const timestamp = cursor.readU64BE();
-  const minerSignature = cursor.readBytes(65).toString('hex');
-  const signerSignature = cursor.readArray(c => c.readBytes(65).toString('hex'));
-  const poxTreatment = cursor.readBitVec();
-
-  return {
-    version,
-    chainLength,
-    burnSpent,
-    consensusHash,
-    parentBlockId,
-    txMerkleRoot,
-    stateIndexRoot,
-    timestamp,
-    minerSignature,
-    signerSignature,
-    poxTreatment,
-  };
-}
-
-// https://github.com/stacks-network/stacks-core/blob/a2dcd4c3ffdb625a6478bb2c0b23836bc9c72f9f/stackslib/src/chainstate/nakamoto/mod.rs#L764-L795
-function getNakamotoBlockHash(blockHeader: ReturnType<typeof parseNakamotoBlockHeader>): string {
-  const blockHeaderBytes = new BufferWriter();
-  blockHeaderBytes.writeU8(blockHeader.version);
-  blockHeaderBytes.writeU64BE(blockHeader.chainLength);
-  blockHeaderBytes.writeU64BE(blockHeader.burnSpent);
-  blockHeaderBytes.writeBytes(Buffer.from(blockHeader.consensusHash, 'hex'));
-  blockHeaderBytes.writeBytes(Buffer.from(blockHeader.parentBlockId, 'hex'));
-  blockHeaderBytes.writeBytes(Buffer.from(blockHeader.txMerkleRoot, 'hex'));
-  blockHeaderBytes.writeBytes(Buffer.from(blockHeader.stateIndexRoot, 'hex'));
-  blockHeaderBytes.writeU64BE(blockHeader.timestamp);
-  blockHeaderBytes.writeBytes(Buffer.from(blockHeader.minerSignature, 'hex'));
-  blockHeaderBytes.writeBitVec(blockHeader.poxTreatment);
-  const blockHash = crypto.hash('sha512-256', blockHeaderBytes.buffer, 'hex');
-  return blockHash;
-}
-
-enum BlockResponseTypePrefix {
-  // An accepted block response
-  Accepted = 0,
-  // A rejected block response
-  Rejected = 1,
-}
-
-// https://github.com/stacks-network/stacks-core/blob/cd702e7dfba71456e4983cf530d5b174e34507dc/libsigner/src/v0/messages.rs#L650
-function parseBlockResponse(cursor: BufferCursor) {
-  const typePrefix = cursor.readU8Enum(BlockResponseTypePrefix);
-  switch (typePrefix) {
-    case BlockResponseTypePrefix.Accepted: {
-      const signerSignatureHash = cursor.readBytes(32).toString('hex');
-      const signature = cursor.readBytes(65).toString('hex');
-      const metadata = parseSignerMessageMetadata(cursor);
-      return { type: 'accepted', signerSignatureHash, signature, metadata } as const;
-    }
-    case BlockResponseTypePrefix.Rejected: {
-      const reason = cursor.readVecString();
-      const reasonCode = parseBlockResponseRejectCode(cursor);
-      const signerSignatureHash = cursor.readBytes(32).toString('hex');
-      const chainId = cursor.readU32BE();
-      const signature = cursor.readBytes(65).toString('hex');
-      const metadata = parseSignerMessageMetadata(cursor);
-      return {
-        type: 'rejected',
-        reason,
-        reasonCode,
-        signerSignatureHash,
-        chainId,
-        signature,
-        metadata,
-      } as const;
-    }
-    default:
-      throw new Error(`Unknown block response type prefix: ${typePrefix}`);
-  }
-}
-
-function parseSignerMessageMetadata(cursor: BufferCursor) {
-  if (cursor.buffer.length === 0) {
-    return null;
-  }
-  return { server_version: cursor.readVecString() };
-}
-
-// https://github.com/stacks-network/stacks-core/blob/e45867c1781a7c45541e765cd42b6a084996fec8/libsigner/src/v0/messages.rs#L934
-const RejectCodeTypePrefix = {
-  // The block was rejected due to validation issues
-  ValidationFailed: 0,
-  // The block was rejected due to connectivity issues with the signer
-  ConnectivityIssues: 1,
-  // The block was rejected in a prior round
-  RejectedInPriorRound: 2,
-  // The block was rejected due to no sortition view
-  NoSortitionView: 3,
-  // The block was rejected due to a mismatch with expected sortition view
-  SortitionViewMismatch: 4,
-  // The block was rejected due to a testing directive
-  TestingDirective: 5,
-};
-
-enum ValidateRejectCode {
-  /// The block was rejected due to validation issues
-  ValidationFailed = 0,
-  /// The block was rejected due to connectivity issues with the signer
-  ConnectivityIssues = 1,
-  /// The block was rejected in a prior round
-  RejectedInPriorRound = 2,
-  /// The block was rejected due to no sortition view
-  NoSortitionView = 3,
-  /// The block was rejected due to a mismatch with expected sortition view
-  SortitionViewMismatch = 4,
-  /// The block was rejected due to a testing directive
-  TestingDirective = 5,
-  /// The block attempted to reorg the previous tenure but was not allowed
-  ReorgNotAllowed = 6,
-  /// The bitvec field does not match what is expected
-  InvalidBitvec = 7,
-  /// The miner's pubkey hash does not match the winning pubkey hash
-  PubkeyHashMismatch = 8,
-  /// The miner has been marked as invalid
-  InvalidMiner = 9,
-  /// Miner is last sortition winner, when the current sortition winner is
-  /// still valid
-  NotLatestSortitionWinner = 10,
-  /// The block does not confirm the expected parent block
-  InvalidParentBlock = 11,
-  /// The block contains a block found tenure change, but we've already seen
-  /// a block found
-  DuplicateBlockFound = 12,
-  /// The block attempted a tenure extend but the burn view has not changed
-  /// and not enough time has passed for a time-based tenure extend
-  InvalidTenureExtend = 13,
-  /// Unknown reject code, for forward compatibility
-  Unknown = 254,
-  /// The block was approved, no rejection details needed
-  NotRejected = 255,
-}
-
-// https://github.com/stacks-network/stacks-core/blob/cd702e7dfba71456e4983cf530d5b174e34507dc/libsigner/src/v0/messages.rs#L812
-function parseBlockResponseRejectCode(cursor: BufferCursor) {
-  const rejectCode = cursor.readU8Enum(RejectCodeTypePrefix);
-  switch (rejectCode) {
-    case RejectCodeTypePrefix.ValidationFailed: {
-      const validateRejectCode = cursor.readU8Enum(ValidateRejectCode);
-      return {
-        rejectCode: getEnumName(RejectCodeTypePrefix, rejectCode),
-        validateRejectCode: getEnumName(ValidateRejectCode, validateRejectCode),
-      } as const;
-    }
-    case RejectCodeTypePrefix.ConnectivityIssues:
-    case RejectCodeTypePrefix.RejectedInPriorRound:
-    case RejectCodeTypePrefix.NoSortitionView:
-    case RejectCodeTypePrefix.SortitionViewMismatch:
-    case RejectCodeTypePrefix.TestingDirective:
-      return {
-        rejectCode: getEnumName(RejectCodeTypePrefix, rejectCode),
-      } as const;
-    default:
-      throw new Error(`Unknown reject code type prefix: ${rejectCode}`);
-  }
-}
-
-function getEnumName<T extends Record<string | number, string | number>>(
-  enumObj: T,
-  value: T[keyof T]
-): Extract<keyof T, string> {
-  const key = Object.keys(enumObj).find(key => enumObj[key] === value) as
-    | Extract<keyof T, string>
-    | undefined;
-  if (!key) {
-    throw new Error(`Value ${value} is not a valid enum value.`);
-  }
-  return key;
-}
-function parseBlockPushed(cursor: BufferCursor) {
-  const block = parseNakamotoBlock(cursor);
-  return block;
-}
-function parseMockProposal(cursor: BufferCursor) {
-  const peerInfo = parseMockPeerInfo(cursor);
-  const signature = cursor.readBytes(65).toString('hex');
-  return { peerInfo, signature };
-}
-
-// https://github.com/stacks-network/stacks-core/blob/09d920cd1926422a8e3fb76fe4e1b1ef649546b4/libsigner/src/v0/messages.rs#L283
-function parseMockPeerInfo(cursor: BufferCursor) {
-  const burnBlockHeight = cursor.readU64BE();
-  const stacksTipConsensusHash = cursor.readBytes(20).toString('hex');
-  const stacksTip = cursor.readBytes(32).toString('hex');
-  const stacksTipHeight = cursor.readU64BE();
-  const serverVersion = cursor.readU8LengthPrefixedString();
-  const poxConsensusHash = cursor.readBytes(20).toString('hex');
-  const networkId = cursor.readU32BE();
-  const indexBlockHash = getIndexBlockHash(stacksTip, stacksTipConsensusHash);
-  return {
-    burnBlockHeight,
-    stacksTipConsensusHash,
-    stacksTip,
-    stacksTipHeight,
-    serverVersion,
-    poxConsensusHash,
-    networkId,
-    indexBlockHash,
-  };
-}
-
-function parseMockSignature(cursor: BufferCursor) {
-  const signature = cursor.readBytes(65).toString('hex');
-  const mockProposal = parseMockProposal(cursor);
-  const metadata = parseSignerMessageMetadata(cursor);
-  return {
-    signature,
-    mockProposal,
-    metadata,
-  };
-}
-
-function parseMockBlock(cursor: BufferCursor) {
-  const mockProposal = parseMockProposal(cursor);
-  const mockSignatures = cursor.readArray(parseMockSignature);
-  return { mockProposal, mockSignatures };
 }
