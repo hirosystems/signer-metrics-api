@@ -199,12 +199,17 @@ function mapBlockProposal(proposal: SignerMessageBlockProposal['block_proposal']
 }
 
 function mapBlockResponse(response: BlockResponseAccepted | BlockResponseRejected) {
+  // Older signer versions omit metadata; keep it optional (null when absent) to
+  // match the ingestion contract, which reads it as `metadata?.server_version`.
+  const metadata = response.metadata
+    ? { server_version: response.metadata.server_version }
+    : null;
   if (response.response_type === 'accepted') {
     return {
       type: 'accepted',
       signerSignatureHash: response.signer_signature_hash,
       signature: response.signature,
-      metadata: { server_version: response.metadata.server_version },
+      metadata,
     } as const;
   }
   return {
@@ -217,7 +222,7 @@ function mapBlockResponse(response: BlockResponseAccepted | BlockResponseRejecte
     signerSignatureHash: response.signer_signature_hash,
     chainId: response.chain_id,
     signature: response.signature,
-    metadata: { server_version: response.metadata.server_version },
+    metadata,
   } as const;
 }
 
