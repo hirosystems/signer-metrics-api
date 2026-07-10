@@ -52,6 +52,7 @@ jobs:
 
   github-release:
     runs-on: ubuntu-latest
+    needs: publish-docker
     permissions:
       contents: write
     steps:
