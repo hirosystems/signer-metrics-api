@@ -116,10 +116,9 @@ export class EventStreamHandler {
     await this.db.sqlWriteTransaction(async sql => {
       const chainTip = await this.db.getChainTip(sql);
       if (block.blockHeight <= chainTip.block_height) {
-        const indexBlockHash = normalizeHexString(block.indexBlockHash);
         if (
           block.blockHeight === chainTip.block_height &&
-          indexBlockHash !== chainTip.index_block_hash
+          block.indexBlockHash !== chainTip.index_block_hash
         ) {
           // The previously ingested block at this height was orphaned (e.g. a reorg after a
           // network stall). Repoint the chain tip at the canonical block, otherwise the stream
@@ -130,7 +129,7 @@ export class EventStreamHandler {
           );
           await this.db.ingestion.updateChainTip(sql, {
             blockHeight: block.blockHeight,
-            indexBlockHash,
+            indexBlockHash: block.indexBlockHash,
           });
           return;
         }
