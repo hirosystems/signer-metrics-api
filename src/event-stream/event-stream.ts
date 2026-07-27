@@ -125,7 +125,7 @@ export class EventStreamHandler {
           // handshake resume position can never be resolved and ingestion restarts from scratch
           // on every reconnect.
           this.logger.warn(
-            `Chain tip block ${chainTip.block_height} hash ${chainTip.index_block_hash} was orphaned, updating to canonical hash ${indexBlockHash}`
+            `Chain tip block ${chainTip.block_height} hash ${chainTip.index_block_hash} was orphaned, updating to canonical hash ${block.indexBlockHash}`
           );
           await this.db.ingestion.updateChainTip(sql, {
             blockHeight: block.blockHeight,
