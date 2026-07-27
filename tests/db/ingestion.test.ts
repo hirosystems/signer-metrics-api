@@ -61,10 +61,12 @@ describe('End-to-end ingestion tests', () => {
     assert.ok(signerData);
     assert.equal(signerData.length, 3);
 
-    assert.equal(signerData[0].signer_key,
+    assert.equal(
+      signerData[0].signer_key,
       '0x028efa20fa5706567008ebaf48f7ae891342eeb944d96392f719c505c89f84ed8d'
     );
-    assert.equal(signerData[0].last_metadata_server_version,
+    assert.equal(
+      signerData[0].last_metadata_server_version,
       'stacks-signer 0.0.1 (:dd1ebe64603f54dae48558a5d82d9bd885e97a01, debug build, linux [aarch64])'
     );
     assert.equal(signerData[0].stacked_amount, '4125240000000000');
@@ -74,10 +76,12 @@ describe('End-to-end ingestion tests', () => {
     assert.equal(signerData[0].weight, 4);
     assert.equal(signerData[0].weight_percentage, 50);
 
-    assert.equal(signerData[1].signer_key,
+    assert.equal(
+      signerData[1].signer_key,
       '0x023f19d77c842b675bd8c858e9ac8b0ca2efa566f17accf8ef9ceb5a992dc67836'
     );
-    assert.equal(signerData[1].last_metadata_server_version,
+    assert.equal(
+      signerData[1].last_metadata_server_version,
       'stacks-signer 0.0.1 (:dd1ebe64603f54dae48558a5d82d9bd885e97a01, debug build, linux [aarch64])'
     );
     assert.equal(signerData[1].stacked_amount, '2750160000000000');
@@ -87,10 +91,12 @@ describe('End-to-end ingestion tests', () => {
     assert.equal(signerData[1].weight, 3);
     assert.equal(signerData[1].weight_percentage, 37.5);
 
-    assert.equal(signerData[2].signer_key,
+    assert.equal(
+      signerData[2].signer_key,
       '0x029fb154a570a1645af3dd43c3c668a979b59d21a46dd717fd799b13be3b2a0dc7'
     );
-    assert.equal(signerData[2].last_metadata_server_version,
+    assert.equal(
+      signerData[2].last_metadata_server_version,
       'stacks-signer 0.0.1 (:dd1ebe64603f54dae48558a5d82d9bd885e97a01, debug build, linux [aarch64])'
     );
     assert.equal(signerData[2].stacked_amount, '1375080000000000');
@@ -113,9 +119,50 @@ describe('End-to-end ingestion tests', () => {
     assert.equal(signerData?.stacked_amount_rank, 1);
     assert.equal(signerData?.weight, 4);
     assert.equal(signerData?.weight_percentage, 50);
-    assert.equal(signerData?.signer_key,
+    assert.equal(
+      signerData?.signer_key,
       '0x028efa20fa5706567008ebaf48f7ae891342eeb944d96392f719c505c89f84ed8d'
     );
+  });
+
+  test('chain tip is repointed when its block is orphaned by a reorg', async () => {
+    const eventStreamHandler = new EventStreamHandler({ db });
+    try {
+      // Get the last /new_block message from the sample events dump (the current chain tip)
+      const payloadDumpFile = './tests/db/dumps/stackerdb-sample-events.tsv.gz';
+      const lines = zlib.gunzipSync(fs.readFileSync(payloadDumpFile)).toString('utf8').split('\n');
+      const lastNewBlockLine = lines.filter(line => line.split('\t')[2] === '/new_block').at(-1);
+      assert.ok(lastNewBlockLine);
+      const [id, timestamp, path, payload] = lastNewBlockLine.split('\t');
+      const blockMsg = JSON.parse(payload) as { block_height: number; index_block_hash: string };
+      assert.equal(blockMsg.block_height, sampleEventsBlockHeight);
+
+      const chainTipBefore = await db.getChainTip(db.sql);
+      assert.equal(chainTipBefore.index_block_hash, blockMsg.index_block_hash);
+
+      // Replaying the same canonical block is a no-op
+      await eventStreamHandler.handleMsg(id, timestamp, {
+        path,
+        payload: blockMsg,
+      } as Message);
+      let chainTip = await db.getChainTip(db.sql);
+      assert.equal(chainTip.block_height, sampleEventsBlockHeight);
+      assert.equal(chainTip.index_block_hash, chainTipBefore.index_block_hash);
+
+      // A replayed block at the same height with a different index_block_hash means the
+      // previously ingested tip block was orphaned - the chain tip hash must be repointed
+      const canonicalHash = '0x' + 'ab'.repeat(32);
+      blockMsg.index_block_hash = canonicalHash;
+      await eventStreamHandler.handleMsg(id, timestamp, {
+        path,
+        payload: blockMsg,
+      } as Message);
+      chainTip = await db.getChainTip(db.sql);
+      assert.equal(chainTip.block_height, sampleEventsBlockHeight);
+      assert.equal(chainTip.index_block_hash, canonicalHash);
+    } finally {
+      await eventStreamHandler.threadedParser.close();
+    }
   });
 
   test('validate current cycle signer weight percentages', async () => {

@@ -30,7 +30,7 @@ export interface ParsedNakamotoBlock {
 }
 
 export interface ParsedRewardSet {
-  pox_ustx_threshold: string; // "666720000000000"
+  pox_ustx_threshold?: string; // "666720000000000"
   rewarded_addresses: string[]; // burnchain (btc) addresses
   signers?: {
     signing_key: string; // "03a80704b1eb07b4d526f069d6ac592bb9b8216bcf1734fa40badd8f9867b4c79e",

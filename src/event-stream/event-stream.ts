@@ -1,4 +1,5 @@
 import { PgStore } from '../pg/pg-store.js';
+import { normalizeHexString } from '../helpers.js';
 import { logger as defaultLogger, stopwatch } from '@stacks/api-toolkit';
 import { ENV } from '../env.js';
 import { ParsedNakamotoBlock, ParsedStackerDbChunk } from './msg-parsing.js';
@@ -113,8 +114,25 @@ export class EventStreamHandler {
   async handleNakamotoBlockMsg(block: ParsedNakamotoBlock): Promise<void> {
     const time = stopwatch();
     await this.db.sqlWriteTransaction(async sql => {
-      const { block_height: lastIngestedBlockHeight } = await this.db.getChainTip(sql);
-      if (block.blockHeight <= lastIngestedBlockHeight) {
+      const chainTip = await this.db.getChainTip(sql);
+      if (block.blockHeight <= chainTip.block_height) {
+        if (
+          block.blockHeight === chainTip.block_height &&
+          block.indexBlockHash !== chainTip.index_block_hash
+        ) {
+          // The previously ingested block at this height was orphaned (e.g. a reorg after a
+          // network stall). Repoint the chain tip at the canonical block, otherwise the stream
+          // handshake resume position can never be resolved and ingestion restarts from scratch
+          // on every reconnect.
+          this.logger.warn(
+            `Chain tip block ${chainTip.block_height} hash ${chainTip.index_block_hash} was orphaned, updating to canonical hash ${block.indexBlockHash}`
+          );
+          await this.db.ingestion.updateChainTip(sql, {
+            blockHeight: block.blockHeight,
+            indexBlockHash: block.indexBlockHash,
+          });
+          return;
+        }
         this.logger.info(`Skipping previously ingested block ${block.blockHeight}`);
         return;
       }
