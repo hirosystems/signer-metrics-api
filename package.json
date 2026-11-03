@@ -46,7 +46,7 @@
     "@noble/secp256k1": "3.0.0",
     "@sinclair/typebox": "0.34.49",
     "@stacks/api-toolkit": "1.13.0",
-    "@stacks/codec": "2.1.0",
+    "@stacks/codec": "2.2.0",
     "@stacks/node-publisher-client": "2.2.1",
     "@types/node": "24.12.2",
     "bignumber.js": "10.0.2",
